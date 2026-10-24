@@ -10,6 +10,9 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
+    "@crm/contracts": "workspace:*",
+    "@crm/design-tokens": "workspace:*",
+    "@crm/domain": "workspace:*",
     "next": "16.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3"

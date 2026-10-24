@@ -3,11 +3,28 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./task-transition": "./src/task-transition.ts" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./task-transition": {
+      "types": "./dist/task-transition.d.ts",
+      "import": "./dist/task-transition.js",
+      "default": "./dist/task-transition.js"
+    }
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "devDependencies": { "typescript": "^5.9.3", "vitest": "^4.0.0" }
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  }
 }

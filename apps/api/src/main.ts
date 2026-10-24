@@ -2,11 +2,17 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter.js';
+import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
+
+  app.useGlobalInterceptors(new RequestIdInterceptor());
+  app.useGlobalFilters(new GlobalHttpExceptionFilter());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
