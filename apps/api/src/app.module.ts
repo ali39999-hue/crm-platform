@@ -14,6 +14,7 @@ import { SearchController } from './modules/search/search.controller.js';
 import { WebhookController } from './modules/integrations/webhook.controller.js';
 import { FilesController } from './modules/files/files.controller.js';
 import { BackupController } from './modules/operations/backup.controller.js';
+import { JobController } from './modules/jobs/job.controller.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -54,6 +55,8 @@ import { MetricsService } from './common/observability/metrics.service.js';
 import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
 import { InMemoryBackupRepository } from './modules/operations/backup.repository.js';
 import { BackupService } from './modules/operations/backup.service.js';
+import { InMemoryJobRepository } from './modules/jobs/job.repository.js';
+import { JobWorkerService } from './modules/jobs/job-worker.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -73,6 +76,7 @@ import { BackupService } from './modules/operations/backup.service.js';
     WebhookController,
     FilesController,
     BackupController,
+    JobController,
   ],
   providers: [
     AuthService,
@@ -124,6 +128,12 @@ import { BackupService } from './modules/operations/backup.service.js';
     MetricsInterceptor,
     InMemoryBackupRepository,
     BackupService,
+    {
+      provide: 'JOB_REPOSITORY',
+      useClass: InMemoryJobRepository,
+    },
+    InMemoryJobRepository,
+    JobWorkerService,
   ],
   exports: [
     AuthService,
@@ -157,6 +167,9 @@ import { BackupService } from './modules/operations/backup.service.js';
     MetricsService,
     InMemoryBackupRepository,
     BackupService,
+    'JOB_REPOSITORY',
+    InMemoryJobRepository,
+    JobWorkerService,
   ],
 })
 export class AppModule implements NestModule {

@@ -27,6 +27,7 @@ import type {
   CreateTaskRequest,
   CreateTicketRequest,
   CurrentUserDto,
+  CustomerTimelineItem,
   DealDto,
   LeadDto,
   PageQuery,
@@ -345,6 +346,94 @@ export class ApiClient {
       },
     ],
   };
+
+  private fallbackTimeline: CustomerTimelineItem[] = [
+    {
+      id: 'act-1',
+      entityType: 'ACCOUNT',
+      entityId: '50000000-0000-0000-0000-000000000001',
+      kind: 'ACCOUNT_CREATED',
+      summary: 'حساب شرکت پتروشیمی سپهر ثبت گردید',
+      occurredAt: '2026-10-01T10:00:00.000Z',
+      actorName: 'کارمند عملیات',
+    },
+    {
+      id: 'act-2',
+      entityType: 'DEAL',
+      entityId: 'deal-2',
+      kind: 'DEAL_PROPOSAL_SENT',
+      summary: 'پیشنهاد قیمت توسعه سفارشی ماژول ERP به مبلغ ۱,۲۰۰,۰۰۰,۰۰۰ ریال ارسال گردید',
+      occurredAt: '2026-10-12T11:00:00.000Z',
+      actorName: 'کارمند عملیات',
+      metadata: { accountId: '50000000-0000-0000-0000-000000000001' },
+    },
+    {
+      id: 'act-3',
+      entityType: 'TICKET',
+      entityId: '90000000-0000-0000-0000-000000000001',
+      kind: 'TICKET_CREATED',
+      summary: 'تیکت TKT-1042 با عنوان «عدم دسترسی به ماژول گزارش‌گیری» ثبت شد',
+      occurredAt: '2026-10-20T10:30:00.000Z',
+      actorName: 'کاربر مشتری',
+      metadata: { accountId: '50000000-0000-0000-0000-000000000001' },
+    },
+    {
+      id: 'act-4',
+      entityType: 'ACCOUNT',
+      entityId: '50000000-0000-0000-0000-000000000001',
+      kind: 'CALL_LOGGED',
+      summary: 'تماس تلفنی با مدیر فناوری در خصوص زمان تحویل نسخه آزمایشی انجام شد',
+      occurredAt: '2026-10-22T14:15:00.000Z',
+      actorName: 'کارشناس فروش',
+    },
+    {
+      id: 'act-5',
+      entityType: 'ACCOUNT',
+      entityId: '50000000-0000-0000-0000-000000000002',
+      kind: 'ACCOUNT_CREATED',
+      summary: 'حساب شرکت فولاد گستر آریا ثبت گردید',
+      occurredAt: '2026-09-15T09:00:00.000Z',
+      actorName: 'کارمند عملیات',
+    },
+    {
+      id: 'act-6',
+      entityType: 'DEAL',
+      entityId: 'deal-1',
+      kind: 'DEAL_NEGOTIATION',
+      summary: 'مذاکره قرارداد سالانه پشتیبانی سازمانی ۳۵۰,۰۰۰,۰۰۰ ریالی پیگیری شد',
+      occurredAt: '2026-10-10T14:00:00.000Z',
+      actorName: 'کارشناس فروش',
+      metadata: { accountId: '50000000-0000-0000-0000-000000000002' },
+    },
+    {
+      id: 'act-7',
+      entityType: 'TICKET',
+      entityId: '90000000-0000-0000-0000-000000000004',
+      kind: 'TICKET_CREATED',
+      summary: 'تیکت TKT-1041 در خصوص افزایش سهمیه فایل‌های پیوست ثبت شد',
+      occurredAt: '2026-10-21T08:00:00.000Z',
+      actorName: 'کارشناس پشتیبانی',
+      metadata: { accountId: '50000000-0000-0000-0000-000000000002' },
+    },
+    {
+      id: 'act-8',
+      entityType: 'ACCOUNT',
+      entityId: '50000000-0000-0000-0000-000000000003',
+      kind: 'ACCOUNT_CREATED',
+      summary: 'حساب شرکت فناوری داده‌پژوهان ثبت گردید',
+      occurredAt: '2026-10-10T11:20:00.000Z',
+      actorName: 'کارمند عملیات',
+    },
+    {
+      id: 'act-9',
+      entityType: 'ACCOUNT',
+      entityId: '50000000-0000-0000-0000-000000000003',
+      kind: 'NOTE_LOGGED',
+      summary: 'بررسی نیازمندی‌های یکپارچه‌سازی با سامانه احراز هویت تک‌مرحله‌ای (SSO)',
+      occurredAt: '2026-10-21T16:45:00.000Z',
+      actorName: 'مدیر فنی',
+    },
+  ];
 
   constructor(baseUrl?: string, token?: string) {
     this.baseUrl =
@@ -1238,6 +1327,71 @@ export class ApiClient {
       }
       throw err;
     }
+  }
+
+  async getEntityTimeline(
+    entityType: string,
+    entityId: string,
+    limit = 50,
+  ): Promise<CustomerTimelineItem[]> {
+    try {
+      const path = `/activities/entity/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}?limit=${limit}`;
+      return await this.request<CustomerTimelineItem[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackTimeline
+          .filter(
+            (item) =>
+              item.entityType.toUpperCase() === entityType.toUpperCase() &&
+              item.entityId === entityId,
+          )
+          .map((item) => ({ ...item }));
+      }
+      throw err;
+    }
+  }
+
+  async getCustomerTimeline(
+    accountId: string,
+    limit = 50,
+  ): Promise<CustomerTimelineItem[]> {
+    try {
+      const path = `/activities/account/${encodeURIComponent(accountId)}?limit=${limit}`;
+      return await this.request<CustomerTimelineItem[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackTimeline
+          .filter(
+            (item) =>
+              item.entityId === accountId ||
+              item.metadata?.accountId === accountId,
+          )
+          .map((item) => ({ ...item }));
+      }
+      throw err;
+    }
+  }
+
+  async logTimelineActivity(item: {
+    entityType: 'ACCOUNT' | 'LEAD' | 'CONTACT' | 'DEAL' | 'TICKET';
+    entityId: string;
+    kind: string;
+    summary: string;
+    actorName?: string;
+    metadata?: Record<string, any>;
+  }): Promise<CustomerTimelineItem> {
+    const newItem: CustomerTimelineItem = {
+      id: `act-${Date.now()}`,
+      entityType: item.entityType,
+      entityId: item.entityId,
+      kind: item.kind,
+      summary: item.summary,
+      occurredAt: new Date().toISOString(),
+      actorName: item.actorName ?? 'کارمند عملیات',
+      ...(item.metadata ? { metadata: item.metadata } : {}),
+    };
+    this.fallbackTimeline.unshift(newItem);
+    return newItem;
   }
 }
 

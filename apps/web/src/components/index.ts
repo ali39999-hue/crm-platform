@@ -7,3 +7,4 @@ export * from './TaskBoard';
 export * from './TaskList';
 export * from './TaskCalendar';
 export * from './CreateTaskModal';
+export * from './Customer360Drawer';

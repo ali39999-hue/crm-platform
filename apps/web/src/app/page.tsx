@@ -4,11 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type {
   AccountDto,
   AutomationRuleDto,
+  ContactDto,
   CurrentUserDto,
   DashboardKpiReport,
   DealDto,
   LeadDto,
   NotificationDto,
+  TaskDetails,
   TaskPriority,
   TaskStatus,
   TaskSummary,
@@ -20,6 +22,7 @@ import { apiClient } from '../lib/api-client';
 import {
   CreateTaskModal,
   type CreateTaskFormData,
+  Customer360Drawer,
   EmptyState,
   ErrorBanner,
   getPriorityLabel,
@@ -70,6 +73,7 @@ export default function WorkspaceApp() {
   // Domain & Entity States
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [contacts, setContacts] = useState<ContactDto[]>([]);
   const [leads, setLeads] = useState<LeadDto[]>([]);
   const [deals, setDeals] = useState<DealDto[]>([]);
   const [tickets, setTickets] = useState<TicketDto[]>([]);
@@ -79,6 +83,10 @@ export default function WorkspaceApp() {
   const [audits, setAudits] = useState<AuditItem[]>(INITIAL_AUDITS);
   const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
+
+  // Customer 360 Drawer state
+  const [selectedAccount, setSelectedAccount] = useState<AccountDto | null>(null);
+  const [isCustomerDrawerOpen, setIsCustomerDrawerOpen] = useState(false);
 
   // UI feedback states
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +100,40 @@ export default function WorkspaceApp() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  const handleOpenCustomerDrawer = (acc: AccountDto) => {
+    setSelectedAccount(acc);
+    setIsCustomerDrawerOpen(true);
+  };
+
+  const handleContactCreated = (newContact: ContactDto) => {
+    setContacts((prev) => [newContact, ...prev]);
+  };
+
+  const handleDealCreated = (newDeal: DealDto) => {
+    setDeals((prev) => [newDeal, ...prev]);
+  };
+
+  const handleTaskCreatedFromDrawer = (newTask: TaskDetails) => {
+    setTasks((prev) => [newTask, ...prev]);
+    setAudits((prev) => [
+      {
+        id: `aud-${Date.now()}`,
+        action: 'TASK_CREATED',
+        actor: currentUser?.displayName ?? 'کارمند عملیات',
+        entity: `Task:${newTask.key}`,
+        time: 'هم‌اکنون',
+        details: `ایجاد تسک «${newTask.title}» از پنجره ۳۶۰ مشتری`,
+      },
+      ...prev,
+    ]);
+  };
+
+  const handleLeadConvertedFromDrawer = (leadId: string, accountId: string) => {
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, status: 'CONVERTED', accountId } : l)),
+    );
+  };
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -137,6 +179,7 @@ export default function WorkspaceApp() {
         wsRes,
         myTasks,
         accountsRes,
+        contactsRes,
         leadsRes,
         dealsRes,
         ticketsRes,
@@ -148,6 +191,7 @@ export default function WorkspaceApp() {
         apiClient.getWorkspaces(),
         apiClient.getMyWork(),
         apiClient.getAccounts(),
+        apiClient.getContacts(),
         apiClient.getLeads(),
         apiClient.getDeals(),
         apiClient.getTickets(),
@@ -160,6 +204,7 @@ export default function WorkspaceApp() {
       setWorkspaces(wsRes);
       setTasks(myTasks);
       setAccounts(accountsRes);
+      setContacts(contactsRes);
       setLeads(leadsRes);
       setDeals(dealsRes);
       setTickets(ticketsRes);
@@ -552,7 +597,12 @@ export default function WorkspaceApp() {
               padding: '24px',
             }}
           >
-            <h3 style={{ margin: '0 0 8px' }}>مشتریان و خط‌لوله فروش (CRM Core)</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0 }}>مشتریان و خط‌لوله فروش (CRM Core)</h3>
+              <span style={{ fontSize: '12px', color: 'var(--muted)', background: 'var(--soft)', padding: '4px 10px', borderRadius: '8px' }}>
+                💡 برای مشاهده نمای جامع ۳۶۰°، اطلاعات تماس، فرصت‌ها و تایم‌لاین، روی هر سطر کلیک کنید
+              </span>
+            </div>
             <p className="muted" style={{ marginBottom: '20px' }}>
               ماژول مدیریت شرکت‌ها (Accounts)، مخاطبان (Contacts)، سرنخ‌ها (Leads) و فرصت‌های فروش (Deals).
             </p>
@@ -573,6 +623,7 @@ export default function WorkspaceApp() {
                     <th>تلفن تماس</th>
                     <th>فرصت‌های فعال</th>
                     <th>وضعیت</th>
+                    <th style={{ textAlign: 'center' }}>نمای ۳۶۰°</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -581,7 +632,12 @@ export default function WorkspaceApp() {
                     const totalAmount = accDeals.reduce((sum, d) => sum + (d.amountMinor || 0), 0);
 
                     return (
-                      <tr key={acc.id}>
+                      <tr
+                        key={acc.id}
+                        className="table-row-clickable"
+                        onClick={() => handleOpenCustomerDrawer(acc)}
+                        title="برای مشاهده پرونده کامل ۳۶۰ درجه کلیک کنید"
+                      >
                         <td>
                           <strong>{acc.name}</strong>
                           {acc.website && (
@@ -601,6 +657,19 @@ export default function WorkspaceApp() {
                           <span className={`badge ${acc.status === 'ACTIVE' ? 'badge-done' : 'badge-todo'}`}>
                             {acc.status === 'ACTIVE' ? 'فعال' : acc.status}
                           </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            style={{ fontSize: '11px', padding: '4px 10px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCustomerDrawer(acc);
+                            }}
+                          >
+                            نمای ۳۶۰°
+                          </button>
                         </td>
                       </tr>
                     );
@@ -902,6 +971,22 @@ export default function WorkspaceApp() {
         onClose={() => setIsModalOpen(false)}
         onCreateTask={handleCreateTask}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Customer 360 Drawer */}
+      <Customer360Drawer
+        isOpen={isCustomerDrawerOpen}
+        onClose={() => setIsCustomerDrawerOpen(false)}
+        account={selectedAccount}
+        contacts={contacts}
+        deals={deals}
+        tickets={tickets}
+        leads={leads}
+        onContactCreated={handleContactCreated}
+        onDealCreated={handleDealCreated}
+        onTaskCreated={handleTaskCreatedFromDrawer}
+        onLeadConverted={handleLeadConvertedFromDrawer}
+        onToast={showToast}
       />
 
       {/* Toast Notification */}
