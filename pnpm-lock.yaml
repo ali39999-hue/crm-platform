@@ -84,6 +84,12 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@crm/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@crm/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       expo:
         specifier: ^57.0.31
         version: 57.0.31(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.2.3))(react@19.2.3)(typescript@5.9.3)

@@ -11,6 +11,8 @@
     "clean": "rm -rf .expo dist"
   },
   "dependencies": {
+    "@crm/contracts": "workspace:*",
+    "@crm/domain": "workspace:*",
     "expo": "^57.0.31",
     "react": "19.2.3",
     "react-native": "0.86.0"

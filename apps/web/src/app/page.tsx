@@ -317,6 +317,13 @@ export default function WorkspaceApp() {
         </nav>
 
         <div className="sidebar-foot">
+          <a
+            href="/portal"
+            className="secondary-button"
+            style={{ width: '100%', justifyContent: 'center', marginBottom: '12px', color: '#0284c7', borderColor: '#bae6fd', background: '#f0f9ff', textDecoration: 'none' }}
+          >
+            مشاهده پورتال مشتریان ↗
+          </a>
           <strong>برد کانبان تعاملی (Drag & Drop)</strong>
           <div>انتقال وضعیت‌ها بر اساس ماشین حالت دامنه محافظت شده است.</div>
         </div>
