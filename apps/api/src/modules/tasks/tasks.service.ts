@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { assertTaskTransition, type TransitionActorCapabilities } from '@crm/domain';
+import {
+  areBlockingDependenciesResolved,
+  assertNoCycle,
+  assertTaskTransition,
+  type TransitionActorCapabilities,
+} from '@crm/domain';
 import { InMemoryTaskRepository, type TaskEntity } from './task.repository.js';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
 import type { TransitionTaskDto } from './dto/transition-task.dto.js';
@@ -54,7 +59,8 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found in this organization`);
     }
-    return this.mapToDetails(task);
+    const deps = await this.taskRepo.getDependencies(organizationId, id);
+    return this.mapToDetails(task, deps.map((d) => d.id));
   }
 
   async createTask(
@@ -118,6 +124,16 @@ export class TasksService {
       );
     }
 
+    // Check blocking dependencies if transitioning to DONE
+    if (dto.targetStatus === 'DONE') {
+      const deps = await this.taskRepo.getDependencies(organizationId, taskId);
+      if (!areBlockingDependenciesResolved(deps)) {
+        throw new BadRequestException(
+          'Cannot complete task: blocking dependencies are not yet resolved',
+        );
+      }
+    }
+
     // Domain state machine transition check
     try {
       assertTaskTransition(task.status, dto.targetStatus, actorCapabilities);
@@ -159,7 +175,49 @@ export class TasksService {
       },
     });
 
-    return this.mapToDetails(updated);
+    const currentDeps = await this.taskRepo.getDependencies(organizationId, taskId);
+    return this.mapToDetails(updated, currentDeps.map((d) => d.id));
+  }
+
+  async addDependency(
+    organizationId: string,
+    actorId: string,
+    taskId: string,
+    dependsOnId: string,
+    requestId?: string,
+  ): Promise<TaskDetails> {
+    const task = await this.taskRepo.findById(organizationId, taskId);
+    if (!task) {
+      throw new NotFoundException(`Task ${taskId} not found in organization`);
+    }
+
+    const target = await this.taskRepo.findById(organizationId, dependsOnId);
+    if (!target) {
+      throw new NotFoundException(`Target dependency ${dependsOnId} not found in organization`);
+    }
+
+    // Check circular dependencies
+    const existingEdges = await this.taskRepo.getAllDependencyEdges(organizationId);
+    try {
+      assertNoCycle(existingEdges, { taskId, dependsOnId });
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
+
+    await this.taskRepo.addDependency(organizationId, taskId, dependsOnId);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TASK_DEPENDENCY_ADDED',
+      entityType: 'Task',
+      entityId: taskId,
+      requestId,
+      metadata: { taskId, dependsOnId },
+    });
+
+    const deps = await this.taskRepo.getDependencies(organizationId, taskId);
+    return this.mapToDetails(task, deps.map((d) => d.id));
   }
 
   private mapToSummary(t: TaskEntity): TaskSummary {
@@ -179,13 +237,13 @@ export class TasksService {
     };
   }
 
-  private mapToDetails(t: TaskEntity): TaskDetails {
+  private mapToDetails(t: TaskEntity, dependencies: string[] = []): TaskDetails {
     return {
       ...this.mapToSummary(t),
       description: t.description,
       creatorId: t.creatorId,
       commentsCount: 0,
-      dependencies: [],
+      dependencies,
     };
   }
 }

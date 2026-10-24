@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import type { TaskDetails, TaskPriority, TaskStatus, RecordVisibility } from '@crm/contracts';
+import type { TaskPriority, TaskStatus, RecordVisibility } from '@crm/contracts';
+import type { TaskDependencyEdge } from '@crm/domain';
 
 export type TaskEntity = {
   id: string;
@@ -35,12 +36,16 @@ export interface ITaskRepository {
   findById(organizationId: string, id: string): Promise<TaskEntity | null>;
   create(task: Omit<TaskEntity, 'id' | 'key' | 'version' | 'createdAt' | 'updatedAt'>): Promise<TaskEntity>;
   update(task: TaskEntity): Promise<TaskEntity>;
+  getDependencies(organizationId: string, taskId: string): Promise<TaskEntity[]>;
+  getAllDependencyEdges(organizationId: string): Promise<TaskDependencyEdge[]>;
+  addDependency(organizationId: string, taskId: string, dependsOnId: string): Promise<void>;
 }
 
 @Injectable()
 export class InMemoryTaskRepository implements ITaskRepository {
   private tasks: Map<string, TaskEntity> = new Map();
   private orgCounter: Map<string, number> = new Map();
+  private dependencies: Map<string, Set<string>> = new Map(); // taskId -> dependsOnIds
 
   constructor() {
     this.seedDefaultTasks();
@@ -148,7 +153,6 @@ export class InMemoryTaskRepository implements ITaskRepository {
   async findById(organizationId: string, id: string): Promise<TaskEntity | null> {
     const task = this.tasks.get(id);
     if (!task) return null;
-    // Strict tenant isolation: return null if not in requested organization
     if (task.organizationId !== organizationId) {
       return null;
     }
@@ -179,5 +183,41 @@ export class InMemoryTaskRepository implements ITaskRepository {
     };
     this.tasks.set(task.id, updated);
     return updated;
+  }
+
+  async addDependency(organizationId: string, taskId: string, dependsOnId: string): Promise<void> {
+    const deps = this.dependencies.get(taskId) ?? new Set<string>();
+    deps.add(dependsOnId);
+    this.dependencies.set(taskId, deps);
+  }
+
+  async getDependencies(organizationId: string, taskId: string): Promise<TaskEntity[]> {
+    const depIds = this.dependencies.get(taskId);
+    if (!depIds || depIds.size === 0) return [];
+
+    const result: TaskEntity[] = [];
+    for (const depId of depIds) {
+      const task = this.tasks.get(depId);
+      if (task && task.organizationId === organizationId) {
+        result.push(task);
+      }
+    }
+    return result;
+  }
+
+  async getAllDependencyEdges(organizationId: string): Promise<TaskDependencyEdge[]> {
+    const edges: TaskDependencyEdge[] = [];
+    for (const [taskId, dependsOnIds] of this.dependencies.entries()) {
+      const task = this.tasks.get(taskId);
+      if (task && task.organizationId === organizationId) {
+        for (const dependsOnId of dependsOnIds) {
+          const depTask = this.tasks.get(dependsOnId);
+          if (depTask && depTask.organizationId === organizationId) {
+            edges.push({ taskId, dependsOnId });
+          }
+        }
+      }
+    }
+    return edges;
   }
 }

@@ -17,6 +17,7 @@ import { TasksService } from './tasks.service.js';
 import { CreateTaskDto } from './dto/create-task.dto.js';
 import { TransitionTaskDto } from './dto/transition-task.dto.js';
 import { TaskQueryDto } from './dto/task-query.dto.js';
+import { AddDependencyDto } from './dto/add-dependency.dto.js';
 import type { Request } from 'express';
 
 @Controller('tasks')
@@ -79,6 +80,25 @@ export class TasksController {
       id,
       dto,
       { canReopenDoneTask: canReopen, canRestoreCanceledTask: canReopen },
+      requestId,
+    );
+  }
+
+  @Post(':id/dependencies')
+  @RequirePermission('create_or_edit_tasks')
+  async addDependency(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: AddDependencyDto,
+    @Req() req: Request,
+  ) {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.tasksService.addDependency(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      dto.dependsOnId,
       requestId,
     );
   }

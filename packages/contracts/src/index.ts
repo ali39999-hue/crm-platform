@@ -109,3 +109,172 @@ export type WorkspaceDto = {
   role: string;
   isCurrent: boolean;
 };
+
+/* CRM Contracts */
+
+export type AccountDto = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  website?: string | null;
+  phone?: string | null;
+  ownerId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAccountRequest = {
+  name: string;
+  type?: string;
+  website?: string;
+  phone?: string;
+  ownerId?: string;
+};
+
+export type ContactDto = {
+  id: string;
+  accountId?: string | null;
+  accountName?: string | null;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  ownerId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateContactRequest = {
+  accountId?: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  ownerId?: string;
+};
+
+export type LeadDto = {
+  id: string;
+  displayName: string;
+  email?: string | null;
+  phone?: string | null;
+  source?: string | null;
+  status: 'NEW' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED';
+  ownerId?: string | null;
+  accountId?: string | null;
+  convertedContactId?: string | null;
+  convertedDealId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateLeadRequest = {
+  displayName: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  ownerId?: string;
+};
+
+export type ConvertLeadRequest = {
+  idempotencyKey: string;
+  accountName?: string;
+  dealName?: string;
+  dealAmountMinor?: number;
+  dealCurrency?: string;
+};
+
+export type ConvertLeadResponse = {
+  leadId: string;
+  accountId: string;
+  contactId: string;
+  dealId?: string | null;
+};
+
+export type DealDto = {
+  id: string;
+  accountId?: string | null;
+  name: string;
+  stage: string;
+  amountMinor?: number | null;
+  currency?: string | null;
+  probability?: number | null;
+  targetCloseAt?: string | null;
+  ownerId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateDealRequest = {
+  accountId?: string;
+  name: string;
+  stage?: string;
+  amountMinor?: number;
+  currency?: string;
+  probability?: number;
+  targetCloseAt?: string;
+  ownerId?: string;
+};
+
+export type CustomerTimelineItem = {
+  id: string;
+  entityType: 'LEAD' | 'ACCOUNT' | 'CONTACT' | 'DEAL' | 'TICKET';
+  entityId: string;
+  kind: string;
+  summary: string;
+  occurredAt: string;
+  actorName?: string | null;
+  metadata?: Record<string, any>;
+};
+
+/* Support & Ticketing Contracts */
+
+export type TicketStatus =
+  | 'NEW'
+  | 'OPEN'
+  | 'PENDING_CUSTOMER'
+  | 'PENDING_INTERNAL'
+  | 'RESOLVED'
+  | 'CLOSED';
+
+export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export type TicketDto = {
+  id: string;
+  reference: string;
+  title: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  accountId?: string | null;
+  accountName?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  targetResolutionAt?: string;
+  messagesCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TicketMessageDto = {
+  id: string;
+  ticketId: string;
+  authorId?: string | null;
+  authorName?: string | null;
+  body: string;
+  visibility: RecordVisibility;
+  createdAt: string;
+};
+
+export type CreateTicketRequest = {
+  title: string;
+  description: string;
+  priority?: TicketPriority;
+  accountId?: string;
+  assigneeId?: string;
+};
+
+export type AddTicketMessageRequest = {
+  body: string;
+  visibility?: RecordVisibility;
+};

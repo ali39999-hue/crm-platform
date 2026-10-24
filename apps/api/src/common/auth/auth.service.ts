@@ -81,6 +81,20 @@ export class AuthService {
           },
         ],
       },
+      {
+        id: '55555555-5555-5555-5555-555555555555',
+        email: 'support@org-alpha.com',
+        displayName: 'کارشناس پشتیبانی',
+        memberships: [
+          {
+            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            organizationName: 'شرکت آلفا',
+            organizationSlug: 'alpha',
+            role: 'SupportAgent',
+            active: true,
+          },
+        ],
+      },
     ];
 
     for (const u of users) {

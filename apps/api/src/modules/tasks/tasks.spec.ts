@@ -179,4 +179,46 @@ describe('Tasks & Security Vertical Slice', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('5. Task Dependencies and Cycle Prevention', () => {
+    it('successfully links two tasks with dependency', async () => {
+      const taskA = '10000000-0000-0000-0000-000000000001';
+      const taskB = '10000000-0000-0000-0000-000000000002';
+
+      const result = await tasksService.addDependency(orgAlphaId, employeeAlphaId, taskA, taskB);
+      expect(result.dependencies).toContain(taskB);
+
+      const audit = auditService.getEvents(orgAlphaId).find((a) => a.action === 'TASK_DEPENDENCY_ADDED');
+      expect(audit).toBeDefined();
+    });
+
+    it('rejects circular dependencies when adding inverse edge', async () => {
+      const taskA = '10000000-0000-0000-0000-000000000001';
+      const taskB = '10000000-0000-0000-0000-000000000002';
+
+      // First link taskA -> taskB
+      await tasksService.addDependency(orgAlphaId, employeeAlphaId, taskA, taskB);
+
+      // Now attempting inverse link taskB -> taskA creates a cycle!
+      await expect(
+        tasksService.addDependency(orgAlphaId, employeeAlphaId, taskB, taskA),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('prevents completing task if blocking dependency is not resolved', async () => {
+      const taskA = '10000000-0000-0000-0000-000000000001';
+      const taskB = '10000000-0000-0000-0000-000000000002';
+
+      // Link taskA -> taskB (where taskB is IN_PROGRESS)
+      await tasksService.addDependency(orgAlphaId, employeeAlphaId, taskA, taskB);
+
+      // Transitioning taskA to DONE directly must be rejected
+      await expect(
+        tasksService.transitionTask(orgAlphaId, employeeAlphaId, taskA, {
+          targetStatus: 'DONE',
+          expectedVersion: 1,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 });
