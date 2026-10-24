@@ -37,6 +37,8 @@ export class SupportService {
       organizationId,
       accountId: dto.accountId ?? null,
       assigneeId: dto.assigneeId ?? null,
+      customerId: actorId,
+      creatorId: actorId,
       title: dto.title.trim(),
       status: 'NEW',
       priority,

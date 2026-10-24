@@ -382,3 +382,30 @@ export type CreateAutomationRuleRequest = {
   enabled?: boolean;
 };
 
+/* Global Search Contracts */
+
+export type SearchEntityType = 'TASK' | 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'TICKET';
+
+export type SearchResultItem = {
+  id: string;
+  entityType: 'TASK' | 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'TICKET';
+  title: string;
+  subtitle?: string | null;
+  status?: string | null;
+  url: string;
+  createdAt: string;
+};
+
+export type SearchResultDto = {
+  query: string;
+  totalHits: number;
+  items: SearchResultItem[];
+};
+
+export type SearchQueryDto = {
+  q: string;
+  entityTypes?: string[];
+  limit?: number;
+};
+
+

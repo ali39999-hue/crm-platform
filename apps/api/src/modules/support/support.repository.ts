@@ -7,6 +7,8 @@ export type TicketEntity = {
   organizationId: string;
   accountId: string | null;
   assigneeId: string | null;
+  customerId?: string | null;
+  creatorId?: string | null;
   reference: string;
   title: string;
   status: TicketStatus;
@@ -51,6 +53,8 @@ export class InMemorySupportRepository {
       organizationId: orgAlpha,
       accountId: accAlphaId,
       assigneeId: employeeAlpha,
+      customerId,
+      creatorId: customerId,
       reference: 'TKT-1042',
       title: 'عدم دسترسی به ماژول گزارش‌گیری برای کاربر جدید',
       status: 'OPEN',
@@ -130,6 +134,14 @@ export class InMemorySupportRepository {
     this.tickets.set(id, entity);
     this.messages.set(id, []);
     return entity;
+  }
+
+  async isTicketOwnedByUser(organizationId: string, ticketId: string, userId: string): Promise<boolean> {
+    const ticket = this.tickets.get(ticketId);
+    if (!ticket || ticket.organizationId !== organizationId) return false;
+    if (ticket.customerId === userId || ticket.creatorId === userId) return true;
+    const msgs = this.messages.get(ticketId) ?? [];
+    return msgs.some((m) => m.authorId === userId);
   }
 
   async findMessages(
