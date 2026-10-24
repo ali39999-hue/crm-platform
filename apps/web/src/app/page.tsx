@@ -56,6 +56,20 @@ const INITIAL_TASKS: TaskSummary[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: '10000000-0000-0000-0000-000000000004',
+    key: 'TSK-1004',
+    title: 'تنظیمات اولیه زیرساخت کانتینرها و مانیتورینگ',
+    status: 'DONE',
+    priority: 'LOW',
+    visibility: 'INTERNAL',
+    assigneeId: '22222222-2222-2222-2222-222222222222',
+    projectId: null,
+    dueAt: '۱۴۰۵/۰۸/۰۱',
+    version: 3,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 const INITIAL_AUDITS: AuditItem[] = [
@@ -77,13 +91,25 @@ const INITIAL_AUDITS: AuditItem[] = [
   },
 ];
 
+const KANBAN_COLUMNS: Array<{ status: TaskStatus; label: string; badgeClass: string }> = [
+  { status: 'TODO', label: 'در انتظار شروع', badgeClass: 'badge-todo' },
+  { status: 'IN_PROGRESS', label: 'در حال انجام', badgeClass: 'badge-in_progress' },
+  { status: 'IN_REVIEW', label: 'در انتظار بازبینی', badgeClass: 'badge-in_review' },
+  { status: 'DONE', label: 'تکمیل‌شده', badgeClass: 'badge-done' },
+];
+
 export default function WorkspaceApp() {
   const [activeTab, setActiveTab] = useState<'overview' | 'my-work' | 'crm' | 'support' | 'audit'>('my-work');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [tasks, setTasks] = useState<TaskSummary[]>(INITIAL_TASKS);
   const [audits, setAudits] = useState<AuditItem[]>(INITIAL_AUDITS);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Drag and Drop State
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
 
   // New task form fields
   const [newTitle, setNewTitle] = useState('');
@@ -92,7 +118,7 @@ export default function WorkspaceApp() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleCreateTask = (e: React.FormEvent) => {
@@ -138,14 +164,16 @@ export default function WorkspaceApp() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Validate with domain rule
+    if (task.status === targetStatus) return;
+
+    // Validate with domain state machine rule
     const allowed = canTransitionTask(task.status, targetStatus, {
       canReopenDoneTask: true,
       canRestoreCanceledTask: true,
     });
 
     if (!allowed) {
-      showToast(`خطای دامنه: انتقال از ${task.status} به ${targetStatus} مجاز نیست`);
+      showToast(`خطای دامنه: انتقال مستقیم از «${statusLabel(task.status)}» به «${statusLabel(targetStatus)}» مجاز نیست`);
       return;
     }
 
@@ -174,7 +202,37 @@ export default function WorkspaceApp() {
       ...audits,
     ]);
 
-    showToast(`وضعیت تسک ${task.key} به ${statusLabel(targetStatus)} تغییر یافت`);
+    showToast(`وضعیت ${task.key} به «${statusLabel(targetStatus)}» تغییر یافت`);
+  };
+
+  /* HTML5 Drag and Drop handlers */
+  const onDragStart = (e: React.DragEvent, taskId: string) => {
+    setDraggedTaskId(taskId);
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragOver = (e: React.DragEvent, colStatus: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== colStatus) {
+      setDragOverCol(colStatus);
+    }
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    // Only reset if leaving column
+    setDragOverCol(null);
+  };
+
+  const onDrop = (e: React.DragEvent, targetStatus: TaskStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+    if (taskId) {
+      handleTransition(taskId, targetStatus);
+    }
+    setDraggedTaskId(null);
   };
 
   const statusLabel = (s: TaskStatus) => {
@@ -259,8 +317,8 @@ export default function WorkspaceApp() {
         </nav>
 
         <div className="sidebar-foot">
-          <strong>برش عمودی امن (Vertical Slice)</strong>
-          <div>اعتبارسنجی قوانین سرور، تفکیک سازمانی و ثبت Audit Event فعال است.</div>
+          <strong>برد کانبان تعاملی (Drag & Drop)</strong>
+          <div>انتقال وضعیت‌ها بر اساس ماشین حالت دامنه محافظت شده است.</div>
         </div>
       </aside>
 
@@ -278,18 +336,36 @@ export default function WorkspaceApp() {
               {activeTab === 'audit' && 'تاریخچه رویدادهای ممیزی (Audit Trail)'}
             </h1>
             <p className="muted">
-              تمام تغییرات وضعیت بر اساس ماشین حالت دامنه اجرا و ثبت ممیزی می‌شوند.
+              کارت‌ها را بکشید و در ستون مورد نظر رها کنید؛ ماشین حالت دامنه انتقال‌های نامعتبر را کنترل می‌کند.
             </p>
           </div>
           <div className="top-actions">
             {activeTab === 'my-work' && (
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => setIsModalOpen(true)}
-              >
-                + تسک جدید
-              </button>
+              <>
+                <div className="view-switcher" role="radiogroup" aria-label="حالت نمایش">
+                  <button
+                    type="button"
+                    className={`view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
+                    onClick={() => setViewMode('kanban')}
+                  >
+                    <span>▦</span> برد کانبان
+                  </button>
+                  <button
+                    type="button"
+                    className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                    onClick={() => setViewMode('list')}
+                  >
+                    <span>☰</span> فهرست
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  + تسک جدید
+                </button>
+              </>
             )}
           </div>
         </header>
@@ -338,99 +414,205 @@ export default function WorkspaceApp() {
         {/* My Work Tab */}
         {activeTab === 'my-work' && (
           <div>
-            {/* Filter Bar */}
-            <div className="filter-bar">
-              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', marginLeft: '8px' }}>فیلتر وضعیت:</span>
-              {['ALL', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  className={`filter-chip ${statusFilter === st ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(st)}
-                >
-                  {st === 'ALL' && 'همه وظایف'}
-                  {st === 'TODO' && 'در انتظار شروع'}
-                  {st === 'IN_PROGRESS' && 'در حال انجام'}
-                  {st === 'IN_REVIEW' && 'در انتظار بازبینی'}
-                  {st === 'DONE' && 'تکمیل‌شده'}
-                </button>
-              ))}
-            </div>
+            {/* Filter Bar (for list view or global filter) */}
+            {viewMode === 'list' && (
+              <div className="filter-bar">
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', marginLeft: '8px' }}>فیلتر وضعیت:</span>
+                {['ALL', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    className={`filter-chip ${statusFilter === st ? 'active' : ''}`}
+                    onClick={() => setStatusFilter(st)}
+                  >
+                    {st === 'ALL' && 'همه وظایف'}
+                    {st === 'TODO' && 'در انتظار شروع'}
+                    {st === 'IN_PROGRESS' && 'در حال انجام'}
+                    {st === 'IN_REVIEW' && 'در انتظار بازبینی'}
+                    {st === 'DONE' && 'تکمیل‌شده'}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            {/* Tasks Grid */}
-            <div className="task-grid">
-              {filteredTasks.map((t) => (
-                <article className="task-card" key={t.id}>
-                  <div style={{ flex: 1 }}>
-                    <div className="task-meta">
-                      <span className="task-key">{t.key}</span>
-                      <span className={`badge badge-${t.status.toLowerCase()}`}>
-                        {statusLabel(t.status)}
-                      </span>
-                      <span className={`priority-badge priority-${t.priority}`}>
-                        اولویت: {priorityLabel(t.priority)}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>نسخه هم‌زمانی: v{t.version}</span>
+            {/* Kanban Board View */}
+            {viewMode === 'kanban' && (
+              <div className="kanban-board">
+                {KANBAN_COLUMNS.map((col) => {
+                  const colTasks = tasks.filter((t) => t.status === col.status);
+                  const isOver = dragOverCol === col.status;
+
+                  return (
+                    <section
+                      key={col.status}
+                      className="kanban-column"
+                      onDragOver={(e) => onDragOver(e, col.status)}
+                      onDragLeave={onDragLeave}
+                      onDrop={(e) => onDrop(e, col.status)}
+                    >
+                      <header className="kanban-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className={`badge ${col.badgeClass}`}>{col.label}</span>
+                        </div>
+                        <span className="kanban-count">{colTasks.length}</span>
+                      </header>
+
+                      <div className={`kanban-dropzone ${isOver ? 'drag-over' : ''}`}>
+                        {colTasks.map((t) => {
+                          const isDragging = draggedTaskId === t.id;
+
+                          return (
+                            <article
+                              key={t.id}
+                              draggable
+                              onDragStart={(e) => onDragStart(e, t.id)}
+                              className={`kanban-card ${isDragging ? 'dragging' : ''}`}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span className="task-key">{t.key}</span>
+                                <span className={`priority-badge priority-${t.priority}`}>
+                                  {priorityLabel(t.priority)}
+                                </span>
+                              </div>
+
+                              <p className="kanban-card-title">{t.title}</p>
+
+                              <div className="kanban-card-footer">
+                                <span>سررسید: {t.dueAt ?? '—'}</span>
+                                <span>v{t.version}</span>
+                              </div>
+
+                              {/* Accessible quick actions for keyboard users */}
+                              <div className="kanban-card-actions">
+                                {col.status === 'TODO' && (
+                                  <button
+                                    type="button"
+                                    className="quick-action-btn"
+                                    onClick={() => handleTransition(t.id, 'IN_PROGRESS')}
+                                  >
+                                    ▶ شروع
+                                  </button>
+                                )}
+                                {col.status === 'IN_PROGRESS' && (
+                                  <button
+                                    type="button"
+                                    className="quick-action-btn"
+                                    onClick={() => handleTransition(t.id, 'IN_REVIEW')}
+                                  >
+                                    🔍 بازبینی
+                                  </button>
+                                )}
+                                {col.status === 'IN_REVIEW' && (
+                                  <button
+                                    type="button"
+                                    className="quick-action-btn"
+                                    onClick={() => handleTransition(t.id, 'DONE')}
+                                  >
+                                    ✓ اتمام
+                                  </button>
+                                )}
+                                {col.status === 'DONE' && (
+                                  <button
+                                    type="button"
+                                    className="quick-action-btn"
+                                    onClick={() => handleTransition(t.id, 'TODO')}
+                                  >
+                                    ↺ بازگشایی
+                                  </button>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })}
+
+                        {colTasks.length === 0 && (
+                          <div style={{ textAlign: 'center', padding: '32px 12px', color: 'var(--muted)', fontSize: '12px' }}>
+                            کارت را اینجا رها کنید
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* List View */}
+            {viewMode === 'list' && (
+              <div className="task-grid">
+                {filteredTasks.map((t) => (
+                  <article className="task-card" key={t.id}>
+                    <div style={{ flex: 1 }}>
+                      <div className="task-meta">
+                        <span className="task-key">{t.key}</span>
+                        <span className={`badge badge-${t.status.toLowerCase()}`}>
+                          {statusLabel(t.status)}
+                        </span>
+                        <span className={`priority-badge priority-${t.priority}`}>
+                          اولویت: {priorityLabel(t.priority)}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--muted)' }}>نسخه هم‌زمانی: v{t.version}</span>
+                      </div>
+                      <div className="task-title">{t.title}</div>
+                      <p className="task-desc">مهلت انجام: {t.dueAt ?? 'تعیین نشده'}</p>
                     </div>
-                    <div className="task-title">{t.title}</div>
-                    <p className="task-desc">مهلت انجام: {t.dueAt ?? 'تعیین نشده'}</p>
+
+                    {/* Allowed Action Buttons based on Domain State Machine */}
+                    <div className="task-actions">
+                      {t.status === 'TODO' && (
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => handleTransition(t.id, 'IN_PROGRESS')}
+                        >
+                          ▶ شروع کار
+                        </button>
+                      )}
+
+                      {t.status === 'IN_PROGRESS' && (
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          style={{ borderColor: 'var(--warning)', color: 'var(--warning)' }}
+                          onClick={() => handleTransition(t.id, 'IN_REVIEW')}
+                        >
+                          🔍 ارسال برای بازبینی
+                        </button>
+                      )}
+
+                      {t.status === 'IN_REVIEW' && (
+                        <button
+                          type="button"
+                          className="primary-button"
+                          style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                          onClick={() => handleTransition(t.id, 'DONE')}
+                        >
+                          ✓ تأیید و اتمام
+                        </button>
+                      )}
+
+                      {t.status === 'DONE' && (
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => handleTransition(t.id, 'TODO')}
+                        >
+                          ↺ بازگشایی مجدد
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                ))}
+
+                {filteredTasks.length === 0 && (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">📋</div>
+                    <h3>هیچ وظیفه‌ای در این فیلتر یافت نشد</h3>
+                    <p>می‌توانید فیلتر را تغییر دهید یا یک تسک جدید ایجاد کنید.</p>
                   </div>
-
-                  {/* Allowed Action Buttons based on Domain State Machine */}
-                  <div className="task-actions">
-                    {t.status === 'TODO' && (
-                      <button
-                        type="button"
-                        className="primary-button"
-                        onClick={() => handleTransition(t.id, 'IN_PROGRESS')}
-                      >
-                        ▶ شروع کار
-                      </button>
-                    )}
-
-                    {t.status === 'IN_PROGRESS' && (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        style={{ borderColor: 'var(--warning)', color: 'var(--warning)' }}
-                        onClick={() => handleTransition(t.id, 'IN_REVIEW')}
-                      >
-                        🔍 ارسال برای بازبینی
-                      </button>
-                    )}
-
-                    {t.status === 'IN_REVIEW' && (
-                      <button
-                        type="button"
-                        className="primary-button"
-                        style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
-                        onClick={() => handleTransition(t.id, 'DONE')}
-                      >
-                        ✓ تأیید و اتمام
-                      </button>
-                    )}
-
-                    {t.status === 'DONE' && (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => handleTransition(t.id, 'TODO')}
-                      >
-                        ↺ بازگشایی مجدد
-                      </button>
-                    )}
-                  </div>
-                </article>
-              ))}
-
-              {filteredTasks.length === 0 && (
-                <div className="empty-state">
-                  <div className="empty-state-icon">📋</div>
-                  <h3>هیچ وظیفه‌ای در این فیلتر یافت نشد</h3>
-                  <p>می‌توانید فیلتر را تغییر دهید یا یک تسک جدید ایجاد کنید.</p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
