@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -19,6 +20,7 @@ import { CreateContactDto } from './dto/create-contact.dto.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 import { ConvertLeadDto } from './dto/convert-lead.dto.js';
 import { CreateDealDto } from './dto/create-deal.dto.js';
+import { UpdateDealDto } from './dto/update-deal.dto.js';
 import type { Request } from 'express';
 
 @Controller('crm')
@@ -130,6 +132,12 @@ export class CrmController {
     return this.crmService.getDeals(user.activeOrganization.id, accountId);
   }
 
+  @Get('deals/:id')
+  @RequirePermission('view_crm')
+  async getDealById(@CurrentUser() user: UserContext, @Param('id') id: string) {
+    return this.crmService.getDealById(user.activeOrganization.id, id);
+  }
+
   @Post('deals')
   @RequirePermission('edit_crm')
   async createDeal(
@@ -142,6 +150,26 @@ export class CrmController {
     return this.crmService.createDeal(
       user.activeOrganization.id,
       user.id,
+      dto,
+      requestId,
+    );
+  }
+
+  @Patch('deals/:id')
+  @RequirePermission('edit_crm')
+  async updateDeal(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateDealDto,
+    @Req() req: Request,
+  ) {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.updateDeal(
+      user.activeOrganization.id,
+      user.id,
+      user.activeOrganization.role,
+      id,
       dto,
       requestId,
     );

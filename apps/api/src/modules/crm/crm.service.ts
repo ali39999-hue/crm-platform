@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   canConvertLead,
   isDuplicateCandidate,
   normalizeEmail,
   normalizePhone,
+  type MembershipRole,
 } from '@crm/domain';
 import {
   AccountEntity,
@@ -21,6 +23,8 @@ import type { CreateContactDto } from './dto/create-contact.dto.js';
 import type { CreateLeadDto } from './dto/create-lead.dto.js';
 import type { ConvertLeadDto } from './dto/convert-lead.dto.js';
 import type { CreateDealDto } from './dto/create-deal.dto.js';
+import type { UpdateDealDto } from './dto/update-deal.dto.js';
+import { PipelineStageService } from './pipeline/pipeline-stage.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type {
@@ -38,6 +42,7 @@ export class CrmService {
     private readonly crmRepo: InMemoryCrmRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    @Optional() private readonly pipelineStageService?: PipelineStageService,
   ) {}
 
   /* Accounts */
@@ -334,6 +339,14 @@ export class CrmService {
     return list.map((d) => this.mapDeal(d));
   }
 
+  async getDealById(organizationId: string, id: string): Promise<DealDto> {
+    const deal = await this.crmRepo.findDealById(organizationId, id);
+    if (!deal) {
+      throw new NotFoundException(`Deal ${id} not found in this organization`);
+    }
+    return this.mapDeal(deal);
+  }
+
   async createDeal(
     organizationId: string,
     actorId: string,
@@ -347,15 +360,34 @@ export class CrmService {
       }
     }
 
+    const stageKey = dto.stage ?? 'QUALIFICATION';
+    let probability = dto.probability;
+
+    if (this.pipelineStageService) {
+      const stage = await this.pipelineStageService.getStageByKey(organizationId, stageKey);
+      if (!stage) {
+        throw new BadRequestException(
+          `Stage '${stageKey}' is not configured in organization pipeline`,
+        );
+      }
+      if (probability === undefined || probability === null) {
+        probability = stage.defaultProbability;
+      }
+    } else {
+      if (probability === undefined || probability === null) {
+        probability = 10;
+      }
+    }
+
     const deal = await this.crmRepo.createDeal({
       organizationId,
       accountId: dto.accountId ?? null,
       ownerId: dto.ownerId ?? actorId,
       name: dto.name.trim(),
-      stage: dto.stage ?? 'QUALIFICATION',
+      stage: stageKey,
       amountMinor: dto.amountMinor ?? 0,
       currency: dto.currency || 'IRR',
-      probability: dto.probability ?? 10,
+      probability,
       targetCloseAt: dto.targetCloseAt ?? null,
     });
 
@@ -378,6 +410,84 @@ export class CrmService {
     });
 
     return this.mapDeal(deal);
+  }
+
+  async updateDeal(
+    organizationId: string,
+    actorId: string,
+    actorRole: MembershipRole | string,
+    dealId: string,
+    dto: UpdateDealDto,
+    requestId?: string,
+  ): Promise<DealDto> {
+    const deal = await this.crmRepo.findDealById(organizationId, dealId);
+    if (!deal) {
+      throw new NotFoundException(`Deal ${dealId} not found in this organization`);
+    }
+
+    if (dto.accountId) {
+      const account = await this.crmRepo.findAccountById(organizationId, dto.accountId);
+      if (!account) {
+        throw new NotFoundException(`Account ${dto.accountId} not found in organization`);
+      }
+      deal.accountId = dto.accountId;
+    }
+
+    if (dto.name !== undefined) deal.name = dto.name.trim();
+    if (dto.amountMinor !== undefined) deal.amountMinor = dto.amountMinor;
+    if (dto.currency !== undefined) deal.currency = dto.currency;
+    if (dto.ownerId !== undefined) deal.ownerId = dto.ownerId;
+    if (dto.targetCloseAt !== undefined) deal.targetCloseAt = dto.targetCloseAt;
+
+    if (dto.stage && dto.stage !== deal.stage) {
+      if (this.pipelineStageService) {
+        await this.pipelineStageService.validateTransition(
+          organizationId,
+          deal.stage,
+          dto.stage,
+          actorRole,
+        );
+      }
+      deal.stage = dto.stage;
+
+      // If probability was not explicitly provided, update to stage default probability
+      if (dto.probability === undefined) {
+        if (this.pipelineStageService) {
+          deal.probability = await this.pipelineStageService.getStageProbability(
+            organizationId,
+            dto.stage,
+          );
+        }
+      }
+    }
+
+    if (dto.probability !== undefined) {
+      deal.probability = dto.probability;
+    }
+
+    const updated = await this.crmRepo.updateDeal(deal);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_DEAL_UPDATED',
+      entityType: 'Deal',
+      entityId: deal.id,
+      requestId,
+      metadata: {
+        updates: dto,
+      },
+    });
+
+    this.outboxService.emit({
+      organizationId,
+      eventType: 'CrmDealUpdated',
+      aggregateType: 'Deal',
+      aggregateId: deal.id,
+      payload: { name: deal.name, stage: deal.stage },
+    });
+
+    return this.mapDeal(updated);
   }
 
   /* Customer 360 Timeline */

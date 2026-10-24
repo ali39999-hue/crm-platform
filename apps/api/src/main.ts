@@ -5,13 +5,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
+import { MetricsService } from './common/observability/metrics.service.js';
+import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
 
-  app.useGlobalInterceptors(new RequestIdInterceptor());
+  const metricsService = app.get(MetricsService);
+  app.useGlobalInterceptors(new RequestIdInterceptor(), new MetricsInterceptor(metricsService));
   app.useGlobalFilters(new GlobalHttpExceptionFilter());
 
   app.useGlobalPipes(

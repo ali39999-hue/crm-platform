@@ -217,6 +217,55 @@ export type CreateDealRequest = {
   ownerId?: string;
 };
 
+export type UpdateDealRequest = {
+  accountId?: string;
+  name?: string;
+  stage?: string;
+  amountMinor?: number;
+  currency?: string;
+  probability?: number;
+  targetCloseAt?: string;
+  ownerId?: string;
+};
+
+export type PipelineStageDto = {
+  id: string;
+  organizationId: string;
+  name: string;
+  key: string;
+  order: number;
+  defaultProbability: number;
+  isWon: boolean;
+  isLost: boolean;
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreatePipelineStageRequest = {
+  name: string;
+  key: string;
+  order?: number;
+  defaultProbability?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+  color?: string;
+};
+
+export type UpdatePipelineStageRequest = {
+  name?: string;
+  key?: string;
+  order?: number;
+  defaultProbability?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+  color?: string;
+};
+
+export type ReorderPipelineStagesRequest = {
+  stageIds: string[];
+};
+
 export type CustomerTimelineItem = {
   id: string;
   entityType: 'LEAD' | 'ACCOUNT' | 'CONTACT' | 'DEAL' | 'TICKET';
@@ -304,6 +353,34 @@ export type NotificationPreferencesDto = {
   email: boolean;
   push: boolean;
   digest: boolean;
+  sms?: boolean | undefined;
+  quietHours?: {
+    enabled: boolean;
+    start: string;
+    end: string;
+    timeZone?: string | undefined;
+  } | undefined;
+};
+
+export type DeadLetterStatus = 'PENDING_RETRY' | 'FAILED' | 'RESOLVED';
+
+export type DeadLetterNotificationDto = {
+  id: string;
+  organizationId: string;
+  userId: string;
+  channel: string;
+  recipient: string;
+  title: string;
+  message: string;
+  payload?: Record<string, any> | undefined;
+  dedupeKey?: string | null | undefined;
+  retryCount: number;
+  maxRetries: number;
+  lastError: string;
+  status: DeadLetterStatus;
+  createdAt: string;
+  failedAt: string;
+  resolvedAt?: string | null | undefined;
 };
 
 /* Reporting & Analytics Contracts */

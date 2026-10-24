@@ -1,10 +1,18 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import type {
   INotificationRepository,
   NotificationEntity,
 } from './notification.repository.js';
-import type { NotificationDto, NotificationPreferencesDto } from '@crm/contracts';
+import type {
+  DeadLetterNotificationDto,
+  NotificationDto,
+  NotificationPreferencesDto,
+} from '@crm/contracts';
 import { OutboxEvent, OutboxService } from '../outbox/outbox.service.js';
+import {
+  NotificationDispatcherService,
+  type RetryDeadLetterResult,
+} from './notification-dispatcher.service.js';
 
 @Injectable()
 export class NotificationService {
@@ -14,6 +22,8 @@ export class NotificationService {
     @Inject('NOTIFICATION_REPOSITORY')
     private readonly notificationRepo: INotificationRepository,
     private readonly outboxService: OutboxService,
+    @Optional()
+    private readonly dispatcherService?: NotificationDispatcherService,
   ) {}
 
   async getMyNotifications(organizationId: string, userId: string, limit = 50): Promise<NotificationDto[]> {
@@ -42,6 +52,18 @@ export class NotificationService {
     return this.notificationRepo.setPreferences(userId, prefs);
   }
 
+  async getDeadLetters(organizationId: string, limit = 50): Promise<DeadLetterNotificationDto[]> {
+    if (!this.dispatcherService) return [];
+    return this.dispatcherService.getDeadLetters(organizationId, limit);
+  }
+
+  async retryDeadLetter(organizationId: string, id: string): Promise<RetryDeadLetterResult> {
+    if (!this.dispatcherService) {
+      throw new NotFoundException(`Dead-letter notification dispatcher not available`);
+    }
+    return this.dispatcherService.retryDeadLetter(organizationId, id);
+  }
+
   /**
    * Dispatches notifications triggered by domain/outbox events (idempotent via dedupeKey)
    */
@@ -49,25 +71,59 @@ export class NotificationService {
     const { organizationId, eventType, aggregateId, payload } = event;
 
     if (eventType === 'TaskCreated' && payload.assigneeId) {
-      await this.notificationRepo.create({
-        organizationId,
-        userId: payload.assigneeId,
-        type: 'TASK_ASSIGNED',
-        title: 'تخصیص وظیفه جدید',
-        message: `وظیفه ${payload.key} (${payload.title}) به شما واگذار شد.`,
-        payload: { taskId: aggregateId, key: payload.key },
-        dedupeKey: `task-created-${aggregateId}-${payload.assigneeId}`,
-      });
+      const title = 'تخصیص وظیفه جدید';
+      const message = `وظیفه ${payload.key} (${payload.title}) به شما واگذار شد.`;
+      const dedupeKey = `task-created-${aggregateId}-${payload.assigneeId}`;
+      const notifPayload = { taskId: aggregateId, key: payload.key };
+
+      if (this.dispatcherService) {
+        await this.dispatcherService.dispatch({
+          organizationId,
+          userId: payload.assigneeId,
+          type: 'TASK_ASSIGNED',
+          title,
+          message,
+          payload: notifPayload,
+          dedupeKey,
+        });
+      } else {
+        await this.notificationRepo.create({
+          organizationId,
+          userId: payload.assigneeId,
+          type: 'TASK_ASSIGNED',
+          title,
+          message,
+          payload: notifPayload,
+          dedupeKey,
+        });
+      }
     } else if (eventType === 'TaskStatusTransitioned' && payload.actorId) {
-      await this.notificationRepo.create({
-        organizationId,
-        userId: payload.actorId,
-        type: 'TASK_STATUS_CHANGED',
-        title: 'تغییر وضعیت وظیفه',
-        message: `وضعیت وظیفه ${payload.key} از ${payload.fromStatus} به ${payload.toStatus} تغییر کرد.`,
-        payload: { taskId: aggregateId, key: payload.key, status: payload.toStatus },
-        dedupeKey: `task-transition-${aggregateId}-${payload.toStatus}`,
-      });
+      const title = 'تغییر وضعیت وظیفه';
+      const message = `وضعیت وظیفه ${payload.key} از ${payload.fromStatus} به ${payload.toStatus} تغییر کرد.`;
+      const dedupeKey = `task-transition-${aggregateId}-${payload.toStatus}`;
+      const notifPayload = { taskId: aggregateId, key: payload.key, status: payload.toStatus };
+
+      if (this.dispatcherService) {
+        await this.dispatcherService.dispatch({
+          organizationId,
+          userId: payload.actorId,
+          type: 'TASK_STATUS_CHANGED',
+          title,
+          message,
+          payload: notifPayload,
+          dedupeKey,
+        });
+      } else {
+        await this.notificationRepo.create({
+          organizationId,
+          userId: payload.actorId,
+          type: 'TASK_STATUS_CHANGED',
+          title,
+          message,
+          payload: notifPayload,
+          dedupeKey,
+        });
+      }
     } else if (eventType === 'CrmLeadConverted') {
       this.logger.log(`Notification processed for lead conversion ${aggregateId}`);
     }

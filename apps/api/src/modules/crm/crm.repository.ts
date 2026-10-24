@@ -258,4 +258,10 @@ export class InMemoryCrmRepository {
     this.deals.set(id, entity);
     return entity;
   }
+
+  async updateDeal(deal: DealEntity): Promise<DealEntity> {
+    const updated = { ...deal, updatedAt: new Date().toISOString() };
+    this.deals.set(deal.id, updated);
+    return updated;
+  }
 }

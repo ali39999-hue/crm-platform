@@ -9,6 +9,7 @@ import { ReportingController } from './modules/reporting/reporting.controller.js
 import { AutomationController } from './modules/automation/automation.controller.js';
 import { ActivityController } from './modules/activity/activity.controller.js';
 import { ImportExportController } from './modules/crm/csv/import-export.controller.js';
+import { PipelineStageController } from './modules/crm/pipeline/pipeline-stage.controller.js';
 import { SearchController } from './modules/search/search.controller.js';
 import { WebhookController } from './modules/integrations/webhook.controller.js';
 import { FilesController } from './modules/files/files.controller.js';
@@ -26,11 +27,18 @@ import { InMemoryTaskRepository } from './modules/tasks/task.repository.js';
 import { PrismaTaskRepository } from './modules/tasks/prisma-task.repository.js';
 import { TasksService } from './modules/tasks/tasks.service.js';
 import { InMemoryCrmRepository } from './modules/crm/crm.repository.js';
+import { PipelineStageRepository } from './modules/crm/pipeline/pipeline-stage.repository.js';
+import { PipelineStageService } from './modules/crm/pipeline/pipeline-stage.service.js';
 import { CrmService } from './modules/crm/crm.service.js';
 import { InMemorySupportRepository } from './modules/support/support.repository.js';
 import { SupportService } from './modules/support/support.service.js';
 import { InMemoryNotificationRepository } from './modules/notifications/notification.repository.js';
+import { InMemoryNotificationDlqRepository } from './modules/notifications/notification-dlq.repository.js';
 import { NotificationService } from './modules/notifications/notification.service.js';
+import { NotificationDispatcherService } from './modules/notifications/notification-dispatcher.service.js';
+import { EmailAdapter } from './modules/notifications/adapters/email.adapter.js';
+import { PushAdapter } from './modules/notifications/adapters/push.adapter.js';
+import { SmsAdapter } from './modules/notifications/adapters/sms.adapter.js';
 import { ReportingService } from './modules/reporting/reporting.service.js';
 import { InMemoryAutomationRepository } from './modules/automation/automation.repository.js';
 import { AutomationService } from './modules/automation/automation.service.js';
@@ -40,6 +48,8 @@ import { ImportExportService } from './modules/crm/csv/import-export.service.js'
 import { SearchService } from './modules/search/search.service.js';
 import { InMemoryWebhookRepository } from './modules/integrations/webhook.repository.js';
 import { WebhookService } from './modules/integrations/webhook.service.js';
+import { MetricsService } from './common/observability/metrics.service.js';
+import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
 
 @Module({
   imports: [PrismaModule],
@@ -48,6 +58,7 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
     AuthController,
     TasksController,
     CrmController,
+    PipelineStageController,
     ImportExportController,
     SupportController,
     NotificationController,
@@ -74,6 +85,8 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
     PrismaTaskRepository,
     TasksService,
     InMemoryCrmRepository,
+    PipelineStageRepository,
+    PipelineStageService,
     CrmService,
     ImportExportService,
     InMemorySupportRepository,
@@ -83,6 +96,15 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
       useClass: InMemoryNotificationRepository,
     },
     InMemoryNotificationRepository,
+    {
+      provide: 'NOTIFICATION_DLQ_REPOSITORY',
+      useClass: InMemoryNotificationDlqRepository,
+    },
+    InMemoryNotificationDlqRepository,
+    EmailAdapter,
+    PushAdapter,
+    SmsAdapter,
+    NotificationDispatcherService,
     NotificationService,
     ReportingService,
     InMemoryAutomationRepository,
@@ -92,6 +114,8 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
     SearchService,
     InMemoryWebhookRepository,
     WebhookService,
+    MetricsService,
+    MetricsInterceptor,
   ],
   exports: [
     AuthService,
@@ -104,16 +128,24 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
     PrismaTaskRepository,
     TasksService,
     InMemoryCrmRepository,
+    PipelineStageRepository,
+    PipelineStageService,
     CrmService,
     ImportExportService,
     InMemorySupportRepository,
     SupportService,
+    EmailAdapter,
+    PushAdapter,
+    SmsAdapter,
+    InMemoryNotificationDlqRepository,
+    NotificationDispatcherService,
     NotificationService,
     ReportingService,
     AutomationService,
     ActivityService,
     SearchService,
     WebhookService,
+    MetricsService,
   ],
 })
 export class AppModule implements NestModule {

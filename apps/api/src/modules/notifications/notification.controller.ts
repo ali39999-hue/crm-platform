@@ -1,23 +1,46 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
   Put,
   Query,
   UseGuards,
+  Optional,
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { NotificationService } from './notification.service.js';
-import type { NotificationDto, NotificationPreferencesDto } from '@crm/contracts';
+import {
+  NotificationDispatcherService,
+  type RetryDeadLetterResult,
+} from './notification-dispatcher.service.js';
+import type {
+  DeadLetterNotificationDto,
+  NotificationDto,
+  NotificationPreferencesDto,
+} from '@crm/contracts';
 
 @Controller('notifications')
 @UseGuards(AuthGuard)
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    @Optional()
+    private readonly dispatcherService?: NotificationDispatcherService,
+  ) {}
+
+  private checkAdminRole(user: UserContext): void {
+    const role = user?.activeOrganization?.role;
+    if (role !== 'SystemOwner' && role !== 'OrganizationAdmin') {
+      throw new ForbiddenException(
+        'Admin permissions (SystemOwner or OrganizationAdmin) required for dead-letter queue operations',
+      );
+    }
+  }
 
   @Get()
   async getMyNotifications(
@@ -28,6 +51,42 @@ export class NotificationController {
       user.activeOrganization.id,
       user.id,
       limit ? Number(limit) : 50,
+    );
+  }
+
+  @Get('dlq')
+  async getDeadLetters(
+    @CurrentUser() user: UserContext,
+    @Query('limit') limit?: number,
+  ): Promise<DeadLetterNotificationDto[]> {
+    this.checkAdminRole(user);
+    if (this.dispatcherService) {
+      return this.dispatcherService.getDeadLetters(
+        user.activeOrganization.id,
+        limit ? Number(limit) : 50,
+      );
+    }
+    return this.notificationService.getDeadLetters(
+      user.activeOrganization.id,
+      limit ? Number(limit) : 50,
+    );
+  }
+
+  @Post('dlq/:id/retry')
+  async retryDeadLetter(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ): Promise<RetryDeadLetterResult> {
+    this.checkAdminRole(user);
+    if (this.dispatcherService) {
+      return this.dispatcherService.retryDeadLetter(
+        user.activeOrganization.id,
+        id,
+      );
+    }
+    return this.notificationService.retryDeadLetter(
+      user.activeOrganization.id,
+      id,
     );
   }
 
