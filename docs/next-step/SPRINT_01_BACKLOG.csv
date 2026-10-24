@@ -1,0 +1,16 @@
+ID,Priority,Area,Task,Acceptance Criteria,Dependencies
+CRM-001,P0,CI,Fix pnpm setup order and update action runtimes,The latest GitHub Actions run reaches typecheck test and build and does not report missing pnpm,None
+CRM-002,P0,CI,Verify frozen lockfile install,CI uses pnpm install --frozen-lockfile and succeeds on clean runner,CRM-001
+CRM-003,P1,Backend,Add Prisma provider/client and validate schema,Prisma generation and database connectivity are validated in isolated integration tests,CRM-002
+CRM-004,P1,Backend,Introduce TaskRepository interface and Prisma adapter,Production provider uses PostgreSQL and in-memory repository is test-only,CRM-003
+CRM-005,P1,Backend,Implement organization-scoped task CRUD,All task queries include authorized organization scope and negative cross-org tests pass,CRM-004
+CRM-006,P1,Backend,Implement task status transition and optimistic concurrency,Invalid transitions are rejected and stale version updates return conflict,CRM-004
+CRM-007,P1,Backend,Persist audit events for task mutations,Successful mutations create corresponding audit events and failures do not leave partial changes,CRM-004
+CRM-008,P1,Web,Add typed API client and connect task list/create/transition,Web reads and mutates persisted tasks through the API; no mock path is used in production route,CRM-005;CRM-006
+CRM-009,P1,Mobile,Connect tasks and tickets to API,App reads and mutates server data and never reports unconfirmed writes as successful,CRM-005;CRM-006
+CRM-010,P1,Mobile,Implement durable offline mutation queue,Queue survives app restart and uses mutation IDs/idempotency/retry/conflict states,CRM-009
+CRM-011,P1,QA,Add tenant authorization integration tests,User from org A cannot read or mutate org B records via id or list filters,CRM-005
+CRM-012,P1,QA,Add web end-to-end task flow,Create task change state reload and verify persisted state,CRM-008
+CRM-013,P1,QA,Add mobile bundle/export check to CI,Expo export/build fails CI on invalid native dependency or bundling failure,CRM-002
+CRM-014,P2,Frontend,Refactor large page and App components,Features are separated into testable components/screens without changing behavior,CRM-008;CRM-009
+CRM-015,P1,Security,Verify auth and authorization on all business endpoints,Unauthenticated and underprivileged requests are rejected server-side,CRM-005
