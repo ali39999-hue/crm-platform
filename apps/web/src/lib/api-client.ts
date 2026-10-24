@@ -5,6 +5,14 @@
  */
 
 import type {
+  AutomationRuleDto,
+  CreateAutomationRuleRequest,
+  CrmFunnelReport,
+  DashboardKpiReport,
+  NotificationDto,
+  NotificationPreferencesDto,
+  SupportSlaReport,
+  WorkloadReportItem,
   AccountDto,
   AddTicketMessageRequest,
   ApiError,
@@ -927,6 +935,42 @@ export class ApiClient {
     }
   }
 
+  private fallbackNotifications: NotificationDto[] = [
+    {
+      id: '99000000-0000-0000-0000-000000000001',
+      type: 'TASK_ASSIGNED',
+      title: 'تخصیص وظیفه جدید',
+      message: 'وظیفه TSK-1001 به شما واگذار شد.',
+      readAt: null,
+      dedupeKey: 'task-assign-1001',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: '99000000-0000-0000-0000-000000000002',
+      type: 'TICKET_REPLIED',
+      title: 'پیام جدید در تیکت',
+      message: 'پیام جدیدی در تیکت TKT-1042 ثبت شد.',
+      readAt: null,
+      dedupeKey: 'ticket-reply-1042',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+    },
+  ];
+
+  private fallbackRules: AutomationRuleDto[] = [
+    {
+      id: '88000000-0000-0000-0000-000000000001',
+      name: 'اطلاع‌رسانی خودکار برای وظایف با اولویت فوری',
+      trigger: 'TASK_CREATED',
+      conditionField: 'priority',
+      conditionValue: 'URGENT',
+      actionType: 'SEND_NOTIFICATION',
+      actionPayload: { title: 'وظیفه فوری', message: 'وظیفه با اولویت فوری ایجاد گردید.' },
+      enabled: true,
+      executionCount: 2,
+      lastExecutedAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+  ];
+
   /* ---------------- Support & Ticketing ---------------- */
 
   async getTickets(accountId?: string): Promise<TicketDto[]> {
@@ -1067,6 +1111,130 @@ export class ApiClient {
         }
 
         return { ...newMsg };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Notifications ---------------- */
+
+  async getNotifications(limit = 50): Promise<NotificationDto[]> {
+    try {
+      return await this.request<NotificationDto[]>(`/notifications?limit=${limit}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackNotifications.map((n) => ({ ...n }));
+      }
+      throw err;
+    }
+  }
+
+  async markNotificationAsRead(id: string): Promise<NotificationDto> {
+    try {
+      return await this.request<NotificationDto>(`/notifications/${encodeURIComponent(id)}/read`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackNotifications.find((n) => n.id === id);
+        if (found) {
+          found.readAt = new Date().toISOString();
+          return { ...found };
+        }
+      }
+      throw err;
+    }
+  }
+
+  async markAllNotificationsAsRead(): Promise<{ count: number }> {
+    try {
+      return await this.request<{ count: number }>('/notifications/read-all', {
+        method: 'POST',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        let c = 0;
+        this.fallbackNotifications.forEach((n) => {
+          if (!n.readAt) {
+            n.readAt = now;
+            c++;
+          }
+        });
+        return { count: c };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Reporting & KPIs ---------------- */
+
+  async getDashboardKpi(): Promise<DashboardKpiReport> {
+    try {
+      return await this.request<DashboardKpiReport>('/reporting/dashboard');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          workload: [
+            {
+              userId: DEFAULT_EMPLOYEE_ID,
+              userName: 'کارمند عملیات',
+              activeTasksCount: this.fallbackTasks.filter((t) => t.status !== 'DONE').length,
+              overdueTasksCount: 0,
+              completedTasksCount: this.fallbackTasks.filter((t) => t.status === 'DONE').length,
+            },
+          ],
+          crmFunnel: {
+            totalLeads: this.fallbackLeads.length,
+            convertedLeads: this.fallbackLeads.filter((l) => l.status === 'CONVERTED').length,
+            conversionRatePercent: 33,
+            totalDealsValue: this.fallbackDeals.reduce((acc, d) => acc + (d.amountMinor ?? 0), 0),
+            weightedPipelineValue: 450000000,
+            stagesBreakdown: [
+              { stage: 'LEAD', count: 1, amount: 250000000 },
+              { stage: 'NEGOTIATION', count: 1, amount: 1200000000 },
+            ],
+          },
+          supportSla: {
+            totalTickets: this.fallbackTickets.length,
+            openTickets: this.fallbackTickets.filter((t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED').length,
+            resolvedTickets: this.fallbackTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
+            slaBreachRatePercent: 0,
+            averageResolutionHours: 3.5,
+          },
+          generatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Automation Rules ---------------- */
+
+  async getAutomationRules(): Promise<AutomationRuleDto[]> {
+    try {
+      return await this.request<AutomationRuleDto[]>('/automation/rules');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackRules.map((r) => ({ ...r }));
+      }
+      throw err;
+    }
+  }
+
+  async toggleAutomationRule(id: string, enabled: boolean): Promise<AutomationRuleDto> {
+    try {
+      return await this.request<AutomationRuleDto>(`/automation/rules/${encodeURIComponent(id)}/toggle`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled }),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackRules.find((r) => r.id === id);
+        if (found) {
+          found.enabled = enabled;
+          return { ...found };
+        }
       }
       throw err;
     }

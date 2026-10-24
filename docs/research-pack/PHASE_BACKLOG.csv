@@ -1,0 +1,69 @@
+﻿phase_id,phase_name_fa,target_window,task_id,task_title_fa,owner,priority,acceptance_criteria_fa
+F0,تحقیق و تصمیم‌های معماری,هفته 1,F0-01,ثبت نقش‌ها و پرسونای کارکنان، مدیر، فروش، پشتیبانی و مشتری,Product,P0,RACI/permission matrix و 5 مسیر کار اصلی تأیید شده‌اند
+F0,تحقیق و تصمیم‌های معماری,هفته 1,F0-02,تعریف MVP و out-of-scope,Product/Tech Lead,P0,اولویت‌های P0/P1/P2 و عدم‌هدف‌ها ثبت شده‌اند
+F0,تحقیق و تصمیم‌های معماری,هفته 1,F0-03,ثبت ADR برای UI stack، auth، offline، search، notifications,Tech Lead,P0,هر تصمیم گزینه‌ها، دلیل و ریسک دارد
+F0,تحقیق و تصمیم‌های معماری,هفته 1,F0-04,ممیزی LICENSE برای تمام کدها، فونت‌ها، آیکون‌ها و قالب‌ها,Engineering/Legal,P0,SBOM/license inventory با notice obligations تولید شده
+F0,تحقیق و تصمیم‌های معماری,هفته 1,F0-05,Benchmark UX از Twenty، Plane، Chatwoot و Jira/Linear/HubSpot,Design,P0,اسکرین/flow matrix داخلی ثبت شده؛ کپی ظاهری بدون طراحی محصول انجام نشده
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-01,اصلاح ترتیب نصب pnpm و setup-node در GitHub Actions,Platform,P0,CI از clean runner تا install بدون خطا می‌رسد
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-02,یکپارچه کردن packageManager، Node version و lockfile,Platform,P0,clean install با frozen lockfile موفق است
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-03,اضافه کردن lint، typecheck، unit tests و build به CI,Platform,P0,همه gateها اجباری و fail-fast هستند
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-04,تثبیت env schema و .env.example بدون secret,Backend/Platform,P0,startup با متغیر ناقص خطای واضح می‌دهد؛ secret در Git نیست
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-05,Docker Compose توسعه، health checks و seed امن,Platform,P1,دیتابیس و Redis با healthcheck آماده هستند
+F1,سبز کردن CI و مهندسی پایه,هفته 1,F1-06,قواعد PR، CODEOWNERS، branch protection و conventional commits,Maintainers,P1,تغییر main بدون green checks ممنوع است
+F2,Design System و UX foundations,هفته 2–3,F2-01,"ثبت visual tokens: color, spacing, radius, typography, elevation",Design/FE,P0,tokens در یک منبع مشترک تعریف شده‌اند
+F2,Design System و UX foundations,هفته 2–3,F2-02,انتخاب یک پایه UI؛ اجرای prototype 3 صفحه با shadcn/Radix در برابر kit جایگزین,Design/FE,P0,"تصمیم براساس usability, RTL, data density و maintenability ثبت شده"
+F2,Design System و UX foundations,هفته 2–3,F2-03,"ساخت Button, Input, Select, Combobox, Dialog, Drawer, Toast, Badge, Avatar",FE,P0,states default/hover/focus/disabled/loading/error در Storybook وجود دارند
+F2,Design System و UX foundations,هفته 2–3,F2-04,"ساخت AppShell, sidebar, topbar, breadcrumb, command/search palette",FE,P0,keyboard navigation و active route قابل تست است
+F2,Design System و UX foundations,هفته 2–3,F2-05,ساخت DataTable استاندارد با sort/filter/selection/pagination,FE,P0,server-side state و URL filters پایدارند؛ empty/error/loading پوشش دارد
+F2,Design System و UX foundations,هفته 2–3,F2-06,ساخت فرم‌الگوها و validation messages فارسی/انگلیسی,FE/Design,P0,خطای field-level قابل فهم است و focus به خطا منتقل می‌شود
+F2,Design System و UX foundations,هفته 2–3,F2-07,تکمیل RTL/LTR، locale dates/numbers و responsive breakpoints,FE,P0,صفحات حیاتی در 360px، 768px و desktop قابل استفاده‌اند
+F2,Design System و UX foundations,هفته 2–3,F2-08,Accessibility baseline WCAG 2.2 AA برای flowهای حیاتی,QA/Design,P0,keyboard-only، focus visibility و axe checks قبول هستند
+F2,Design System و UX foundations,هفته 2–3,F2-09,مرجع visual regression و Storybook review,FE/QA,P1,stories برای stateهای کلیدی و review checklist وجود دارد
+F3,Task vertical slice واقعی,هفته 3–4,F3-01,"تکمیل مدل Task, Project, Membership, Comment, Attachment metadata",Backend,P0,FKها، indexes، tenant_id و deletion policy مستند شده‌اند
+F3,Task vertical slice واقعی,هفته 3–4,F3-02,ایجاد Prisma migration معتبر و seed داده فقط در dev/test,Backend,P0,migration از دیتابیس خالی اجرا و rollback/restore plan مشخص است
+F3,Task vertical slice واقعی,هفته 3–4,F3-03,جایگزینی InMemoryTaskRepository با PrismaTaskRepository,Backend,P0,داده بعد از restart باقی می‌ماند؛ repository test موجود است
+F3,Task vertical slice واقعی,هفته 3–4,F3-04,DTO validation، auth guard و organization scope در همه endpointها,Backend/Security,P0,negative tests منع cross-tenant access را اثبات می‌کنند
+F3,Task vertical slice واقعی,هفته 3–4,F3-05,گردش وضعیت Task با transition map سمت سرور,Backend,P0,transition نامعتبر رد و transition مجاز audit می‌شود
+F3,Task vertical slice واقعی,هفته 3–4,F3-06,تاریخچه audit append-only و correlation/request id,Backend,P0,"actor, entity, action, timestamp و metadata ثبت می‌شود؛ اطلاعات حساس redact است"
+F3,Task vertical slice واقعی,هفته 3–4,F3-07,وب: جایگزینی INITIAL_TASKS با API و cache invalidation,FE,P0,CRUD به server می‌رود؛ reload همان داده را بازیابی می‌کند
+F3,Task vertical slice واقعی,هفته 3–4,F3-08,"وب: loading, empty, error, retry, optimistic update و conflict handling",FE,P0,موفقیت کاذب وجود ندارد و retry duplicate نمی‌سازد
+F3,Task vertical slice واقعی,هفته 3–4,F3-09,API contract/OpenAPI و contract tests,Backend/QA,P1,spec با implementation سازگار و در CI اعتبارسنجی می‌شود
+F3,Task vertical slice واقعی,هفته 3–4,F3-10,E2E مسیر create → update → reload → permissions,QA,P0,سناریوی حیاتی روی CI pass می‌شود
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-01,تعریف permissions بر اساس resource/action/scope,Security/Product,P0,"matrix برای member, manager, admin, support, customer تأیید شده"
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-02,Backend authorization policy و object-level access checks,Backend,P0,هر query و mutation tenant/ownership scope دارد
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-03,امن‌سازی session/cookie/token و refresh/logout/revocation,Backend/Security,P0,session lifecycle و CSRF/XSS threat review انجام شده
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-04,rate limit، brute-force protection و security headers,Backend/Platform,P1,تست abuse و baseline headers در CI/pass گزارش شده
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-05,file upload allowlist، size limits، malware scanning plan و signed access,Backend/Security,P1,دسترسی فایل براساس مجوز و tenant کنترل می‌شود
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-06,"privacy, retention, export/delete workflow و PII redaction",Product/Security,P1,policyها و auditهای مربوط مستند شده‌اند
+F4,هویت، نقش‌ها و امنیت سازمانی,هفته 4–5,F4-07,threat model و dependency/SBOM scan,Security,P0,ریسک‌های بالا owner و mitigation دارند
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-01,"مدل Organization/Company, Contact, Lead, Deal, Activity",Backend,P0,روابط و unique constraints مناسب مستند و تست شده‌اند
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-02,تشخیص duplicate با email/phone normalization و merge review,Backend/Product,P1,duplicateها حذف خودکار مخرب نمی‌شوند؛ merge audit دارد
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-03,"Customer 360: profile, relations, activities, tickets, tasks",FE/Backend,P0,هر تب با data واقعی و permission مناسب کار می‌کند
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-04,pipeline stages و transition rules قابل تنظیم,Backend/FE,P1,مراحل توسط admin تغییر می‌کنند بدون deploy جدید
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-05,activity timeline با pagination و event ordering,Backend/FE,P1,timeline پایدار، مرتب و tenant-scoped است
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-06,CSV import/export با validation، preview، dry-run و audit,Backend/FE,P1,خطاهای هر ردیف گزارش می‌شوند و import تکراری کنترل شده است
+F5,CRM مشتری و فعالیت‌ها,هفته 5–7,F5-07,جست‌وجوی global اولیه با Postgres و benchmark,Backend,P1,نتایج با permission/tenant scope محدود می‌شوند
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-01,Ticket lifecycle، assignment، priority و status transition,Backend,P1,state machine و audit test دارند
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-02,"SLA policy: business hours, pauses, escalation",Backend/Product,P1,محاسبه در timezone و خارج ساعات کاری تست شده
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-03,notification outbox، retries، idempotency و dead-letter visibility,Backend,P0,رویداد از دست نمی‌رود و retry duplicate notification تولید نمی‌کند
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-04,in-app notification center و read/unread state,FE/Backend,P1,permission و pagination رعایت می‌شود
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-05,email push adapters و preference per user,Backend,P2,ارسال با provider تست و opt-out/preference رعایت می‌شود
+F6,Helpdesk، SLA و notification,هفته 7–8,F6-06,Customer portal محدود و کاملاً جدا از staff routes,FE/Backend/Security,P1,negative cross-role tests برای API/UI می‌گذرند
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-01,اتصال app به API با auth و error mapping مشترک,Mobile/Backend,P0,login/session/refresh/logout و timeout تست می‌شوند
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-02,لیست My Tasks، details، status update و comments با داده واقعی,Mobile,P0,داده سروری و حالت loading/error/empty واقعی است
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-03,صف local durable با outbox و operation id,Mobile/Backend,P1,صف پس از restart باقی می‌ماند و duplicate write ندارد
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-04,"sync protocol: ack, retry/backoff, conflict detection, dead-letter",Mobile/Backend,P1,فقط ack server آیتم را از pending خارج می‌کند
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-05,secure storage برای credential/token و local cache minimization,Mobile/Security,P0,secretها در AsyncStorage/plaintext نیستند
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-06,push notification deep links و permission preference,Mobile/Backend,P2,routing و authorization مقصد دوباره از سرور بررسی می‌شود
+F7,موبایل واقعی و آفلاین,هفته 8–10,F7-07,"offline, poor network, duplicate/reordered request E2E tests",QA/Mobile,P1,سناریوها روی emulator/device تست شده‌اند
+F8,اتوماسیون، گزارش و integrations,هفته 10–12,F8-01,"workflow rules پایه: trigger, condition, action",Backend/Product,P2,rules versioned، auditable و rate-limited هستند
+F8,اتوماسیون، گزارش و integrations,هفته 10–12,F8-02,background jobs، retry policy و visibility,Backend/Platform,P1,job status و failure قابل مشاهده‌اند
+F8,اتوماسیون، گزارش و integrations,هفته 10–12,F8-03,reporting dashboards با aggregates سمت سرور,Backend/FE,P1,queryها pagination/limits دارند و PII بی‌دلیل نمایش داده نمی‌شود
+F8,اتوماسیون، گزارش و integrations,هفته 10–12,F8-04,integrations API/webhooks با signature، retries و replay protection,Backend/Security,P2,webhook idempotent و قابل مشاهده است
+F8,اتوماسیون، گزارش و integrations,هفته 10–12,F8-05,search engine مجزا فقط پس از benchmark Postgres,Architecture,P2,داده/ترافیک benchmark دلیل انتخاب Meilisearch/Typesense/OpenSearch را ثابت می‌کند
+F9,Production readiness,هفته 12+,F9-01,"CI security gates: dependency, secret, license, migration checks",Platform/Security,P0,blocking checks و سیاست exception دارند
+F9,Production readiness,هفته 12+,F9-02,"metrics, traces, structured logs و alerting",Platform,P1,latency/error rate/queue/db pool dashboards و alerts دارند
+F9,Production readiness,هفته 12+,F9-03,load test و performance budgets برای core flows,QA/Platform,P1,هدف‌ها روی محیط شبیه production اندازه‌گیری شده‌اند
+F9,Production readiness,هفته 12+,F9-04,backup/restore drill و disaster recovery runbook,Platform/DBA,P0,restore واقعی در staging و RPO/RTO ثبت شده‌اند
+F9,Production readiness,هفته 12+,F9-05,staging rollout، smoke test، rollback procedure,Release owner,P0,release از طریق checklist و rollback آزمایش‌شده انجام می‌شود
+F9,Production readiness,هفته 12+,F9-06,pilot با گروه داخلی، feedback و usability retest,Product/Design,P0,"task success, time-on-task و defect severity اندازه‌گیری می‌شود"

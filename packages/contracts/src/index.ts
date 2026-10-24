@@ -278,3 +278,107 @@ export type AddTicketMessageRequest = {
   body: string;
   visibility?: RecordVisibility;
 };
+
+/* Notification Contracts */
+
+export type NotificationType =
+  | 'TASK_ASSIGNED'
+  | 'TASK_STATUS_CHANGED'
+  | 'TICKET_REPLIED'
+  | 'LEAD_CONVERTED'
+  | 'SYSTEM_ALERT';
+
+export type NotificationDto = {
+  id: string;
+  type: NotificationType | string;
+  title: string;
+  message: string;
+  readAt: string | null;
+  dedupeKey?: string | null;
+  createdAt: string;
+  metadata?: Record<string, any>;
+};
+
+export type NotificationPreferencesDto = {
+  inApp: boolean;
+  email: boolean;
+  push: boolean;
+  digest: boolean;
+};
+
+/* Reporting & Analytics Contracts */
+
+export type WorkloadReportItem = {
+  userId: string;
+  userName: string;
+  activeTasksCount: number;
+  overdueTasksCount: number;
+  completedTasksCount: number;
+};
+
+export type CrmFunnelReport = {
+  totalLeads: number;
+  convertedLeads: number;
+  conversionRatePercent: number;
+  totalDealsValue: number;
+  weightedPipelineValue: number;
+  stagesBreakdown: Array<{
+    stage: string;
+    count: number;
+    amount: number;
+  }>;
+};
+
+export type SupportSlaReport = {
+  totalTickets: number;
+  openTickets: number;
+  resolvedTickets: number;
+  slaBreachRatePercent: number;
+  averageResolutionHours: number;
+};
+
+export type DashboardKpiReport = {
+  workload: WorkloadReportItem[];
+  crmFunnel: CrmFunnelReport;
+  supportSla: SupportSlaReport;
+  generatedAt: string;
+};
+
+/* Automation Contracts */
+
+export type AutomationTrigger =
+  | 'TASK_CREATED'
+  | 'TASK_STATUS_CHANGED'
+  | 'LEAD_CREATED'
+  | 'LEAD_CONVERTED'
+  | 'TICKET_CREATED';
+
+export type AutomationActionType =
+  | 'SEND_NOTIFICATION'
+  | 'ASSIGN_USER'
+  | 'CHANGE_STATUS'
+  | 'WEBHOOK_POST';
+
+export type AutomationRuleDto = {
+  id: string;
+  name: string;
+  trigger: AutomationTrigger;
+  conditionField?: string | null;
+  conditionValue?: string | null;
+  actionType: AutomationActionType;
+  actionPayload: Record<string, any>;
+  enabled: boolean;
+  executionCount: number;
+  lastExecutedAt?: string | null;
+};
+
+export type CreateAutomationRuleRequest = {
+  name: string;
+  trigger: AutomationTrigger;
+  conditionField?: string;
+  conditionValue?: string;
+  actionType: AutomationActionType;
+  actionPayload: Record<string, any>;
+  enabled?: boolean;
+};
+

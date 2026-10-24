@@ -3,9 +3,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type {
   AccountDto,
+  AutomationRuleDto,
   CurrentUserDto,
+  DashboardKpiReport,
   DealDto,
   LeadDto,
+  NotificationDto,
   TaskPriority,
   TaskStatus,
   TaskSummary,
@@ -58,7 +61,9 @@ const INITIAL_AUDITS: AuditItem[] = [
 ];
 
 export default function WorkspaceApp() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'my-work' | 'crm' | 'support' | 'audit'>('my-work');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'my-work' | 'crm' | 'support' | 'notifications' | 'reports' | 'automation' | 'audit'
+  >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
 
   // Domain & Entity States
@@ -67,6 +72,9 @@ export default function WorkspaceApp() {
   const [leads, setLeads] = useState<LeadDto[]>([]);
   const [deals, setDeals] = useState<DealDto[]>([]);
   const [tickets, setTickets] = useState<TicketDto[]>([]);
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+  const [reports, setReports] = useState<DashboardKpiReport | null>(null);
+  const [rules, setRules] = useState<AutomationRuleDto[]>([]);
   const [audits, setAudits] = useState<AuditItem[]>(INITIAL_AUDITS);
   const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
@@ -84,21 +92,68 @@ export default function WorkspaceApp() {
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await apiClient.markNotificationAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+      );
+      showToast('اعلان به عنوان خوانده‌شده ثبت شد');
+    } catch {
+      showToast('خطا در به‌روزرسانی اعلان');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await apiClient.markAllNotificationsAsRead();
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, readAt: new Date().toISOString() })),
+      );
+      showToast('همه اعلان‌ها به عنوان خوانده‌شده علامت‌گذاری شدند');
+    } catch {
+      showToast('خطا در علامت‌گذاری اعلان‌ها');
+    }
+  };
+
+  const handleToggleRule = async (id: string, currentEnabled: boolean) => {
+    try {
+      const updated = await apiClient.toggleAutomationRule(id, !currentEnabled);
+      setRules((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      showToast(`قانون اتوماسیون ${!currentEnabled ? 'فعال' : 'غیرفعال'} شد`);
+    } catch {
+      showToast('خطا در تغییر وضعیت قانون اتوماسیون');
+    }
+  };
+
   // Fetch initial data from API client (with offline fallback built-in)
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [userRes, wsRes, myTasks, accountsRes, leadsRes, dealsRes, ticketsRes] =
-        await Promise.all([
-          apiClient.getMe(),
-          apiClient.getWorkspaces(),
-          apiClient.getMyWork(),
-          apiClient.getAccounts(),
-          apiClient.getLeads(),
-          apiClient.getDeals(),
-          apiClient.getTickets(),
-        ]);
+      const [
+        userRes,
+        wsRes,
+        myTasks,
+        accountsRes,
+        leadsRes,
+        dealsRes,
+        ticketsRes,
+        notifsRes,
+        reportsRes,
+        rulesRes,
+      ] = await Promise.all([
+        apiClient.getMe(),
+        apiClient.getWorkspaces(),
+        apiClient.getMyWork(),
+        apiClient.getAccounts(),
+        apiClient.getLeads(),
+        apiClient.getDeals(),
+        apiClient.getTickets(),
+        apiClient.getNotifications(),
+        apiClient.getDashboardKpi(),
+        apiClient.getAutomationRules(),
+      ]);
 
       setCurrentUser(userRes);
       setWorkspaces(wsRes);
@@ -107,6 +162,9 @@ export default function WorkspaceApp() {
       setLeads(leadsRes);
       setDeals(dealsRes);
       setTickets(ticketsRes);
+      setNotifications(notifsRes);
+      setReports(reportsRes);
+      setRules(rulesRes);
     } catch (err: any) {
       console.error('[WorkspaceApp] Error loading data:', err);
       setError('خطا در بارگذاری اطلاعات از سرویس‌دهنده CRM. لطفاً اتصال را بررسی نمایید.');
@@ -269,6 +327,27 @@ export default function WorkspaceApp() {
           </button>
           <button
             type="button"
+            className={`nav-button ${activeTab === 'notifications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            <span>🔔</span> اعلان‌ها {notifications.filter((n) => !n.readAt).length > 0 && `(${notifications.filter((n) => !n.readAt).length})`}
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <span>📈</span> گزارش‌ها و KPI
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'automation' ? 'active' : ''}`}
+            onClick={() => setActiveTab('automation')}
+          >
+            <span>⚙️</span> اتوماسیون‌ها ({rules.length})
+          </button>
+          <button
+            type="button"
             className={`nav-button ${activeTab === 'audit' ? 'active' : ''}`}
             onClick={() => setActiveTab('audit')}
           >
@@ -320,6 +399,9 @@ export default function WorkspaceApp() {
               {activeTab === 'overview' && 'داشبورد سلامت و شاخص‌ها'}
               {activeTab === 'crm' && 'مدیریت ارتباط با مشتریان (CRM)'}
               {activeTab === 'support' && 'میز پشتیبانی و درخواست‌ها'}
+              {activeTab === 'notifications' && 'مرکز اعلان‌ها و رخدادها'}
+              {activeTab === 'reports' && 'گزارش‌های عملکردی و شاخص‌های کلیدی (KPI)'}
+              {activeTab === 'automation' && 'موتور قوانین اتوماسیون (Automation Rules)'}
               {activeTab === 'audit' && 'تاریخچه رویدادهای ممیزی (Audit Trail)'}
             </h1>
             <p className="muted">
@@ -354,6 +436,15 @@ export default function WorkspaceApp() {
                   + تسک جدید
                 </button>
               </>
+            )}
+            {activeTab === 'notifications' && notifications.some((n) => !n.readAt) && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleMarkAllAsRead}
+              >
+                ✓ خواندن همه اعلان‌ها
+              </button>
             )}
           </div>
         </header>
@@ -562,6 +653,190 @@ export default function WorkspaceApp() {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div
+            style={{
+              background: 'var(--paper)',
+              border: '1px solid var(--line)',
+              borderRadius: '12px',
+              padding: '24px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: '0 0 4px' }}>اعلان‌ها و رخدادهای درون‌برنامه‌ای (In-App Notifications)</h3>
+                <p className="muted" style={{ margin: 0 }}>
+                  اعلان‌های خودکار حاصل از رویدادهای Outbox و تغییرات در وظایف و تیکت‌ها
+                </p>
+              </div>
+            </div>
+
+            {notifications.length === 0 ? (
+              <EmptyState title="هیچ اعلانی ندارید" description="همه اعلان‌ها مشاهده و بررسی شده‌اند." />
+            ) : (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      padding: '14px 18px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--line)',
+                      background: n.readAt ? 'var(--canvas)' : 'var(--paper)',
+                      borderRight: n.readAt ? '3px solid #cbd5e1' : '3px solid var(--accent)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: n.readAt ? 'normal' : '700', fontSize: '14px', marginBottom: '4px' }}>
+                        {n.title}
+                      </div>
+                      <div style={{ color: 'var(--muted)', fontSize: '13px' }}>{n.message}</div>
+                      <small style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                        {new Date(n.createdAt).toLocaleTimeString('fa-IR')}
+                      </small>
+                    </div>
+                    {!n.readAt && (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ fontSize: '11px', padding: '6px 10px' }}
+                        onClick={() => handleMarkAsRead(n.id)}
+                      >
+                        ✓ علامت به عنوان خوانده‌شده
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reports & KPI Tab */}
+        {activeTab === 'reports' && (
+          <div style={{ display: 'grid', gap: '24px' }}>
+            {/* KPI Cards */}
+            <div className="summary-grid">
+              <article className="summary-card">
+                <p>نرخ تبدیل سرنخ (Funnel)</p>
+                <strong style={{ color: 'var(--accent)' }}>
+                  {reports?.crmFunnel.conversionRatePercent ?? 0}٪
+                </strong>
+                <small>{reports?.crmFunnel.convertedLeads ?? 0} از {reports?.crmFunnel.totalLeads ?? 0} سرنخ</small>
+              </article>
+              <article className="summary-card">
+                <p>ارزش کل پایپ‌لاین</p>
+                <strong>
+                  {((reports?.crmFunnel.totalDealsValue ?? 0) / 1000000).toLocaleString('fa-IR')} م.ر
+                </strong>
+                <small>وزنی: {((reports?.crmFunnel.weightedPipelineValue ?? 0) / 1000000).toLocaleString('fa-IR')} م.ر</small>
+              </article>
+              <article className="summary-card">
+                <p>تیکت‌های در دست اقدام</p>
+                <strong style={{ color: 'var(--warning)' }}>
+                  {reports?.supportSla.openTickets ?? 0}
+                </strong>
+                <small>از مجموع {reports?.supportSla.totalTickets ?? 0} تیکت</small>
+              </article>
+              <article className="summary-card">
+                <p>نرخ نقض SLA</p>
+                <strong style={{ color: reports?.supportSla.slaBreachRatePercent ? 'var(--danger)' : 'var(--success)' }}>
+                  {reports?.supportSla.slaBreachRatePercent ?? 0}٪
+                </strong>
+                <small>میانگین حل: {reports?.supportSla.averageResolutionHours ?? 0} ساعت</small>
+              </article>
+            </div>
+
+            {/* Workload Table */}
+            <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: '12px', padding: '24px' }}>
+              <h3 style={{ margin: '0 0 12px' }}>گزارش بار کاری تیم (Workload Report)</h3>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>کاربر / مسئول</th>
+                    <th>وظایف فعال</th>
+                    <th>وظایف سررسیدگذشته (Overdue)</th>
+                    <th>وظایف تکمیل‌شده</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports?.workload.map((w) => (
+                    <tr key={w.userId}>
+                      <td><strong>{w.userName}</strong></td>
+                      <td>{w.activeTasksCount}</td>
+                      <td style={{ color: w.overdueTasksCount > 0 ? 'var(--danger)' : 'inherit' }}>
+                        {w.overdueTasksCount}
+                      </td>
+                      <td style={{ color: 'var(--success)' }}>{w.completedTasksCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Automation Rules Tab */}
+        {activeTab === 'automation' && (
+          <div
+            style={{
+              background: 'var(--paper)',
+              border: '1px solid var(--line)',
+              borderRadius: '12px',
+              padding: '24px',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px' }}>موتور قوانین اتوماسیون (Automation Rules Engine - AUTO-001)</h3>
+            <p className="muted" style={{ marginBottom: '20px' }}>
+              تعریف تریگر، شرط، اقدام و کلید قطع اضطراری (Kill Switch) جهت جلوگیری از چرخه‌های بی‌پایان.
+            </p>
+
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>نام قانون</th>
+                  <th>رویداد محرک (Trigger)</th>
+                  <th>شرط (Condition)</th>
+                  <th>اقدام (Action)</th>
+                  <th>دفعات اجرا</th>
+                  <th>کلید اضطراری (Kill Switch)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((r) => (
+                  <tr key={r.id}>
+                    <td><strong>{r.name}</strong></td>
+                    <td><span className="task-key">{r.trigger}</span></td>
+                    <td>{r.conditionField ? `${r.conditionField} == ${r.conditionValue}` : 'بدون شرط (همیشه)'}</td>
+                    <td><span className="badge badge-in_progress">{r.actionType}</span></td>
+                    <td>{r.executionCount} مرتبه</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={r.enabled ? 'primary-button' : 'secondary-button'}
+                        style={{
+                          fontSize: '11px',
+                          padding: '4px 10px',
+                          background: r.enabled ? 'var(--success)' : '#e2e8f0',
+                          borderColor: r.enabled ? 'var(--success)' : '#cbd5e1',
+                          color: r.enabled ? '#fff' : '#64748b',
+                        }}
+                        onClick={() => handleToggleRule(r.id, r.enabled)}
+                      >
+                        {r.enabled ? 'فعال (روشن)' : 'غیرفعال (خاموش)'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

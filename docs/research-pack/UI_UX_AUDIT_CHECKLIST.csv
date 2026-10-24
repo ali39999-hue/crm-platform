@@ -1,0 +1,36 @@
+﻿id,area,acceptance_fa,scope,priority
+UX-001,Navigation,هر صفحه با ساختار ناوبری ثابت و active route قابل تشخیص است,desktop/tablet/mobile,P0
+UX-002,Search,جست‌وجوی global نتایج tenant-scoped و keyboard navigable است,web,P0
+UX-003,Task List,sort/filter/grouping در URL منعکس و پس از refresh حفظ می‌شود,web,P0
+UX-004,Task Detail,کاربر بدون از دست رفتن متن در mutation failure بازیابی می‌شود,web/mobile,P0
+UX-005,Forms,label واضح، help text ضروری، validation field-level و focus error وجود دارد,all,P0
+UX-006,Accessibility,همه عملیات اصلی بدون mouse قابل اجراست,web,P0
+UX-007,Accessibility,focus visible و focus restoration در modal/drawer درست است,web,P0
+UX-008,Accessibility,contrast مطابق target WCAG 2.2 AA بررسی شده است,all,P0
+UX-009,Status,status با رنگ تنها منتقل نمی‌شود؛ متن/icon هم دارد,all,P0
+UX-010,RTL,فارسی: ترتیب layout، alignment، punctuation، icons و mixed content تست شده,web/mobile,P0
+UX-011,Localization,تاریخ/ساعت/عدد/نام ماه بر اساس locale و timezone نمایش داده می‌شود,all,P1
+UX-012,Responsive,در 360px هیچ action حیاتی زیر horizontal overflow پنهان نیست,mobile web,P0
+UX-013,Touch,hit target و فاصله کنترل‌ها برای لمس قابل استفاده است,mobile,P0
+UX-014,Loading,صفحات داده‌محور skeleton/loading مناسب دارند بدون layout jump شدید,all,P1
+UX-015,Empty,empty state توضیح و CTA مرتبط دارد، نه پیام خام «بدون داده»,all,P1
+UX-016,Error,خطا پیام قابل فهم، retry یا راه حل مشخص دارد و اطلاعات حساس لو نمی‌دهد,all,P0
+UX-017,Offline,نشان وضعیت offline و unsynced واضح است؛ موفقیت پیش از ACK نشان داده نمی‌شود,mobile,P0
+UX-018,Optimistic UI,optimistic updates rollback/conflict states درست دارند,web/mobile,P1
+UX-019,Undo,عملیات قابل بازگشت، undo یا confirmation متناسب دارد,all,P1
+UX-020,Bulk action,bulk selection و actionها واضح، قابل keyboard و دارای confirmation لازم هستند,web,P1
+UX-021,Data density,ستون‌ها و اطلاعات ضروری قابل اسکن‌اند؛ صفحه با کارت‌های بی‌دلیل شلوغ نشده,web,P1
+UX-022,Filters,فیلترها clear-all، selected count و persist رفتار روشن دارند,web,P1
+UX-023,Customer 360,فعالیت‌ها و روابط مشتری از همان context قابل دسترسی‌اند,web,P0
+UX-024,Permission UX,عدم دسترسی با پیام مناسب و بدون افشای داده نمایش داده می‌شود,all,P0
+UX-025,Role-specific,کاربر فقط عملیات مفید برای نقش خود را می‌بیند و backend نیز enforce می‌کند,all,P0
+UX-026,Notifications,notification به رکورد صحیح می‌رود و در مقصد دوباره authorization انجام می‌شود,all,P1
+UX-027,Motion,prefers-reduced-motion رعایت می‌شود و animation هدفمند است,web,P1
+UX-028,Performance,input/filter action لگ محسوس ندارد؛ لیست‌های بزرگ virtualize یا paginate شده‌اند,web/mobile,P1
+UX-029,Keyboard,shortcutها discoverable و conflict-free هستند,web,P2
+UX-030,Usability,تست task success/time/error با کاربران نماینده انجام و یافته‌ها triage شده‌اند,all,P0
+UX-031,Design tokens,کامپوننت‌ها از tokens مشترک می‌آیند نه مقدارهای سلیقه‌ای پراکنده,web/mobile,P0
+UX-032,Component states,storybook شامل success/empty/error/loading/disabled/focus states است,web,P1
+UX-033,Tables,row actionها با hover تنها discoverable نیستند و keyboard support دارند,web,P1
+UX-034,Date/time,due date timezone و daylight saving را درست در server/client مدیریت می‌کند,all,P0
+UX-035,Security copy,auth failures و permission errors user enumeration ایجاد نمی‌کنند,all,P0
