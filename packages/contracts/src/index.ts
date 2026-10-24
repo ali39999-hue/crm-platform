@@ -110,6 +110,43 @@ export type WorkspaceDto = {
   isCurrent: boolean;
 };
 
+/* Auth Contracts */
+
+export type LoginRequest = {
+  email: string;
+  password?: string;
+};
+export type LoginRequestDto = LoginRequest;
+
+export type RefreshTokenRequest = {
+  refreshToken: string;
+};
+export type RefreshTokenRequestDto = RefreshTokenRequest;
+
+export type AuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType?: string;
+  user: CurrentUserDto;
+};
+export type AuthResponseDto = AuthResponse;
+
+export type SwitchWorkspaceRequest = {
+  organizationId: string;
+};
+export type SwitchWorkspaceRequestDto = SwitchWorkspaceRequest;
+
+export type LogoutRequest = {
+  refreshToken?: string;
+};
+export type LogoutRequestDto = LogoutRequest;
+
+export type LogoutResponse = {
+  success: boolean;
+  message: string;
+};
+
 /* CRM Contracts */
 
 export type AccountDto = {

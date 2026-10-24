@@ -13,7 +13,9 @@ import { PipelineStageController } from './modules/crm/pipeline/pipeline-stage.c
 import { SearchController } from './modules/search/search.controller.js';
 import { WebhookController } from './modules/integrations/webhook.controller.js';
 import { FilesController } from './modules/files/files.controller.js';
+import { BackupController } from './modules/operations/backup.controller.js';
 import { AuthService } from './common/auth/auth.service.js';
+import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
 import { PermissionsGuard } from './common/auth/permissions.guard.js';
 import { RateLimiterGuard } from './common/security/rate-limiter.guard.js';
@@ -50,6 +52,8 @@ import { InMemoryWebhookRepository } from './modules/integrations/webhook.reposi
 import { WebhookService } from './modules/integrations/webhook.service.js';
 import { MetricsService } from './common/observability/metrics.service.js';
 import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
+import { InMemoryBackupRepository } from './modules/operations/backup.repository.js';
+import { BackupService } from './modules/operations/backup.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -68,9 +72,11 @@ import { MetricsInterceptor } from './common/observability/metrics.interceptor.j
     SearchController,
     WebhookController,
     FilesController,
+    BackupController,
   ],
   providers: [
     AuthService,
+    TokenService,
     AuthGuard,
     PermissionsGuard,
     RateLimiterGuard,
@@ -116,9 +122,12 @@ import { MetricsInterceptor } from './common/observability/metrics.interceptor.j
     WebhookService,
     MetricsService,
     MetricsInterceptor,
+    InMemoryBackupRepository,
+    BackupService,
   ],
   exports: [
     AuthService,
+    TokenService,
     AuditService,
     OutboxService,
     RateLimiterGuard,
@@ -146,6 +155,8 @@ import { MetricsInterceptor } from './common/observability/metrics.interceptor.j
     SearchService,
     WebhookService,
     MetricsService,
+    InMemoryBackupRepository,
+    BackupService,
   ],
 })
 export class AppModule implements NestModule {

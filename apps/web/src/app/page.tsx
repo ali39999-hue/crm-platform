@@ -28,6 +28,7 @@ import {
   PriorityBadge,
   TaskBoard,
   TaskList,
+  TaskCalendar,
   TaskStatusBadge,
   TicketStatusBadge,
 } from '../components';
@@ -64,7 +65,7 @@ export default function WorkspaceApp() {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'my-work' | 'crm' | 'support' | 'notifications' | 'reports' | 'automation' | 'audit'
   >('my-work');
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
 
   // Domain & Entity States
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
@@ -427,6 +428,13 @@ export default function WorkspaceApp() {
                   >
                     <span>☰</span> فهرست
                   </button>
+                  <button
+                    type="button"
+                    className={`view-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+                    onClick={() => setViewMode('calendar')}
+                  >
+                    <span>📅</span> تقویم
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -515,6 +523,12 @@ export default function WorkspaceApp() {
                 tasks={tasks}
                 onTransition={handleTransition}
                 onError={showToast}
+              />
+            ) : viewMode === 'calendar' ? (
+              <TaskCalendar
+                tasks={tasks}
+                onTransition={handleTransition}
+                onSelectTask={(task) => showToast(`انتخاب تسک: ${task.key} - ${task.title}`)}
               />
             ) : (
               <TaskList

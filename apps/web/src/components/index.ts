@@ -5,4 +5,5 @@ export * from './EmptyState';
 export * from './TaskCard';
 export * from './TaskBoard';
 export * from './TaskList';
+export * from './TaskCalendar';
 export * from './CreateTaskModal';
