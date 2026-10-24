@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,7 +11,7 @@ import {
   assertTaskTransition,
   type TransitionActorCapabilities,
 } from '@crm/domain';
-import { InMemoryTaskRepository, type TaskEntity } from './task.repository.js';
+import type { ITaskRepository, TaskEntity } from './task.repository.js';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
 import type { TransitionTaskDto } from './dto/transition-task.dto.js';
 import type { TaskQueryDto } from './dto/task-query.dto.js';
@@ -21,7 +22,7 @@ import type { TaskDetails, TaskSummary, TaskPriority, TaskStatus } from '@crm/co
 @Injectable()
 export class TasksService {
   constructor(
-    private readonly taskRepo: InMemoryTaskRepository,
+    @Inject('TASK_REPOSITORY') private readonly taskRepo: ITaskRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
   ) {}

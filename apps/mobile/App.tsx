@@ -1,8 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -21,290 +19,27 @@ import type {
   TicketPriority,
   TicketStatus,
 } from '@crm/contracts';
-import { canTransitionTask, type TransitionActorCapabilities } from '@crm/domain';
+import { canTransitionTask } from '@crm/domain';
+import {
+  ACTOR_CAPABILITIES,
+  INITIAL_TASKS,
+  INITIAL_TICKETS,
+  getTaskStatusCfg,
+  getTicketStatusCfg,
+} from './src/lib/constants';
+import {
+  DEFAULT_AUTH_TOKEN,
+  getDefaultApiUrl,
+  apiClient,
+} from './src/lib/api-client';
+import { offlineQueue, type QueuedMutation } from './src/lib/offline-queue';
+import { TaskCard } from './src/components/TaskCard';
+import { TicketCard } from './src/components/TicketCard';
+import { CreateTaskModal, type CreateTaskFormData } from './src/components/CreateTaskModal';
+import { CreateTicketModal, type CreateTicketFormData } from './src/components/CreateTicketModal';
+import { OfflineBanner } from './src/components/OfflineBanner';
 
-// ==========================================
-// TYPES & CONFIGURATION
-// ==========================================
-
-const ACTOR_CAPABILITIES: TransitionActorCapabilities = {
-  canReopenDoneTask: true,
-  canRestoreCanceledTask: true,
-};
-
-const ALL_TASK_STATUSES: readonly TaskStatus[] = [
-  'BACKLOG',
-  'TODO',
-  'IN_PROGRESS',
-  'IN_REVIEW',
-  'BLOCKED',
-  'DONE',
-  'CANCELED',
-];
-
-const TASK_STATUS_CONFIG: Record<
-  TaskStatus,
-  { label: string; color: string; bg: string; borderColor: string }
-> = {
-  BACKLOG: { label: 'بک‌لاگ', color: '#475467', bg: '#F2F4F7', borderColor: '#D0D5DD' },
-  TODO: { label: 'در انتظار شروع', color: '#175CD3', bg: '#EFF8FF', borderColor: '#B2DDFF' },
-  IN_PROGRESS: { label: 'در حال انجام', color: '#B54708', bg: '#FEF0C7', borderColor: '#FEDF89' },
-  IN_REVIEW: { label: 'در انتظار بازبینی', color: '#6938EF', bg: '#F4EBFF', borderColor: '#D9D6FE' },
-  BLOCKED: { label: 'مسدود شده', color: '#B42318', bg: '#FEE4E2', borderColor: '#FECDCA' },
-  DONE: { label: 'تکمیل‌شده', color: '#067647', bg: '#ECFDF3', borderColor: '#A6F4C5' },
-  CANCELED: { label: 'لغو شده', color: '#667085', bg: '#F8F9FA', borderColor: '#E4E8EF' },
-};
-
-const TASK_PRIORITY_CONFIG: Record<
-  TaskPriority,
-  { label: string; color: string; bg: string }
-> = {
-  URGENT: { label: 'بسیار فوری', color: '#B42318', bg: '#FEE4E2' },
-  HIGH: { label: 'بالا', color: '#B54708', bg: '#FEF0C7' },
-  MEDIUM: { label: 'متوسط', color: '#026AA2', bg: '#E0F2FE' },
-  LOW: { label: 'پایین', color: '#344054', bg: '#F2F4F7' },
-};
-
-const TICKET_STATUS_CONFIG: Record<
-  TicketStatus,
-  { label: string; color: string; bg: string; borderColor: string }
-> = {
-  NEW: { label: 'جدید', color: '#026AA2', bg: '#E0F2FE', borderColor: '#B9E6FE' },
-  OPEN: { label: 'باز', color: '#B54708', bg: '#FEF0C7', borderColor: '#FEDF89' },
-  PENDING_CUSTOMER: { label: 'منتظر مشتری', color: '#6938EF', bg: '#F4EBFF', borderColor: '#D9D6FE' },
-  PENDING_INTERNAL: { label: 'منتظر کارشناس', color: '#C4320A', bg: '#FFF6ED', borderColor: '#F9DBAF' },
-  RESOLVED: { label: 'حل‌شده', color: '#067647', bg: '#ECFDF3', borderColor: '#A6F4C5' },
-  CLOSED: { label: 'بسته شده', color: '#475467', bg: '#F2F4F7', borderColor: '#D0D5DD' },
-};
-
-const TICKET_PRIORITY_CONFIG: Record<
-  TicketPriority,
-  { label: string; color: string; bg: string }
-> = {
-  URGENT: { label: 'بسیار فوری', color: '#B42318', bg: '#FEE4E2' },
-  HIGH: { label: 'بالا', color: '#B54708', bg: '#FEF0C7' },
-  NORMAL: { label: 'عادی', color: '#026AA2', bg: '#E0F2FE' },
-  LOW: { label: 'پایین', color: '#344054', bg: '#F2F4F7' },
-};
-
-function getTaskStatusCfg(status: TaskStatus) {
-  return (
-    TASK_STATUS_CONFIG[status] ?? {
-      label: status,
-      color: '#475467',
-      bg: '#F2F4F7',
-      borderColor: '#D0D5DD',
-    }
-  );
-}
-
-function getTaskPriorityCfg(priority: TaskPriority) {
-  return (
-    TASK_PRIORITY_CONFIG[priority] ?? {
-      label: priority,
-      color: '#344054',
-      bg: '#F2F4F7',
-    }
-  );
-}
-
-function getTicketStatusCfg(status: TicketStatus) {
-  return (
-    TICKET_STATUS_CONFIG[status] ?? {
-      label: status,
-      color: '#475467',
-      bg: '#F2F4F7',
-      borderColor: '#D0D5DD',
-    }
-  );
-}
-
-function getTicketPriorityCfg(priority: TicketPriority) {
-  return (
-    TICKET_PRIORITY_CONFIG[priority] ?? {
-      label: priority,
-      color: '#344054',
-      bg: '#F2F4F7',
-    }
-  );
-}
-
-function getTransitionButtonText(current: TaskStatus, target: TaskStatus): string {
-  if (current === 'DONE' && target === 'TODO') return 'بازگشایی ↺';
-  if (current === 'CANCELED' && target === 'TODO') return 'بازیابی ↺';
-  if (target === 'IN_PROGRESS') return 'شروع کار ▶';
-  if (target === 'IN_REVIEW') return 'ارسال به بازبینی 🔍';
-  if (target === 'DONE') return 'تکمیل کار ✓';
-  if (target === 'BLOCKED') return 'اعلام مانع ✕';
-  if (target === 'CANCELED') return 'لغو تسک ⊘';
-  if (target === 'TODO') return 'انتقال به صف ↩';
-  if (target === 'BACKLOG') return 'انتقال به بک‌لاگ';
-  return target;
-}
-
-// ==========================================
-// INITIAL MOCK DATA
-// ==========================================
-
-const INITIAL_TASKS: TaskSummary[] = [
-  {
-    id: '10000000-0000-0000-0000-000000000001',
-    key: 'TSK-1001',
-    title: 'بررسی مدارک و اعتبارسنجی قرارداد مشتری جدید',
-    status: 'TODO',
-    priority: 'HIGH',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'علی رضایی',
-    projectId: 'proj-01',
-    projectName: 'پروژه ساماندهی مشتریان سازمانی',
-    dueAt: '۱۴۰۵/۰۸/۰۴',
-    version: 1,
-    createdAt: '۱۴۰۵/۰۷/۲۸',
-    updatedAt: '۱۴۰۵/۰۷/۲۸',
-  },
-  {
-    id: '10000000-0000-0000-0000-000000000002',
-    key: 'TSK-1002',
-    title: 'پیاده‌سازی تست‌های امنیتی احراز هویت و مجوزها',
-    status: 'IN_PROGRESS',
-    priority: 'URGENT',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'سارا احمدی',
-    projectId: 'proj-02',
-    projectName: 'امنیت و کنترل دسترسی',
-    dueAt: '۱۴۰۵/۰۸/۰۲',
-    version: 2,
-    createdAt: '۱۴۰۵/۰۷/۲۷',
-    updatedAt: '۱۴۰۵/۰۷/۲۹',
-  },
-  {
-    id: '10000000-0000-0000-0000-000000000003',
-    key: 'TSK-1003',
-    title: 'بازبینی معماری پایگاه داده و شاخص‌گذاری جدول‌های CRM',
-    status: 'IN_REVIEW',
-    priority: 'MEDIUM',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'حسین محمدی',
-    projectId: 'proj-03',
-    projectName: 'بهینه‌سازی دیتابیس',
-    dueAt: '۱۴۰۵/۰۸/۰۶',
-    version: 3,
-    createdAt: '۱۴۰۵/۰۷/۲۵',
-    updatedAt: '۱۴۰۵/۰۷/۳۰',
-  },
-  {
-    id: '10000000-0000-0000-0000-000000000004',
-    key: 'TSK-1004',
-    title: 'تنظیمات اولیه زیرساخت کانتینرها و مانیتورینگ',
-    status: 'DONE',
-    priority: 'LOW',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'علی رضایی',
-    projectId: 'proj-04',
-    projectName: 'زیرساخت ابری',
-    dueAt: '۱۴۰۵/۰۸/۰۱',
-    version: 4,
-    createdAt: '۱۴۰۵/۰۷/۲۰',
-    updatedAt: '۱۴۰۵/۰۸/۰۱',
-  },
-  {
-    id: '10000000-0000-0000-0000-000000000005',
-    key: 'TSK-1005',
-    title: 'رفع مغایرت صدور صورت‌حساب در درگاه بانکی',
-    status: 'BLOCKED',
-    priority: 'URGENT',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'سارا احمدی',
-    projectId: 'proj-01',
-    projectName: 'ماژول مالی',
-    dueAt: '۱۴۰۵/۰۸/۰۳',
-    version: 2,
-    createdAt: '۱۴۰۵/۰۷/۲۶',
-    updatedAt: '۱۴۰۵/۰۷/۲۹',
-  },
-  {
-    id: '10000000-0000-0000-0000-000000000006',
-    key: 'TSK-1006',
-    title: 'مذاکره اولیه قرارداد سازمانی با مدیران شرکت پتروشیمی',
-    status: 'BACKLOG',
-    priority: 'HIGH',
-    visibility: 'INTERNAL',
-    assigneeId: '22222222-2222-2222-2222-222222222222',
-    assigneeName: 'مهرداد کریمی',
-    projectId: 'proj-05',
-    projectName: 'توسعه فروش سازمانی',
-    dueAt: '۱۴۰۵/۰۸/۱۰',
-    version: 1,
-    createdAt: '۱۴۰۵/۰۷/۲۹',
-    updatedAt: '۱۴۰۵/۰۷/۲۹',
-  },
-];
-
-const INITIAL_TICKETS: TicketDto[] = [
-  {
-    id: '90000000-0000-0000-0000-000000000001',
-    reference: 'TKT-1042',
-    title: 'عدم دسترسی به ماژول گزارش‌گیری برای کاربر جدید',
-    status: 'OPEN',
-    priority: 'HIGH',
-    accountId: '50000000-0000-0000-0000-000000000001',
-    accountName: 'پتروشیمی سپهر',
-    assigneeName: 'کارشناس پشتیبانی',
-    targetResolutionAt: 'امروز، ساعت ۱۸:۰۰',
-    messagesCount: 3,
-    createdAt: '۱۴۰۵/۰۸/۰۲ - ساعت ۱۰:۳۰',
-    updatedAt: '۱۴۰۵/۰۸/۰۲ - ساعت ۱۱:۴۵',
-  },
-  {
-    id: '90000000-0000-0000-0000-000000000002',
-    reference: 'TKT-1043',
-    title: 'خطای اعتبارسنجی در ارسال اطلاعات وب‌هوک به درگاه',
-    status: 'PENDING_INTERNAL',
-    priority: 'URGENT',
-    accountId: '50000000-0000-0000-0000-000000000002',
-    accountName: 'صنایع فولاد غرب',
-    assigneeName: 'کارشناس فنی زیرساخت',
-    targetResolutionAt: 'امروز، ساعت ۱۶:۰۰',
-    messagesCount: 5,
-    createdAt: '۱۴۰۵/۰۸/۰۱ - ساعت ۱۴:۲۰',
-    updatedAt: '۱۴۰۵/۰۸/۰۲ - ساعت ۰۹:۱۵',
-  },
-  {
-    id: '90000000-0000-0000-0000-000000000003',
-    reference: 'TKT-1038',
-    title: 'درخواست فعال‌سازی اتصال به سامانه مالی و انبارداری',
-    status: 'RESOLVED',
-    priority: 'NORMAL',
-    accountId: '50000000-0000-0000-0000-000000000001',
-    accountName: 'پتروشیمی سپهر',
-    assigneeName: 'تیم یکپارچه‌سازی API',
-    targetResolutionAt: '۱۴۰۵/۰۷/۲۸',
-    messagesCount: 4,
-    createdAt: '۱۴۰۵/۰۷/۲۷',
-    updatedAt: '۱۴۰۵/۰۷/۲۸',
-  },
-  {
-    id: '90000000-0000-0000-0000-000000000004',
-    reference: 'TKT-1035',
-    title: 'مشکل عدم نمایش تاریخ‌های شمسی در تقویم رویدادها',
-    status: 'CLOSED',
-    priority: 'LOW',
-    accountId: '50000000-0000-0000-0000-000000000003',
-    accountName: 'گروه صنعتی مانا',
-    assigneeName: 'پشتیبانی فرانت‌اند',
-    targetResolutionAt: '۱۴۰۵/۰۷/۲۱',
-    messagesCount: 2,
-    createdAt: '۱۴۰۵/۰۷/۲۰',
-    updatedAt: '۱۴۰۵/۰۷/۲۱',
-  },
-];
-
-type ActiveTab = 'tasks' | 'tickets';
+type ActiveTab = 'tasks' | 'tickets' | 'settings';
 type TaskFilter = 'ALL' | 'IN_PROGRESS' | 'TODO' | 'BLOCKED' | 'DONE';
 type TicketFilter = 'ALL' | 'OPEN' | 'PENDING' | 'RESOLVED';
 
@@ -313,41 +48,47 @@ type ToastState = {
   type: 'success' | 'info' | 'error';
 };
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
-
 export default function App() {
-  // Navigation Tabs: "کارهای من" (My Work) & "تیکت‌ها" (Tickets)
+  // Navigation Tabs: "کارهای من", "تیکت‌ها", "وضعیت آفلاین / تنظیمات"
   const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('ALL');
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>('ALL');
   const [taskSearch, setTaskSearch] = useState('');
   const [ticketSearch, setTicketSearch] = useState('');
 
-  // Domain & Data State
+  // Data State
   const [tasks, setTasks] = useState<TaskSummary[]>(INITIAL_TASKS);
   const [tickets, setTickets] = useState<TicketDto[]>(INITIAL_TICKETS);
 
-  // Offline / Mock State & Pending Sync Queue
+  // Offline State & Durable Mutation Queue
   const [isOffline, setIsOffline] = useState(false);
-  const [pendingSyncMutations, setPendingSyncMutations] = useState<string[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [queueItems, setQueueItems] = useState<QueuedMutation[]>([]);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  // Task Creation Modal State
+  // Settings: API URL and Token Configuration
+  const [apiUrl, setApiUrl] = useState(apiClient.getBaseUrl());
+  const [authToken, setAuthTokenState] = useState(apiClient.getAuthToken());
+
+  // Modals
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('MEDIUM');
-  const [newTaskProject, setNewTaskProject] = useState('');
-
-  // Ticket Creation Modal State
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [newTicketTitle, setNewTicketTitle] = useState('');
-  const [newTicketAccount, setNewTicketAccount] = useState('');
-  const [newTicketPriority, setNewTicketPriority] = useState<TicketPriority>('NORMAL');
-  const [newTicketDescription, setNewTicketDescription] = useState('');
 
-  // Toast Helper
+  // Subscribe to offline queue changes
+  useEffect(() => {
+    const unsubscribe = offlineQueue.subscribe((items) => {
+      setQueueItems(items);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const pendingCount = useMemo(() => {
+    return queueItems.filter((m) => m.status === 'PENDING' || m.status === 'FAILED')
+      .length;
+  }, [queueItems]);
+
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => {
@@ -359,8 +100,8 @@ export default function App() {
   // TASK TRANSITION & DOMAIN RULE ENFORCEMENT
   // ==========================================
 
-  const handleTaskTransition = (task: TaskSummary, targetStatus: TaskStatus) => {
-    // 1. Domain Rule Check via @crm/domain
+  const handleTaskTransition = async (task: TaskSummary, targetStatus: TaskStatus) => {
+    // 1. Client Domain Invariant Check via @crm/domain
     const isAllowed = canTransitionTask(task.status, targetStatus, ACTOR_CAPABILITIES);
 
     if (!isAllowed) {
@@ -372,7 +113,7 @@ export default function App() {
       return;
     }
 
-    // 2. Perform Valid Transition
+    // 2. Optimistic Local State Update
     const updatedTasks = tasks.map((t) => {
       if (t.id === task.id) {
         return {
@@ -384,20 +125,45 @@ export default function App() {
       }
       return t;
     });
-
     setTasks(updatedTasks);
 
     const targetLabel = getTaskStatusCfg(targetStatus).label;
+
     if (isOffline) {
-      const syncRecord = `انتقال وضعیت تسک ${task.key} به ${targetLabel}`;
-      setPendingSyncMutations((prev) => [...prev, syncRecord]);
-      showToast(`ذخیره در حافظه محلی: وضعیت به «${targetLabel}» تغییر یافت.`, 'info');
+      // Enqueue to durable mutation queue
+      offlineQueue.enqueue({
+        type: 'TRANSITION_TASK',
+        payload: {
+          id: task.id,
+          targetStatus,
+          expectedVersion: task.version,
+          reason: `انتقال وضعیت از طریق اپلیکیشن موبایل به ${targetStatus}`,
+        },
+      });
+      showToast(`ذخیره در صف پایدار: وضعیت به «${targetLabel}» تغییر یافت.`, 'info');
     } else {
-      showToast(`تسک ${task.key} به وضعیت «${targetLabel}» ارتقا یافت.`, 'success');
+      try {
+        await apiClient.transitionTask(task.id, {
+          targetStatus,
+          expectedVersion: task.version,
+        });
+        showToast(`تسک ${task.key} با سرور هماهنگ و به وضعیت «${targetLabel}» ارتقا یافت.`, 'success');
+      } catch (err) {
+        // Fallback to queue if network request failed
+        offlineQueue.enqueue({
+          type: 'TRANSITION_TASK',
+          payload: {
+            id: task.id,
+            targetStatus,
+            expectedVersion: task.version,
+            reason: `انتقال با بازگشت خطا در شبکه: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        });
+        showToast(`خطا در ارتباط با سرور؛ انتقال تسک ${task.key} در صف آفلاین ذخیره شد.`, 'info');
+      }
     }
   };
 
-  // Test intentionally invalid transition to verify graceful domain error alert
   const handleTestInvalidTransition = (task: TaskSummary) => {
     let invalidTarget: TaskStatus = 'DONE';
     if (task.status === 'DONE' || task.status === 'IN_REVIEW') {
@@ -418,28 +184,22 @@ export default function App() {
     }
   };
 
-  // Handle Task Creation
-  const handleCreateTaskSubmit = () => {
-    if (!newTaskTitle.trim()) {
-      Alert.alert('خطا در اعتبارسنجی', 'لطفاً عنوان تسک را وارد فرمایید.', [
-        { text: 'بازگشت', style: 'cancel' },
-      ]);
-      return;
-    }
-
+  const handleCreateTask = async (data: CreateTaskFormData) => {
     const nextIndex = tasks.length + 1001;
     const newKey = `TSK-${nextIndex}`;
+    const newId = `task-${Date.now()}`;
+
     const newTask: TaskSummary = {
-      id: `task-${Date.now()}`,
+      id: newId,
       key: newKey,
-      title: newTaskTitle.trim(),
+      title: data.title,
       status: 'TODO',
-      priority: newTaskPriority,
+      priority: data.priority,
       visibility: 'INTERNAL',
       assigneeId: '22222222-2222-2222-2222-222222222222',
       assigneeName: 'کاربر همراه (شما)',
       projectId: 'proj-default',
-      projectName: newTaskProject.trim() || 'پروژه جاری سازمان',
+      projectName: data.projectName || 'پروژه جاری سازمان',
       dueAt: '۱۴۰۵/۰۸/۱۵',
       version: 1,
       createdAt: 'امروز',
@@ -447,16 +207,37 @@ export default function App() {
     };
 
     setTasks([newTask, ...tasks]);
-    setNewTaskTitle('');
-    setNewTaskProject('');
-    setNewTaskPriority('MEDIUM');
-    setIsTaskModalOpen(false);
 
     if (isOffline) {
-      setPendingSyncMutations((prev) => [...prev, `ایجاد تسک ${newKey}`]);
-      showToast(`تسک ${newKey} در حالت آفلاین ثبت شد و در صف همگام‌سازی قرار گرفت.`, 'info');
+      offlineQueue.enqueue({
+        type: 'CREATE_TASK',
+        payload: {
+          title: data.title,
+          priority: data.priority,
+          visibility: 'INTERNAL',
+          projectName: data.projectName,
+        },
+      });
+      showToast(`تسک ${newKey} در صف آفلاین قرار گرفت.`, 'info');
     } else {
-      showToast(`تسک جدید با شناسه ${newKey} با موفقیت افزوده شد.`, 'success');
+      try {
+        const created = await apiClient.createTask({
+          title: data.title,
+          priority: data.priority,
+          visibility: 'INTERNAL',
+        });
+        showToast(`تسک جدید ${created.key} در سرور ایجاد شد.`, 'success');
+      } catch (err) {
+        offlineQueue.enqueue({
+          type: 'CREATE_TASK',
+          payload: {
+            title: data.title,
+            priority: data.priority,
+            visibility: 'INTERNAL',
+          },
+        });
+        showToast(`تسک ${newKey} در صف آفلاین محلی ذخیره شد.`, 'info');
+      }
     }
   };
 
@@ -464,21 +245,7 @@ export default function App() {
   // TICKET ACTIONS
   // ==========================================
 
-  const handleCreateTicketSubmit = () => {
-    if (!newTicketTitle.trim()) {
-      Alert.alert('خطا در اعتبارسنجی', 'لطفاً موضوع و عنوان تیکت را وارد نمایید.', [
-        { text: 'بازگشت', style: 'cancel' },
-      ]);
-      return;
-    }
-
-    if (!newTicketDescription.trim()) {
-      Alert.alert('خطا در اعتبارسنجی', 'لطفاً شرح کامل درخواست را مرقوم فرمایید.', [
-        { text: 'بازگشت', style: 'cancel' },
-      ]);
-      return;
-    }
-
+  const handleCreateTicket = async (data: CreateTicketFormData) => {
     const nextNumber = tickets.length + 1044;
     const newRef = `TKT-${nextNumber}`;
     const newId = `tkt-${Date.now()}`;
@@ -486,11 +253,11 @@ export default function App() {
     const newTicket: TicketDto = {
       id: newId,
       reference: newRef,
-      title: newTicketTitle.trim(),
+      title: data.title,
       status: 'OPEN',
-      priority: newTicketPriority,
+      priority: data.priority,
       accountId: 'account-1',
-      accountName: newTicketAccount.trim() || 'شرکت طرف قرارداد',
+      accountName: data.accountName || 'شرکت طرف قرارداد',
       assigneeName: 'تخصیص خودکار به پشتیبانی',
       targetResolutionAt: '۲۴ ساعت کاری آینده',
       messagesCount: 1,
@@ -500,18 +267,36 @@ export default function App() {
 
     setTickets([newTicket, ...tickets]);
 
-    // Reset Form
-    setNewTicketTitle('');
-    setNewTicketAccount('');
-    setNewTicketPriority('NORMAL');
-    setNewTicketDescription('');
-    setIsTicketModalOpen(false);
-
     if (isOffline) {
-      setPendingSyncMutations((prev) => [...prev, `ثبت تیکت ${newRef}`]);
-      showToast(`تیکت ${newRef} به صورت محلی ذخیره شد (آفلاین).`, 'info');
+      offlineQueue.enqueue({
+        type: 'CREATE_TICKET',
+        payload: {
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          accountName: data.accountName,
+        },
+      });
+      showToast(`تیکت ${newRef} در صف آفلاین قرار گرفت.`, 'info');
     } else {
-      showToast(`تیکت جدید با شناسه ${newRef} با موفقیت ارسال گردید.`, 'success');
+      try {
+        const created = await apiClient.createTicket({
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+        });
+        showToast(`تیکت ${created.reference} با موفقیت در سرور ثبت شد.`, 'success');
+      } catch {
+        offlineQueue.enqueue({
+          type: 'CREATE_TICKET',
+          payload: {
+            title: data.title,
+            description: data.description,
+            priority: data.priority,
+          },
+        });
+        showToast(`تیکت ${newRef} در صف همگام‌سازی ذخیره شد.`, 'info');
+      }
     }
   };
 
@@ -533,7 +318,14 @@ export default function App() {
     setTickets(updated);
 
     if (isOffline) {
-      setPendingSyncMutations((prev) => [...prev, `تغییر وضعیت تیکت ${ticket.reference}`]);
+      offlineQueue.enqueue({
+        type: 'ADD_MESSAGE',
+        payload: {
+          ticketId: ticket.id,
+          body: `تغییر وضعیت تیکت به «${nextLabel}»`,
+          visibility: 'INTERNAL',
+        },
+      });
       showToast(`تیکت ${ticket.reference} به وضعیت «${nextLabel}» تغییر یافت (آفلاین).`, 'info');
     } else {
       showToast(`وضعیت تیکت ${ticket.reference} به «${nextLabel}» تغییر یافت.`, 'success');
@@ -541,30 +333,27 @@ export default function App() {
   };
 
   // ==========================================
-  // OFFLINE & SYNC CONTROLS
+  // SYNC & NETWORK CONTROLS
   // ==========================================
 
   const handleToggleNetwork = () => {
     if (!isOffline) {
       setIsOffline(true);
-      showToast('حالت آفلاین فعال شد. تغییرات در حافظه محلی ذخیره می‌شوند.', 'info');
+      showToast('حالت آفلاین فعال شد. تغییرات در صف پایدار ذخیره می‌شوند.', 'info');
     } else {
       setIsOffline(false);
-      if (pendingSyncMutations.length > 0) {
-        const count = pendingSyncMutations.length;
-        setPendingSyncMutations([]);
-        showToast(`اتصال برقرار شد؛ ${count} تغییر با سرور همگام‌سازی گردید.`, 'success');
-      } else {
-        showToast('اتصال با سرور برقرار شد. سامانه آنلاین است.', 'success');
+      showToast('حالت آنلاین فعال شد. در حال بررسی صف همگام‌سازی...', 'info');
+      if (pendingCount > 0) {
+        handleManualSync();
       }
     }
   };
 
-  const handleManualSync = () => {
+  const handleManualSync = async () => {
     if (isOffline) {
       Alert.alert(
         'خطای اتصال به شبکه',
-        'دستگاه در حالت آفلاین قرار دارد. جهت ارسال تغییرات محلی به سرور، ابتدا ارتباط آنلاین را فعال کنید.',
+        'دستگاه در حالت آفلاین قرار دارد. جهت ارسال تغییرات به سرور، ابتدا ارتباط آنلاین را فعال کنید.',
         [
           { text: 'فعال‌سازی وضعیت آنلاین', onPress: handleToggleNetwork },
           { text: 'انصراف', style: 'cancel' },
@@ -573,14 +362,60 @@ export default function App() {
       return;
     }
 
-    if (pendingSyncMutations.length === 0) {
-      showToast('تمامی داده‌ها با سرور مرکزی هماهنگ و به‌روز هستند.', 'info');
+    if (pendingCount === 0) {
+      showToast('تمامی داده‌ها با سرور مرکزی هماهنگ هستند.', 'info');
       return;
     }
 
-    const count = pendingSyncMutations.length;
-    setPendingSyncMutations([]);
-    showToast(`${count} عملیات صف با موفقیت در سرور ثبت شد.`, 'success');
+    setIsSyncing(true);
+    try {
+      const result = await offlineQueue.syncQueue(apiClient);
+      if (result.failed === 0) {
+        showToast(`همگام‌سازی کامل شد: ${result.synced} عملیات با سرور هماهنگ شد.`, 'success');
+      } else {
+        showToast(
+          `همگام‌سازی پایان یافت: ${result.synced} موفق، ${result.failed} ناموفق.`,
+          'error',
+        );
+      }
+    } catch (err) {
+      showToast(`خطا در پردازش همگام‌سازی: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleApplyApiSettings = () => {
+    apiClient.setBaseUrl(apiUrl);
+    apiClient.setAuthToken(authToken);
+    showToast('تنظیمات آدرس و توکن احراز هویت با موفقیت اعمال شدند.', 'success');
+  };
+
+  const handleResetApiSettings = () => {
+    const defaultUrl = getDefaultApiUrl();
+    setApiUrl(defaultUrl);
+    setAuthTokenState(DEFAULT_AUTH_TOKEN);
+    apiClient.setBaseUrl(defaultUrl);
+    apiClient.setAuthToken(DEFAULT_AUTH_TOKEN);
+    showToast('تنظیمات به مقادیر پیش‌فرض بازگردانی شدند.', 'info');
+  };
+
+  const handleClearQueue = () => {
+    Alert.alert(
+      'پاک‌سازی صف آفلاین',
+      'آیا از پاک‌سازی تمام عملیات‌های معلق در صف اطمینان دارید؟',
+      [
+        {
+          text: 'بله، پاک‌سازی شود',
+          style: 'destructive',
+          onPress: () => {
+            offlineQueue.clear();
+            showToast('صف عملیات آفلاین کاملاً پاک شد.', 'info');
+          },
+        },
+        { text: 'انصراف', style: 'cancel' },
+      ],
+    );
   };
 
   // ==========================================
@@ -642,61 +477,15 @@ export default function App() {
 
       {/* ================= HEADER ================= */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          {/* Online/Offline Toggle */}
-          <TouchableOpacity
-            style={[styles.networkBadge, isOffline ? styles.offlineBadge : styles.onlineBadge]}
-            onPress={handleToggleNetwork}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.networkDot,
-                { backgroundColor: isOffline ? '#D97706' : '#16A34A' },
-              ]}
-            />
-            <Text
-              style={[
-                styles.networkText,
-                { color: isOffline ? '#92400E' : '#166534' },
-              ]}
-            >
-              {isOffline ? 'آفلاین (محلی)' : 'آنلاین'}
-            </Text>
-          </TouchableOpacity>
+        <OfflineBanner
+          isOffline={isOffline}
+          pendingCount={pendingCount}
+          isSyncing={isSyncing}
+          onToggleNetwork={handleToggleNetwork}
+          onSync={handleManualSync}
+        />
 
-          {/* Org & App Eyebrow */}
-          <View style={styles.headerTitles}>
-            <Text style={styles.eyebrow}>فضای کاری سازمان CRM</Text>
-            <Text style={styles.appTitle}>سامانه همراه پیشگامان</Text>
-          </View>
-        </View>
-
-        {/* Offline Notice Banner */}
-        {isOffline && (
-          <View style={styles.offlineBanner}>
-            <View style={styles.offlineBannerContent}>
-              <Text style={styles.offlineBannerTitle}>
-                ⚡ حالت کاری آفلاین فعال است
-              </Text>
-              <Text style={styles.offlineBannerDesc}>
-                تغییرات به صورت محلی ذخیره می‌شوند.
-                {pendingSyncMutations.length > 0
-                  ? ` (${pendingSyncMutations.length} مورد در صف ارسال)`
-                  : ' (صف همگام‌سازی خالی است)'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.syncButton}
-              onPress={handleManualSync}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.syncButtonText}>همگام‌سازی</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Navigation Tabs: "کارهای من" & "تیکت‌ها" */}
+        {/* Navigation Tabs: "کارهای من", "تیکت‌ها", "وضعیت آفلاین / تنظیمات" */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'tasks' && styles.tabButtonActive]}
@@ -757,6 +546,27 @@ export default function App() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'settings' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('settings')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabContentRow}>
+              {pendingCount > 0 && (
+                <View style={[styles.tabBadge, styles.tabBadgeOrange]}>
+                  <Text style={[styles.tabBadgeText, styles.tabBadgeTextOrange]}>
+                    {pendingCount}
+                  </Text>
+                </View>
+              )}
+              <Text
+                style={[styles.tabText, activeTab === 'settings' && styles.tabTextActive]}
+              >
+                تنظیمات و آفلاین
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -784,7 +594,7 @@ export default function App() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === 'tasks' ? (
+        {activeTab === 'tasks' && (
           /* ================= TAB 1: کارهای من ================= */
           <View style={styles.sectionContainer}>
             {/* Action Bar: Create Task + Section Header */}
@@ -864,135 +674,19 @@ export default function App() {
                 </Text>
               </View>
             ) : (
-              filteredTasks.map((task) => {
-                const statusCfg = getTaskStatusCfg(task.status);
-                const priorityCfg = getTaskPriorityCfg(task.priority);
-
-                // Compute transitions strictly allowed by domain rules
-                const availableTransitions = ALL_TASK_STATUSES.filter((target) =>
-                  canTransitionTask(task.status, target, ACTOR_CAPABILITIES),
-                );
-
-                return (
-                  <View key={task.id} style={styles.itemCard}>
-                    {/* Header Row: Key & Badges */}
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.badgesCluster}>
-                        <View
-                          style={[
-                            styles.badge,
-                            {
-                              backgroundColor: statusCfg.bg,
-                              borderColor: statusCfg.borderColor,
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.badgeText, { color: statusCfg.color }]}>
-                            {statusCfg.label}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.badge,
-                            { backgroundColor: priorityCfg.bg, borderColor: priorityCfg.bg },
-                          ]}
-                        >
-                          <Text style={[styles.badgeText, { color: priorityCfg.color }]}>
-                            {priorityCfg.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.taskKeyBadge}>{task.key}</Text>
-                    </View>
-
-                    {/* Task Title */}
-                    <Text style={styles.itemTitle}>{task.title}</Text>
-
-                    {/* Metadata Pill Box */}
-                    <View style={styles.metadataBox}>
-                      {task.dueAt && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>مهلت:</Text>
-                          <Text style={styles.metaValue}>{task.dueAt}</Text>
-                        </View>
-                      )}
-                      {task.projectName && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>پروژه:</Text>
-                          <Text style={styles.metaValue}>{task.projectName}</Text>
-                        </View>
-                      )}
-                      {task.assigneeName && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>مسئول:</Text>
-                          <Text style={styles.metaValue}>{task.assigneeName}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Version & Update Time */}
-                    <View style={styles.metaFooterRow}>
-                      <Text style={styles.versionTag}>نسخه: v{task.version}</Text>
-                      <Text style={styles.updatedAtTag}>بروزرسانی: {task.updatedAt}</Text>
-                    </View>
-
-                    <View style={styles.cardDivider} />
-
-                    {/* Quick Transitions Section */}
-                    <View style={styles.transitionSection}>
-                      <Text style={styles.transitionPrompt}>
-                        گردش کار و تغییر وضعیت:
-                      </Text>
-
-                      {availableTransitions.length > 0 ? (
-                        <View style={styles.actionButtonWrap}>
-                          {availableTransitions.map((target) => {
-                            const btnLabel = getTransitionButtonText(task.status, target);
-                            const targetCfg = getTaskStatusCfg(target);
-                            return (
-                              <TouchableOpacity
-                                key={target}
-                                style={[
-                                  styles.quickTransitionButton,
-                                  { borderColor: targetCfg.borderColor },
-                                ]}
-                                onPress={() => handleTaskTransition(task, target)}
-                                activeOpacity={0.7}
-                              >
-                                <Text
-                                  style={[
-                                    styles.quickTransitionButtonText,
-                                    { color: targetCfg.color },
-                                  ]}
-                                >
-                                  {btnLabel}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      ) : (
-                        <Text style={styles.noTransitionNote}>
-                          وظیفه در وضعیت نهایی است.
-                        </Text>
-                      )}
-
-                      {/* Test domain rule rejection */}
-                      <TouchableOpacity
-                        style={styles.testDomainButton}
-                        onPress={() => handleTestInvalidTransition(task)}
-                      >
-                        <Text style={styles.testDomainButtonText}>
-                          تست قانون محدودیت دامنه (رد انتقال غیرمجاز)
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
+              filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onTransition={handleTaskTransition}
+                  onTestInvalidTransition={handleTestInvalidTransition}
+                />
+              ))
             )}
           </View>
-        ) : (
+        )}
+
+        {activeTab === 'tickets' && (
           /* ================= TAB 2: تیکت‌ها ================= */
           <View style={styles.sectionContainer}>
             {/* Action Bar: Create Ticket + Section Header */}
@@ -1074,330 +768,262 @@ export default function App() {
                 </Text>
               </View>
             ) : (
-              filteredTickets.map((ticket) => {
-                const statusCfg = getTicketStatusCfg(ticket.status);
-                const priorityCfg = getTicketPriorityCfg(ticket.priority);
-                const isResolved = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
-
-                return (
-                  <View key={ticket.id} style={styles.itemCard}>
-                    {/* Header Row: Reference & Badges */}
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.badgesCluster}>
-                        <View
-                          style={[
-                            styles.badge,
-                            {
-                              backgroundColor: statusCfg.bg,
-                              borderColor: statusCfg.borderColor,
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.badgeText, { color: statusCfg.color }]}>
-                            {statusCfg.label}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.badge,
-                            { backgroundColor: priorityCfg.bg, borderColor: priorityCfg.bg },
-                          ]}
-                        >
-                          <Text style={[styles.badgeText, { color: priorityCfg.color }]}>
-                            {priorityCfg.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.ticketRefBadge}>{ticket.reference}</Text>
-                    </View>
-
-                    {/* Title */}
-                    <Text style={styles.itemTitle}>{ticket.title}</Text>
-
-                    {/* Account & Details Box */}
-                    <View style={styles.metadataBox}>
-                      {ticket.accountName && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>مشتری:</Text>
-                          <Text style={styles.metaValue}>{ticket.accountName}</Text>
-                        </View>
-                      )}
-                      <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>پیام‌ها:</Text>
-                        <Text style={styles.metaValue}>💬 {ticket.messagesCount} پیام</Text>
-                      </View>
-                      {ticket.assigneeName && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>مسئول:</Text>
-                          <Text style={styles.metaValue}>{ticket.assigneeName}</Text>
-                        </View>
-                      )}
-                      {ticket.targetResolutionAt && (
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>هدف حل (SLA):</Text>
-                          <Text style={styles.metaValue}>{ticket.targetResolutionAt}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.cardDivider} />
-
-                    {/* Footer Row: Status Action & Date */}
-                    <View style={styles.ticketFooterRow}>
-                      <Text style={styles.updatedAtTag}>{ticket.createdAt}</Text>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.ticketStatusBtn,
-                          isResolved ? styles.reopenTicketBtn : styles.resolveTicketBtn,
-                        ]}
-                        onPress={() => handleToggleTicketStatus(ticket)}
-                        activeOpacity={0.8}
-                      >
-                        <Text
-                          style={[
-                            styles.ticketStatusBtnText,
-                            isResolved ? styles.reopenTicketBtnText : styles.resolveTicketBtnText,
-                          ]}
-                        >
-                          {isResolved ? 'بازگشایی مجدد تیکت ↺' : 'تغییر به حل‌شده ✓'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
+              filteredTickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  onToggleStatus={handleToggleTicketStatus}
+                />
+              ))
             )}
+          </View>
+        )}
+
+        {activeTab === 'settings' && (
+          /* ================= TAB 3: وضعیت آفلاین / تنظیمات ================= */
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionHeading}>وضعیت آفلاین و پیکربندی API</Text>
+
+            {/* Card 1: Network & Offline Status */}
+            <View style={styles.settingsCard}>
+              <Text style={styles.settingsCardTitle}>وضعیت اتصال شبکه</Text>
+              <Text style={styles.settingsCardDesc}>
+                در صورت قطع اتصال یا فعال‌سازی حالت آفلاین، تمامی عملیات‌ها در صف پایدار
+                محلی ثبت و پس از برقراری مجدد ارتباط به‌طور خودکار ارسال می‌شوند.
+              </Text>
+
+              <View style={styles.settingToggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleBtn,
+                    !isOffline ? styles.toggleBtnActiveOnline : styles.toggleBtnInactive,
+                  ]}
+                  onPress={() => isOffline && handleToggleNetwork()}
+                >
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      !isOffline && styles.toggleBtnTextActiveOnline,
+                    ]}
+                  >
+                    ● آنلاین
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.toggleBtn,
+                    isOffline ? styles.toggleBtnActiveOffline : styles.toggleBtnInactive,
+                  ]}
+                  onPress={() => !isOffline && handleToggleNetwork()}
+                >
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      isOffline && styles.toggleBtnTextActiveOffline,
+                    ]}
+                  >
+                    ⚡ آفلاین (محلی)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Card 2: Server API Configuration */}
+            <View style={styles.settingsCard}>
+              <Text style={styles.settingsCardTitle}>پیکربندی API Client</Text>
+              <Text style={styles.settingsCardDesc}>
+                آدرس سرور مرکزی و توکن احراز هویت پیش‌فرض جهت ارتباط ایمن با Backend.
+              </Text>
+
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>آدرس سرور API (Base URL):</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={apiUrl}
+                  onChangeText={setApiUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textAlign="left"
+                  placeholder="http://localhost:4000/api/v1"
+                />
+              </View>
+
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>توکن احراز هویت (Bearer Token):</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={authToken}
+                  onChangeText={setAuthTokenState}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textAlign="left"
+                  placeholder="22222222-2222-2222-2222-222222222222"
+                />
+              </View>
+
+              <View style={styles.settingsActionsRow}>
+                <TouchableOpacity
+                  style={styles.applyBtn}
+                  onPress={handleApplyApiSettings}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.applyBtnText}>اعمال تنظیمات</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.resetBtn}
+                  onPress={handleResetApiSettings}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.resetBtnText}>بازنشانی به پیش‌فرض</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Card 3: Durable Offline Queue Manager */}
+            <View style={styles.settingsCard}>
+              <View style={styles.queueHeaderRow}>
+                <View style={styles.queueBadgeCluster}>
+                  <View style={[styles.queueCountBadge, pendingCount > 0 ? styles.queueCountBadgeActive : styles.queueCountBadgeEmpty]}>
+                    <Text style={[styles.queueCountText, pendingCount > 0 ? styles.queueCountTextActive : styles.queueCountTextEmpty]}>
+                      {pendingCount} مورد در صف
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.settingsCardTitle}>صف جهش‌های پایدار (Offline Queue)</Text>
+              </View>
+
+              <Text style={styles.settingsCardDesc}>
+                عملیات‌های ثبت‌شده در حالت آفلاین یا در صورت قطعی شبکه با ترتیب زمانی در حافظه ماندگار نگهداری می‌شوند.
+              </Text>
+
+              <View style={styles.queueActionsRow}>
+                <TouchableOpacity
+                  style={[styles.syncQueueBtn, (isSyncing || pendingCount === 0) && styles.btnDisabled]}
+                  onPress={handleManualSync}
+                  disabled={isSyncing || pendingCount === 0}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.syncQueueBtnText}>
+                    {isSyncing ? 'در حال ارسال به سرور...' : 'همگام‌سازی دستی صف'}
+                  </Text>
+                </TouchableOpacity>
+
+                {queueItems.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearQueueBtn}
+                    onPress={handleClearQueue}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.clearQueueBtnText}>پاک‌سازی صف</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Items in Queue */}
+              {queueItems.length === 0 ? (
+                <View style={styles.queueEmptyBox}>
+                  <Text style={styles.queueEmptyText}>✓ صف عملیات آفلاین خالی است.</Text>
+                </View>
+              ) : (
+                <View style={styles.queueListContainer}>
+                  {queueItems.map((item, idx) => (
+                    <View key={item.id} style={styles.queueItemRow}>
+                      <View style={styles.queueItemHeader}>
+                        <TouchableOpacity
+                          onPress={() => offlineQueue.remove(item.id)}
+                          style={styles.queueItemDeleteBtn}
+                        >
+                          <Text style={styles.queueItemDeleteText}>حذف</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.queueItemBadges}>
+                          <View
+                            style={[
+                              styles.queueStatusPill,
+                              item.status === 'FAILED'
+                                ? styles.queueStatusFailed
+                                : item.status === 'SYNCING'
+                                  ? styles.queueStatusSyncing
+                                  : styles.queueStatusPending,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.queueStatusText,
+                                item.status === 'FAILED'
+                                  ? styles.queueStatusTextFailed
+                                  : item.status === 'SYNCING'
+                                    ? styles.queueStatusTextSyncing
+                                    : styles.queueStatusTextPending,
+                              ]}
+                            >
+                              {item.status === 'FAILED'
+                                ? 'ناموفق'
+                                : item.status === 'SYNCING'
+                                  ? 'در حال ارسال'
+                                  : 'در انتظار'}
+                            </Text>
+                          </View>
+
+                          <Text style={styles.queueItemType}>{item.type}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.queueItemPayload} numberOfLines={2}>
+                        {JSON.stringify(item.payload)}
+                      </Text>
+
+                      {item.error && (
+                        <Text style={styles.queueItemError}>خطا: {item.error}</Text>
+                      )}
+
+                      <View style={styles.queueItemFooter}>
+                        <Text style={styles.queueItemMeta}>تلاش‌ها: {item.attempts}</Text>
+                        <Text style={styles.queueItemMeta}>{item.createdAt.slice(11, 19)}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Card 4: Domain Capabilities & Role Information */}
+            <View style={styles.settingsCard}>
+              <Text style={styles.settingsCardTitle}>مجوزها و قوانین دامنه (@crm/domain)</Text>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityStatus}>فعال ✓</Text>
+                <Text style={styles.capabilityLabel}>بازگشایی تسک‌های تکمیل‌شده (Reopen Done)</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityStatus}>فعال ✓</Text>
+                <Text style={styles.capabilityLabel}>بازیابی تسک‌های لغوشده (Restore Canceled)</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityStatus}>سازمان آلفا</Text>
+                <Text style={styles.capabilityLabel}>فضای کاری فعال (Active Workspace)</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityStatus}>کارمند عملیات</Text>
+                <Text style={styles.capabilityLabel}>نقش سازمانی کاربر (Role)</Text>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
 
-      {/* ================= TASK CREATION MODAL ================= */}
-      <Modal
+      {/* ================= MODALS ================= */}
+      <CreateTaskModal
         visible={isTaskModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsTaskModalOpen(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => setIsTaskModalOpen(false)}
-                style={styles.modalCloseBtn}
-              >
-                <Text style={styles.modalCloseBtnText}>✕</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalHeaderTitle}>تعریف وظیفه جدید</Text>
-            </View>
+        onClose={() => setIsTaskModalOpen(false)}
+        onSubmit={handleCreateTask}
+      />
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>عنوان وظیفه *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="مثلاً: بررسی نیازمندی‌های ماژول انبارداری..."
-                  placeholderTextColor="#94A3B8"
-                  value={newTaskTitle}
-                  onChangeText={setNewTaskTitle}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>نام پروژه یا موضوع</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="مثلاً: سامانه مدیریت مالی..."
-                  placeholderTextColor="#94A3B8"
-                  value={newTaskProject}
-                  onChangeText={setNewTaskProject}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>اولویت وظیفه</Text>
-                <View style={styles.prioritySelectorRow}>
-                  {(
-                    [
-                      { key: 'LOW', label: 'پایین' },
-                      { key: 'MEDIUM', label: 'متوسط' },
-                      { key: 'HIGH', label: 'بالا' },
-                      { key: 'URGENT', label: 'بسیار فوری' },
-                    ] as const
-                  ).map((p) => {
-                    const isSelected = newTaskPriority === p.key;
-                    const pCfg = getTaskPriorityCfg(p.key);
-                    return (
-                      <TouchableOpacity
-                        key={p.key}
-                        style={[
-                          styles.priorityChipBtn,
-                          isSelected && {
-                            backgroundColor: pCfg.bg,
-                            borderColor: pCfg.color,
-                          },
-                        ]}
-                        onPress={() => setNewTaskPriority(p.key)}
-                      >
-                        <Text
-                          style={[
-                            styles.priorityChipBtnText,
-                            isSelected && { color: pCfg.color, fontWeight: '700' },
-                          ]}
-                        >
-                          {p.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.modalButtonRow}>
-                <TouchableOpacity
-                  style={styles.modalSubmitButton}
-                  onPress={handleCreateTaskSubmit}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.modalSubmitButtonText}>ثبت و ایجاد وظیفه</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => setIsTaskModalOpen(false)}
-                >
-                  <Text style={styles.modalCancelButtonText}>انصراف</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* ================= TICKET CREATION MODAL ================= */}
-      <Modal
+      <CreateTicketModal
         visible={isTicketModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsTicketModalOpen(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => setIsTicketModalOpen(false)}
-                style={styles.modalCloseBtn}
-              >
-                <Text style={styles.modalCloseBtnText}>✕</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalHeaderTitle}>ثبت تیکت پشتیبانی جدید</Text>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>موضوع تیکت *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="مثلاً: خطای دسترسی به گزارشات فصلی"
-                  placeholderTextColor="#94A3B8"
-                  value={newTicketTitle}
-                  onChangeText={setNewTicketTitle}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>نام مشتری یا شرکت کارفرما</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="مثلاً: پتروشیمی زاگرس"
-                  placeholderTextColor="#94A3B8"
-                  value={newTicketAccount}
-                  onChangeText={setNewTicketAccount}
-                  textAlign="right"
-                />
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>اولویت رسیدگی (SLA)</Text>
-                <View style={styles.prioritySelectorRow}>
-                  {(
-                    [
-                      { key: 'LOW', label: 'پایین' },
-                      { key: 'NORMAL', label: 'عادی' },
-                      { key: 'HIGH', label: 'بالا' },
-                      { key: 'URGENT', label: 'بسیار فوری' },
-                    ] as const
-                  ).map((p) => {
-                    const isSelected = newTicketPriority === p.key;
-                    const pCfg = getTicketPriorityCfg(p.key);
-                    return (
-                      <TouchableOpacity
-                        key={p.key}
-                        style={[
-                          styles.priorityChipBtn,
-                          isSelected && {
-                            backgroundColor: pCfg.bg,
-                            borderColor: pCfg.color,
-                          },
-                        ]}
-                        onPress={() => setNewTicketPriority(p.key)}
-                      >
-                        <Text
-                          style={[
-                            styles.priorityChipBtnText,
-                            isSelected && { color: pCfg.color, fontWeight: '700' },
-                          ]}
-                        >
-                          {p.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={styles.formItemLabel}>شرح کامل درخواست و جزییات خطا *</Text>
-                <TextInput
-                  style={[styles.formInput, styles.formTextArea]}
-                  placeholder="توضیحات و شرایط وقوع مشکل را با جزییات شرح دهید..."
-                  placeholderTextColor="#94A3B8"
-                  value={newTicketDescription}
-                  onChangeText={setNewTicketDescription}
-                  multiline={true}
-                  numberOfLines={4}
-                  textAlign="right"
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.modalButtonRow}>
-                <TouchableOpacity
-                  style={[styles.modalSubmitButton, { backgroundColor: '#0284C7' }]}
-                  onPress={handleCreateTicketSubmit}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.modalSubmitButtonText}>ثبت و ارسال تیکت</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => setIsTicketModalOpen(false)}
-                >
-                  <Text style={styles.modalCancelButtonText}>انصراف</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        onClose={() => setIsTicketModalOpen(false)}
+        onSubmit={handleCreateTicket}
+      />
     </SafeAreaView>
   );
 }
@@ -1418,99 +1044,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 36 : 10,
     paddingBottom: 4,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  headerTitles: {
-    alignItems: 'flex-end',
-  },
-  eyebrow: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  appTitle: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  networkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
-  },
-  onlineBadge: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  offlineBadge: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-  },
-  networkDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  networkText: {
-    fontSize: 12,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  offlineBanner: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 10,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  offlineBannerContent: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  offlineBannerTitle: {
-    color: '#92400E',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  offlineBannerDesc: {
-    color: '#B45309',
-    fontSize: 11,
-    lineHeight: 16,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: 2,
-  },
-  syncButton: {
-    backgroundColor: '#D97706',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  syncButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    writingDirection: 'rtl',
   },
   tabContainer: {
     flexDirection: 'row-reverse',
@@ -1539,10 +1072,10 @@ const styles = StyleSheet.create({
   tabContentRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
     writingDirection: 'rtl',
@@ -1552,9 +1085,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tabBadge: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   tabBadgeActive: {
     backgroundColor: '#EFF6FF',
@@ -1562,8 +1095,11 @@ const styles = StyleSheet.create({
   tabBadgeInactive: {
     backgroundColor: '#E2E8F0',
   },
+  tabBadgeOrange: {
+    backgroundColor: '#FEF3C7',
+  },
   tabBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   tabBadgeTextActive: {
@@ -1571,6 +1107,9 @@ const styles = StyleSheet.create({
   },
   tabBadgeTextInactive: {
     color: '#64748B',
+  },
+  tabBadgeTextOrange: {
+    color: '#D97706',
   },
   toastContainer: {
     position: 'absolute',
@@ -1733,229 +1272,72 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     writingDirection: 'rtl',
   },
-  itemCard: {
+  settingsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderColor: '#E2E8F0',
     borderWidth: 1,
-    padding: 14,
+    padding: 16,
+    gap: 10,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
-    gap: 8,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskKeyBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563EB',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  ticketRefBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0284C7',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgesCluster: {
-    flexDirection: 'row-reverse',
-    gap: 6,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 5,
-    borderWidth: 1,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  itemTitle: {
+  settingsCardTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    lineHeight: 22,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  metadataBox: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 10,
-    backgroundColor: '#F8FAFC',
-    padding: 8,
-    borderRadius: 8,
-  },
-  metaRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    writingDirection: 'rtl',
-  },
-  metaValue: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#334155',
-    writingDirection: 'rtl',
-  },
-  metaFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  versionTag: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  updatedAtTag: {
-    fontSize: 11,
-    color: '#94A3B8',
-    writingDirection: 'rtl',
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 2,
-  },
-  transitionSection: {
-    gap: 6,
-  },
-  transitionPrompt: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  actionButtonWrap: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  quickTransitionButton: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  quickTransitionButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  noTransitionNote: {
-    fontSize: 11,
-    color: '#94A3B8',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    fontStyle: 'italic',
-  },
-  testDomainButton: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  testDomainButtonText: {
-    fontSize: 11,
-    color: '#94A3B8',
-    textDecorationLine: 'underline',
-  },
-  ticketFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ticketStatusBtn: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  resolveTicketBtn: {
-    backgroundColor: '#ECFDF3',
-    borderColor: '#A6F4C5',
-  },
-  resolveTicketBtnText: {
-    color: '#027A48',
-    fontSize: 11,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  reopenTicketBtn: {
-    backgroundColor: '#EFF8FF',
-    borderColor: '#B2DDFF',
-  },
-  reopenTicketBtnText: {
-    color: '#175CD3',
-    fontSize: 11,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  ticketStatusBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 18,
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 10,
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  modalCloseBtnText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#94A3B8',
-  },
-  modalHeaderTitle: {
-    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  settingsCardDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  settingToggleRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginTop: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  toggleBtnInactive: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  toggleBtnActiveOnline: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+  },
+  toggleBtnActiveOffline: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  toggleBtnTextActiveOnline: {
+    color: '#15803D',
+    fontWeight: '700',
+  },
+  toggleBtnTextActiveOffline: {
+    color: '#B45309',
+    fontWeight: '700',
+  },
   formItem: {
-    marginBottom: 12,
-    gap: 5,
+    gap: 4,
   },
   formItemLabel: {
     fontSize: 12,
@@ -1971,64 +1353,220 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontSize: 13,
+    fontSize: 12,
     color: '#0F172A',
-    writingDirection: 'rtl',
   },
-  formTextArea: {
-    height: 80,
-    paddingTop: 8,
-  },
-  prioritySelectorRow: {
-    flexDirection: 'row-reverse',
-    gap: 6,
-  },
-  priorityChipBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    paddingHorizontal: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-  },
-  priorityChipBtnText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '500',
-    writingDirection: 'rtl',
-  },
-  modalButtonRow: {
+  settingsActionsRow: {
     flexDirection: 'row-reverse',
     gap: 8,
-    marginTop: 8,
-    marginBottom: 14,
+    marginTop: 6,
   },
-  modalSubmitButton: {
-    flex: 2,
+  applyBtn: {
+    flex: 1,
     backgroundColor: '#2563EB',
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  modalSubmitButtonText: {
+  applyBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     writingDirection: 'rtl',
   },
-  modalCancelButton: {
-    flex: 1,
+  resetBtn: {
     backgroundColor: '#F1F5F9',
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  modalCancelButtonText: {
-    color: '#64748B',
-    fontSize: 13,
+  resetBtnText: {
+    color: '#475569',
+    fontSize: 12,
     fontWeight: '600',
     writingDirection: 'rtl',
+  },
+  queueHeaderRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  queueBadgeCluster: {
+    flexDirection: 'row',
+  },
+  queueCountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  queueCountBadgeActive: {
+    backgroundColor: '#FEF3C7',
+  },
+  queueCountBadgeEmpty: {
+    backgroundColor: '#F1F5F9',
+  },
+  queueCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  queueCountTextActive: {
+    color: '#B45309',
+  },
+  queueCountTextEmpty: {
+    color: '#64748B',
+  },
+  queueActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginTop: 4,
+  },
+  syncQueueBtn: {
+    flex: 1,
+    backgroundColor: '#D97706',
+    paddingVertical: 9,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  syncQueueBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+  },
+  clearQueueBtn: {
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearQueueBtnText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+  queueEmptyBox: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  queueEmptyText: {
+    color: '#15803D',
+    fontSize: 12,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+  },
+  queueListContainer: {
+    gap: 8,
+    marginTop: 4,
+  },
+  queueItemRow: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    gap: 4,
+  },
+  queueItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  queueItemBadges: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  queueItemType: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E40AF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  queueStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  queueStatusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  queueStatusSyncing: {
+    backgroundColor: '#DBEAFE',
+  },
+  queueStatusFailed: {
+    backgroundColor: '#FEE2E2',
+  },
+  queueStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  queueStatusTextPending: {
+    color: '#92400E',
+  },
+  queueStatusTextSyncing: {
+    color: '#1D4ED8',
+  },
+  queueStatusTextFailed: {
+    color: '#B91C1C',
+  },
+  queueItemDeleteBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  queueItemDeleteText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  queueItemPayload: {
+    fontSize: 11,
+    color: '#475569',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    textAlign: 'left',
+  },
+  queueItemError: {
+    fontSize: 11,
+    color: '#DC2626',
+    writingDirection: 'rtl',
+  },
+  queueItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  queueItemMeta: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  capabilityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  capabilityLabel: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '500',
+    writingDirection: 'rtl',
+  },
+  capabilityStatus: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '700',
   },
 });
