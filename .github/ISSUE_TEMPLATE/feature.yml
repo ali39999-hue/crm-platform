@@ -1,0 +1,35 @@
+name: Feature / User Story
+description: ثبت قابلیت با معیار پذیرش
+labels: ["type: feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: مسئله / نتیجه مورد انتظار
+      description: چه کسی، چه کاری را، چرا نیاز دارد؟
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: معیارهای پذیرش
+      placeholder: |
+        - Given ...
+        - When ...
+        - Then ...
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: نقش‌ها و scope دسترسی
+    validations:
+      required: true
+  - type: textarea
+    id: analytics
+    attributes:
+      label: لاگ / KPI / observability
+  - type: textarea
+    id: risks
+    attributes:
+      label: ریسک‌ها، وابستگی‌ها و موارد خارج از محدوده

@@ -1,0 +1,13 @@
+{
+  "name": "@crm/domain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./task-transition": "./src/task-transition.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": { "typescript": "^5.9.3", "vitest": "^4.0.0" }
+}

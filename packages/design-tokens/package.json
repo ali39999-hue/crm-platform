@@ -1,0 +1,6 @@
+{
+  "name": "@crm/design-tokens",
+  "private": true,
+  "version": "0.1.0",
+  "exports": { "./tokens.json": "./tokens.json" }
+}

@@ -1,0 +1,11 @@
+﻿event_name,producer,consumers,idempotency_key,contains_pii,retention_notes
+task.created,WorkManagement,Audit|Notification|Search,task_id+event_version,low,Domain audit retained by policy
+task.status_changed,WorkManagement,Audit|Notification|Search|Reporting,task_id+version,low,Do not include descriptions or private comments by default
+task.assigned,WorkManagement,Notification|Audit,task_id+assignee_id+version,low,Check assignee access before delivery
+crm.lead_created,CRM,Audit|Notification|Search,lead_id,medium,Do not put email/phone in event name or logs
+crm.lead_converted,CRM,Audit|Activity|Reporting,lead_id+conversion_id,medium,Must be idempotent
+ticket.created,Support,Audit|Notification|SLA,ticket_id,medium,Customer and internal payloads use separate schemas
+ticket.message_created,Support,Audit|Notification,ticket_message_id,high,Payload should contain opaque id only; fetch with policy before delivery
+ticket.sla_breached,Support,Audit|Notification|Reporting,ticket_id+sla_clock_version,medium,Calendar and pause state must be consistent
+file.quarantined,Files,Audit|Notification,file_id+scan_version,medium,Never expose object key publicly
+notification.delivery_failed,Notifications,OperationsAlert,delivery_id+attempt,low,Bounded retries then dead-letter/manual review

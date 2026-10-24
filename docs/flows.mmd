@@ -1,0 +1,30 @@
+flowchart TD
+  A[کاربر وب/موبایل] --> B{session معتبر؟}
+  B -- خیر --> C[OIDC login / MFA]
+  C --> D[اعتبارسنجی issuer, audience, state, PKCE]
+  D --> E[Resolve membership و سازمان فعال]
+  B -- بله --> E
+  E --> F{اجازه دسترسی؟}
+  F -- خیر --> G[403 + ثبت event متناسب]
+  F -- بله --> H[اجرای use case]
+  H --> I[Transaction: data + audit + outbox]
+  I --> J[Response با requestId]
+  I --> K[Worker: retry محدود + idempotency]
+  K --> L[Email/Push/Integration adapter]
+
+  subgraph Task workflow
+    T1[Draft/Backlog] --> T2[TODO]
+    T2 --> T3[IN_PROGRESS]
+    T3 --> T4[IN_REVIEW]
+    T4 --> T5[DONE]
+    T3 --> T6[BLOCKED]
+    T6 --> T2
+    T4 --> T3
+  end
+
+  subgraph Customer-to-internal
+    C1[Lead/Customer event] --> C2[Check duplicate + tenant policy]
+    C2 --> C3[Create activity / task / ticket]
+    C3 --> C4[Visibility policy: internal vs customer-visible]
+    C4 --> C5[Notify only permitted recipients]
+  end

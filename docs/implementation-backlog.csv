@@ -1,0 +1,64 @@
+﻿id,priority,phase,task,acceptance_criteria,status
+DISC-001,P0,Discovery,تعیین tenant model و سازمان/تیم,تصمیم ADR و مدل دسترسی تأیید شده,Proposed
+DISC-002,P0,Discovery,مصاحبه کاربران فروش، پشتیبانی و کارکنان,جریان‌های واقعی و pain point مستند شده,Proposed
+DISC-003,P0,Discovery,فهرست داده مبدا و نیاز مهاجرت,مالک داده، حجم، mapping و ریسک مشخص,Proposed
+DISC-004,P0,Discovery,تعریف SLA، تقویم کاری و timezone,قواعد محاسباتی با مثال مرزی ثبت شده,Proposed
+BOOT-001,P0,Bootstrap,راه‌اندازی monorepo و lockfile,install/build/typecheck در CI موفق,Proposed
+BOOT-002,P0,Bootstrap,Docker Compose محلی و health checks,Postgres/Redis/MinIO سالم و مستند,Proposed
+BOOT-003,P0,Bootstrap,قالب PR، issue و AGENTS.md,قواعد تست، امنیت و گزارش تغییر موجود,Proposed
+BOOT-004,P0,Bootstrap,OpenAPI و error envelope استاندارد,contract test و requestId تعریف شده,Proposed
+IAM-001,P0,Identity,انتخاب OIDC provider و flow,ADR، redirect URI، PKCE و MFA policy مستند,Proposed
+IAM-002,P0,Identity,پیاده‌سازی session و revoke,logout و token/session expiry تست شده,Proposed
+IAM-003,P0,Identity,membership و organization scope,کلاینت نتواند scope سازمان را جعل کند,Proposed
+IAM-004,P0,Identity,permission matrix نقش‌ها,read/write/list/search/export/file پوشش دارد,Proposed
+IAM-005,P0,Identity,audit event برای عملیات حساس,actor/action/time/requestId در مسیرهای حساس ثبت,Proposed
+UX-001,P0,Design,tokenها و typography RTL/LTR,tokens و نمونه componentها مستند,Proposed
+UX-002,P0,Design,navigation و shell واکنش‌گرا,موبایل/تبلت/دسکتاپ overflow ندارد,Proposed
+UX-003,P0,Design,design states برای فرم/جدول/empty/error,loading/empty/error/denied/success تعریف شده,Proposed
+TASK-001,P0,Work,CRUD task و pagination,authorization و integration test کامل,Proposed
+TASK-002,P0,Work,state machine و transition API,transition مجاز/نامجاز تست شده,Proposed
+TASK-003,P0,Work,optimistic concurrency نسخه task,update هم‌زمان conflict قابل تشخیص دارد,Proposed
+TASK-004,P0,Work,task dependency graph بدون cycle,چرخه مستقیم/غیرمستقیم رد می‌شود,Proposed
+TASK-005,P1,Work,comments و visibility داخلی/مشتری,عمومی‌سازی note داخلی غیرممکن و تست شده,Proposed
+TASK-006,P1,Work,board/list/calendar view از داده مشترک,filter/sort/state semantics مشترک‌اند,Proposed
+CRM-001,P0,CRM,Account و Contact API/صفحه,tenant scope و duplicate hints تست شده,Proposed
+CRM-002,P0,CRM,Lead pipeline و مالک,lead بدون owner/next action قابل گزارش است,Proposed
+CRM-003,P0,CRM,Deal stages و amount/currency,پول با integer/numeric و currency مستقل ذخیره,Proposed
+CRM-004,P1,CRM,Lead conversion idempotent,retry دوباره account/contact/deal تولید نمی‌کند,Proposed
+CRM-005,P1,CRM,Customer 360 timeline,هر مورد بر اساس permission نمایش داده می‌شود,Proposed
+CRM-006,P1,CRM,dedup exact match و review merge,merge audit و reversible mapping دارد,Proposed
+SUP-001,P0,Support,ticket lifecycle و numbering,status transition و reference یکتا است,Proposed
+SUP-002,P0,Support,پیام داخلی و customer-visible,query مشتری هیچ private message برنمی‌گرداند,Proposed
+SUP-003,P1,Support,SLA calculator با business calendar,تعطیلی، pause و timezone با تست مرزی پوشش دارد,Proposed
+SUP-004,P1,Support,assign/escalate/reopen audit,هر تغییر actor و زمان دارد,Proposed
+FILE-001,P0,Files,upload/download با signed URL,MIME/size/access/expiry تست شده,Proposed
+FILE-002,P1,Files,quarantine و malware scan adapter,فایل مشکوک قابل دانلود نیست,Proposed
+NOTIF-001,P0,Notifications,notification inbox,scope و unread state در API enforce,Proposed
+NOTIF-002,P1,Notifications,outbox + idempotent worker,retry و duplicate test موفق,Proposed
+NOTIF-003,P1,Notifications,email/push adapters,provider failure retry/DLQ و privacy ثبت,Proposed
+SEARCH-001,P0,Search,جست‌وجوی محدود به مجوز,همه entity hits policy-aware هستند,Proposed
+SEARCH-002,P2,Search,search index جدا در صورت اثبات نیاز,benchmark و index rebuild plan وجود دارد,Proposed
+MOB-001,P0,Mobile,mobile shell و session handling,secure storage و logout revoke مشخص,Proposed
+MOB-002,P0,Mobile,My Work و task detail,API مشترک و offline/error UX تعریف شده,Proposed
+MOB-003,P1,Mobile,deep link و push,tap پس از auth دوباره data/permission را fetch می‌کند,Proposed
+MOB-004,P2,Mobile,offline mutation queue محدود,conflict/idempotency/reauthorization مستند و تست,Proposed
+REPORT-001,P1,Reporting,KPI definitions و dashboard,هر KPI owner/timezone/source دارد,Proposed
+REPORT-002,P1,Reporting,export کنترل‌شده,permission جدا، حجم محدود و audit فعال,Proposed
+AUTO-001,P1,Automation,rule engine محدود برای use caseهای مصوب,versioning، dry-run و audit دارد,Proposed
+AUTO-002,P2,Automation,workflow builder بصری,فقط پس از تثبیت rule schema و user research,Proposed
+SEC-001,P0,Security,cross-tenant negative tests,list/get/update/search/count/export/file پوشش دارد,Proposed
+SEC-002,P0,Security,secret/dependency/license scans,CI gate و owner برای exception مشخص,Proposed
+SEC-003,P1,Security,threat model و ASVS mapping,ریسک‌ها و پذیرش ریسک ثبت شده,Proposed
+TEST-001,P0,Quality,unit/integration harness,دیتابیس تست و fixture قابل تکرار,Proposed
+TEST-002,P0,Quality,E2E مسیر vertical slice,login تا task transition و audit عبور می‌کند,Proposed
+TEST-003,P1,Quality,accessibility و visual regression,صفحات پرکاربرد و keyboard flow تست,Proposed
+OBS-001,P1,Operations,structured logs و requestId,error قابل ردیابی، بدون PII اضافه,Proposed
+OBS-002,P1,Operations,OpenTelemetry metrics/traces,latency، queue و DB pool قابل پایش,Proposed
+OPS-001,P0,Operations,backup/restore و RPO/RTO,restore test در محیط جدا ثبت شده,Proposed
+OPS-002,P0,Operations,staging/production isolation,secrets و data access جدا,Proposed
+OPS-003,P1,Operations,incident/release runbook,owner، escalation و rollback route موجود,Proposed
+DATA-001,P1,Migration,dry-run import pipeline,error report، source mapping و checkpoint دارد,Proposed
+DATA-002,P1,Migration,reconciliation و sign-off,counts/relations/sample audit با مالک داده تأیید,Proposed
+LEGAL-001,P0,Privacy,retention/DPA/data residency review,مالک privacy/legal تصمیم را ثبت کرده,Proposed
+RELEASE-001,P0,Release,production readiness review,چک‌لیست release کامل و امضا شده,Proposed
+RELEASE-002,P0,Release,staged rollout + smoke checks,health/permission/E2E و recovery checks سبز,Proposed

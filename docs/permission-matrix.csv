@@ -1,0 +1,10 @@
+﻿role,organization_settings,manage_members,view_internal_tasks,create_or_edit_tasks,assign_tasks,view_crm,edit_crm,view_ticket_internal_notes,reply_to_customer,view_customer_portal_records,export_data,view_audit,manage_integrations
+SystemOwner,yes,yes,yes,yes,yes,yes,yes,yes,yes,scoped,yes,yes,yes
+OrganizationAdmin,scoped,scoped,yes,yes,yes,yes,yes,yes,yes,scoped,scoped,scoped,scoped
+Manager,limited,no,team_scope,team_scope,team_scope,scoped,scoped,scoped,scoped,no,limited,limited,no
+Employee,own_or_team,no,assigned_or_permitted,own_or_permitted,limited,permitted,permitted,no,permitted,no,no,no,no
+Sales,limited,no,permitted,permitted,limited,owned_or_permitted,owned_or_permitted,case_by_case,limited,no,limited,no,no
+SupportAgent,no,no,assigned_or_permitted,permitted,team_scope,permitted,limited,yes,yes,no,no,limited,no
+CustomerPortalUser,no,no,no,no,no,own_portal_scope,no,no,own_ticket_only,own_portal_scope,no,no,no
+Auditor,no,no,read_scope,no,no,read_scope,no,read_scope,no,read_scope,approved_export,read_scope,no
+IntegrationAccount,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,explicit_scope,limited,explicit_scope
