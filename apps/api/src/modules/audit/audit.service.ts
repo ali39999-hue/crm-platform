@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { redactObject } from '../../common/privacy/pii-redactor.js';
 
 export type AuditRecord = {
   id: string;
@@ -27,6 +28,8 @@ export class AuditService {
     requestId?: string | undefined;
     metadata?: Record<string, any> | undefined;
   }): AuditRecord {
+    const sanitizedMetadata = params.metadata ? redactObject(params.metadata) : undefined;
+
     const record: AuditRecord = {
       id: randomUUID(),
       organizationId: params.organizationId,
@@ -35,7 +38,7 @@ export class AuditService {
       entityType: params.entityType,
       entityId: params.entityId,
       requestId: params.requestId,
-      metadata: params.metadata,
+      metadata: sanitizedMetadata,
       createdAt: new Date().toISOString(),
     };
 

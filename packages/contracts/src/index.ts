@@ -408,4 +408,56 @@ export type SearchQueryDto = {
   limit?: number;
 };
 
+/* Files & Attachments Contracts */
+
+export type FileScanStatus = 'PENDING_SCAN' | 'VERIFIED' | 'REJECTED';
+export type FileVisibility = 'INTERNAL' | 'CUSTOMER_SHARED';
+
+export type FileDto = {
+  id: string;
+  organizationId: string;
+  uploaderId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  visibility: FileVisibility;
+  status: FileScanStatus;
+  storageKey: string;
+  scanDetails?: string | null;
+  associatedEntityType?: string | null;
+  associatedEntityId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UploadIntentRequest = {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  visibility?: FileVisibility;
+  associatedEntityType?: string;
+  associatedEntityId?: string;
+};
+
+export type UploadIntentResponse = {
+  file: FileDto;
+  uploadUrl: string;
+  uploadToken: string;
+  expiresAt: string;
+};
+
+export type SignedDownloadResponse = {
+  fileId: string;
+  fileName: string;
+  downloadUrl: string;
+  downloadToken: string;
+  expiresAt: string;
+};
+
+export type VerifyFileScanRequest = {
+  status: 'VERIFIED' | 'REJECTED';
+  scanDetails?: string;
+};
+
+
 
