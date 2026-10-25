@@ -7,13 +7,14 @@ import type {
   OrganizationSettingsDto,
 } from '@crm/contracts';
 import { apiClient } from '../lib/api-client';
+import { CustomFieldSchemaBuilder } from './CustomFieldSchemaBuilder';
 
 interface AdminSettingsViewProps {
   onNotify?: (msg: string, type?: 'success' | 'error') => void;
 }
 
 export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
-  const [activeTab, setActiveTab] = useState<'workspace' | 'members' | 'security' | 'roles'>(
+  const [activeTab, setActiveTab] = useState<'workspace' | 'members' | 'security' | 'roles' | 'fields'>(
     'workspace',
   );
 
@@ -239,6 +240,20 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
         >
           <span>📋</span>
           <span>ماتریس نقش‌ها و مجوزها</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('fields')}
+          data-testid="tab-fields"
+          className={`pb-2.5 px-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'fields'
+              ? 'border-indigo-500 text-indigo-400 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>🛠️</span>
+          <span>فیلدهای سفارشی</span>
         </button>
       </nav>
 
@@ -525,6 +540,11 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Tab 5: Custom Fields Schema Builder */}
+            {activeTab === 'fields' && (
+              <CustomFieldSchemaBuilder onNotify={onNotify} />
             )}
           </>
         )}

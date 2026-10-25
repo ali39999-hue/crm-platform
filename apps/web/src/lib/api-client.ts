@@ -78,6 +78,11 @@ import type {
   MergeRecordsRequest,
   PipelineStageDto,
   UpdateDealDto,
+  CreateCustomFieldRequest,
+  CustomFieldDefinitionDto,
+  CustomFieldEntityType,
+  CustomFieldType,
+  UpdateCustomFieldRequest,
 } from '@crm/contracts';
 
 import {
@@ -850,6 +855,50 @@ export class ApiClient {
       },
       matchReason: 'ایمیل و شماره تماس یکسان',
       confidenceScore: 98,
+    },
+  ];
+
+  private fallbackCustomFields: CustomFieldDefinitionDto[] = [
+    {
+      id: 'cf-001',
+      organizationId: DEFAULT_ORG_ID,
+      entityType: 'ACCOUNT',
+      key: 'national_id',
+      label: 'شناسه ملی / کد اقتصادی',
+      type: 'TEXT',
+      isRequired: true,
+      order: 1,
+      active: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'cf-002',
+      organizationId: DEFAULT_ORG_ID,
+      entityType: 'DEAL',
+      key: 'channel_source',
+      label: 'کانال معرفی فرصت تجاری',
+      type: 'SELECT',
+      options: ['نمایشگاه تخصصی', 'معرفی مشتری سابق', 'کمپین دیجیتال', 'تماس مستقیم'],
+      isRequired: false,
+      defaultValue: 'نمایشگاه تخصصی',
+      order: 2,
+      active: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'cf-003',
+      organizationId: DEFAULT_ORG_ID,
+      entityType: 'TASK',
+      key: 'estimated_hours',
+      label: 'برآورد نفر-ساعت کار',
+      type: 'NUMBER',
+      isRequired: false,
+      order: 3,
+      active: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
     },
   ];
 
@@ -3042,9 +3091,121 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Custom Fields & Dynamic Schema ---------------- */
+
+  async getCustomFields(
+    entityType?: CustomFieldEntityType,
+  ): Promise<CustomFieldDefinitionDto[]> {
+    try {
+      const path = entityType
+        ? `/custom-fields?entityType=${encodeURIComponent(entityType)}`
+        : '/custom-fields';
+      return await this.request<CustomFieldDefinitionDto[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackCustomFields
+          .filter((f) => !entityType || f.entityType === entityType)
+          .map((f) => ({ ...f }));
+      }
+      throw err;
+    }
+  }
+
+  async createCustomField(
+    dto: CreateCustomFieldRequest,
+  ): Promise<CustomFieldDefinitionDto> {
+    try {
+      return await this.request<CustomFieldDefinitionDto>('/custom-fields', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newField: CustomFieldDefinitionDto = {
+          id: `cf-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          entityType: dto.entityType,
+          key: dto.key.trim().toLowerCase().replace(/[\s-]+/g, '_'),
+          label: dto.label.trim(),
+          type: dto.type,
+          options: dto.options,
+          isRequired: Boolean(dto.isRequired),
+          defaultValue: dto.defaultValue,
+          order: dto.order ?? 99,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackCustomFields.push(newField);
+        return { ...newField };
+      }
+      throw err;
+    }
+  }
+
+  async updateCustomField(
+    id: string,
+    dto: UpdateCustomFieldRequest,
+  ): Promise<CustomFieldDefinitionDto> {
+    try {
+      return await this.request<CustomFieldDefinitionDto>(
+        `/custom-fields/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackCustomFields.findIndex((f) => f.id === id);
+        if (idx === -1) {
+          throw new ApiClientError(`Custom field ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackCustomFields[idx]!;
+        const updated: CustomFieldDefinitionDto = {
+          ...existing,
+          ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
+          ...(dto.options !== undefined ? { options: dto.options } : {}),
+          ...(dto.isRequired !== undefined ? { isRequired: dto.isRequired } : {}),
+          ...(dto.defaultValue !== undefined ? { defaultValue: dto.defaultValue } : {}),
+          ...(dto.order !== undefined ? { order: dto.order } : {}),
+          ...(dto.active !== undefined ? { active: dto.active } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackCustomFields[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async deleteCustomField(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(
+        `/custom-fields/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackCustomFields.findIndex((f) => f.id === id);
+        if (idx !== -1) {
+          this.fallbackCustomFields.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  CreateCustomFieldRequest,
+  CustomFieldDefinitionDto,
+  CustomFieldEntityType,
+  CustomFieldType,
+  UpdateCustomFieldRequest,
   DuplicateCandidateDto,
   MergeRecordsRequest,
   PipelineStageDto,

@@ -18,3 +18,4 @@ export * from './AnalyticsDashboardView';
 export * from './WorkflowAutomationView';
 export * from './DealsPipelineKanban';
 export * from './DuplicateReviewView';
+export * from './CustomFieldSchemaBuilder';

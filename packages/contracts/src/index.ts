@@ -897,5 +897,56 @@ export type MergeRecordsRequest = {
   sourceRecordId: string;
 };
 
+/* Enterprise Custom Fields & Dynamic Schema Contracts */
+
+export type CustomFieldType = 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'DATE';
+export type CustomFieldEntityType = 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'DEAL' | 'TASK' | 'TICKET';
+
+export type CustomFieldDefinitionDto = {
+  id: string;
+  organizationId: string;
+  entityType: CustomFieldEntityType;
+  key: string;
+  label: string;
+  type: CustomFieldType;
+  options?: string[] | undefined;
+  isRequired: boolean;
+  defaultValue?: any;
+  order: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateCustomFieldRequest = {
+  entityType: CustomFieldEntityType;
+  key: string;
+  label: string;
+  type: CustomFieldType;
+  options?: string[] | undefined;
+  isRequired?: boolean | undefined;
+  defaultValue?: any;
+  order?: number | undefined;
+};
+
+export type UpdateCustomFieldRequest = {
+  label?: string | undefined;
+  options?: string[] | undefined;
+  isRequired?: boolean | undefined;
+  defaultValue?: any;
+  order?: number | undefined;
+  active?: boolean | undefined;
+};
+
+export type ValidateCustomFieldsRequest = {
+  entityType: CustomFieldEntityType;
+  values: Record<string, any>;
+};
+
+export type ValidateCustomFieldsResponse = {
+  isValid: boolean;
+  errors: Array<{ fieldKey: string; message: string }>;
+};
+
 
 
