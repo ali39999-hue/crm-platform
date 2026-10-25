@@ -5,13 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type {
+  AutomationActionType,
   AutomationRuleDto,
+  AutomationRunDto,
   AutomationTrigger,
   CreateAutomationRuleRequest,
+  SimulateAutomationResponse,
 } from '@crm/contracts';
 import {
   InMemoryAutomationRepository,
   type AutomationRuleEntity,
+  type AutomationRunEntity,
 } from './automation.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 
@@ -84,18 +88,49 @@ export class AutomationService {
     id: string,
     testPayload: Record<string, any>,
   ): Promise<{ matched: boolean; wouldExecute: string }> {
+    const sim = await this.simulateRule(organizationId, id, testPayload);
+    return {
+      matched: sim.matched,
+      wouldExecute: sim.wouldExecute,
+    };
+  }
+
+  /**
+   * Comprehensive simulation returning matched criteria, expected actions, and payload details
+   */
+  async simulateRule(
+    organizationId: string,
+    id: string,
+    testPayload: Record<string, any>,
+  ): Promise<SimulateAutomationResponse> {
     const rule = await this.automationRepo.findById(organizationId, id);
     if (!rule) {
       throw new NotFoundException(`Rule ${id} not found`);
     }
 
     const matched = this.evaluateCondition(rule, testPayload);
+    const payloadValue = rule.conditionField ? testPayload[rule.conditionField] : undefined;
+
     return {
       matched,
       wouldExecute: matched
-        ? `Rule "${rule.name}" matches and would execute action ${rule.actionType}`
-        : `Rule condition not met`,
+        ? `قانون «${rule.name}» مطابقت دارد و اقدام ${rule.actionType} اجرا خواهد شد.`
+        : `شرط قانون برقرار نیست (مقدار فیلد ${rule.conditionField} با ${rule.conditionValue} مطابقت ندارد).`,
+      details: {
+        conditionField: rule.conditionField,
+        conditionValue: rule.conditionValue,
+        payloadValue,
+        operator: 'EQUALS',
+      },
     };
+  }
+
+  /**
+   * Returns recent automation execution logs
+   */
+  async getRuns(organizationId: string, limit = 50): Promise<AutomationRunDto[]> {
+    const runs = await this.automationRepo.findRuns(organizationId, limit);
+    return runs.map((r) => ({ ...r }));
   }
 
   /**
@@ -118,7 +153,10 @@ export class AutomationService {
     let triggeredCount = 0;
 
     for (const rule of rules) {
-      if (this.evaluateCondition(rule, payload)) {
+      const startTime = Date.now();
+      const matched = this.evaluateCondition(rule, payload);
+
+      if (matched) {
         rule.executionCount += 1;
         rule.lastExecutedAt = new Date().toISOString();
         await this.automationRepo.update(rule);
@@ -133,6 +171,19 @@ export class AutomationService {
           entityType: 'AutomationRule',
           entityId: rule.id,
           metadata: { trigger, action: rule.actionType, payload },
+        });
+
+        // Record execution run log
+        await this.automationRepo.createRun({
+          organizationId,
+          ruleId: rule.id,
+          ruleName: rule.name,
+          trigger,
+          status: 'SUCCESS',
+          executedAction: rule.actionType,
+          actionDetails: `اقدام ${rule.actionType} با موفقیت اجرا شد.`,
+          payloadSummary: JSON.stringify(payload).slice(0, 100),
+          durationMs: Date.now() - startTime,
         });
 
         triggeredCount++;
@@ -151,17 +202,18 @@ export class AutomationService {
   }
 
   private mapDto(r: AutomationRuleEntity): AutomationRuleDto {
-    return {
+    const dto: AutomationRuleDto = {
       id: r.id,
       name: r.name,
       trigger: r.trigger,
-      conditionField: r.conditionField,
-      conditionValue: r.conditionValue,
       actionType: r.actionType,
       actionPayload: r.actionPayload,
       enabled: r.enabled,
       executionCount: r.executionCount,
-      lastExecutedAt: r.lastExecutedAt,
     };
+    if (r.conditionField !== null) dto.conditionField = r.conditionField;
+    if (r.conditionValue !== null) dto.conditionValue = r.conditionValue;
+    if (r.lastExecutedAt !== null) dto.lastExecutedAt = r.lastExecutedAt;
+    return dto;
   }
 }

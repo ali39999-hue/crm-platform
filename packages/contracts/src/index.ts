@@ -489,11 +489,40 @@ export type AutomationRuleDto = {
 export type CreateAutomationRuleRequest = {
   name: string;
   trigger: AutomationTrigger;
-  conditionField?: string;
-  conditionValue?: string;
+  conditionField?: string | undefined;
+  conditionValue?: string | undefined;
   actionType: AutomationActionType;
   actionPayload: Record<string, any>;
-  enabled?: boolean;
+  enabled?: boolean | undefined;
+};
+
+export type AutomationRunDto = {
+  id: string;
+  organizationId: string;
+  ruleId: string;
+  ruleName: string;
+  trigger: AutomationTrigger;
+  status: 'SUCCESS' | 'SKIPPED' | 'FAILED';
+  executedAction: AutomationActionType;
+  actionDetails: string;
+  payloadSummary: string;
+  executedAt: string;
+  durationMs: number;
+};
+
+export type SimulateAutomationRequest = {
+  testPayload: Record<string, any>;
+};
+
+export type SimulateAutomationResponse = {
+  matched: boolean;
+  wouldExecute: string;
+  details: {
+    conditionField?: string | null | undefined;
+    conditionValue?: string | null | undefined;
+    payloadValue?: any;
+    operator?: string | undefined;
+  };
 };
 
 /* Global Search Contracts */

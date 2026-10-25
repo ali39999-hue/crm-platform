@@ -3,7 +3,7 @@ import { AutomationService } from './automation.service.js';
 import { InMemoryAutomationRepository } from './automation.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 
-describe('Automation Rules Engine (AUTO-001)', () => {
+describe('Automation Rules Engine (AUTO-001 & R-070)', () => {
   let automationService: AutomationService;
   let automationRepo: InMemoryAutomationRepository;
   let auditService: AuditService;
@@ -76,10 +76,35 @@ describe('Automation Rules Engine (AUTO-001)', () => {
     expect(noMatchDry.matched).toBe(false);
 
     const afterRule = (await automationService.getRules(orgAlpha))[0]!;
-    expect(afterRule.executionCount).toBe(0); // Dry-run does not increment counter
+    expect(afterRule.executionCount).toBe(2); // Initial seed count was 2, unchanged
   });
 
-  it('prevents runaway recursion beyond MAX_CHAIN_DEPTH', async () => {
+  it('simulates rule with detailed condition and payload evaluation', async () => {
+    const rules = await automationService.getRules(orgAlpha);
+    const ruleId = rules[0]!.id;
+
+    const simPass = await automationService.simulateRule(orgAlpha, ruleId, { priority: 'URGENT' });
+    expect(simPass.matched).toBe(true);
+    expect(simPass.wouldExecute).toContain('مطابقت دارد');
+    expect(simPass.details.conditionField).toBe('priority');
+
+    const simFail = await automationService.simulateRule(orgAlpha, ruleId, { priority: 'NORMAL' });
+    expect(simFail.matched).toBe(false);
+    expect(simFail.wouldExecute).toContain('شرط قانون برقرار نیست');
+  });
+
+  it('records execution run history and prevents runaway recursion', async () => {
+    const initialRuns = await automationService.getRuns(orgAlpha);
+    expect(initialRuns.length).toBeGreaterThanOrEqual(2);
+
+    await automationService.processTrigger(orgAlpha, 'TASK_CREATED', { priority: 'URGENT' });
+
+    const newRuns = await automationService.getRuns(orgAlpha);
+    expect(newRuns.length).toBe(initialRuns.length + 1);
+    expect(newRuns[0]?.status).toBe('SUCCESS');
+    expect(newRuns[0]?.executedAction).toBe('SEND_NOTIFICATION');
+
+    // Recursion limit check
     const res = await automationService.processTrigger(
       orgAlpha,
       'TASK_CREATED',

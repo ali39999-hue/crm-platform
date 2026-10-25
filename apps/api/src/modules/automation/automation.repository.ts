@@ -18,6 +18,20 @@ export type AutomationRuleEntity = {
   updatedAt: string;
 };
 
+export type AutomationRunEntity = {
+  id: string;
+  organizationId: string;
+  ruleId: string;
+  ruleName: string;
+  trigger: AutomationTrigger;
+  status: 'SUCCESS' | 'SKIPPED' | 'FAILED';
+  executedAction: AutomationActionType;
+  actionDetails: string;
+  payloadSummary: string;
+  executedAt: string;
+  durationMs: number;
+};
+
 export interface IAutomationRepository {
   findByOrg(organizationId: string): Promise<AutomationRuleEntity[]>;
   findById(organizationId: string, id: string): Promise<AutomationRuleEntity | null>;
@@ -25,14 +39,20 @@ export interface IAutomationRepository {
   update(rule: AutomationRuleEntity): Promise<AutomationRuleEntity>;
   delete(organizationId: string, id: string): Promise<boolean>;
   findMatchingRules(organizationId: string, trigger: AutomationTrigger): Promise<AutomationRuleEntity[]>;
+
+  // Run history
+  createRun(data: Omit<AutomationRunEntity, 'id' | 'executedAt'>): Promise<AutomationRunEntity>;
+  findRuns(organizationId: string, limit?: number): Promise<AutomationRunEntity[]>;
 }
 
 @Injectable()
 export class InMemoryAutomationRepository implements IAutomationRepository {
   private rules: Map<string, AutomationRuleEntity> = new Map();
+  private runs: AutomationRunEntity[] = [];
 
   constructor() {
     this.seedDefaultRules();
+    this.seedDefaultRuns();
   }
 
   private seedDefaultRules() {
@@ -47,12 +67,60 @@ export class InMemoryAutomationRepository implements IAutomationRepository {
       actionType: 'SEND_NOTIFICATION',
       actionPayload: { title: 'وظیفه فوری جدید', message: 'یک وظیفه با اولویت فوری ایجاد شد.' },
       enabled: true,
-      executionCount: 0,
-      lastExecutedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      executionCount: 2,
+      lastExecutedAt: new Date(Date.now() - 3600000).toISOString(),
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    };
+    const rule2: AutomationRuleEntity = {
+      id: '88000000-0000-0000-0000-000000000002',
+      organizationId: orgAlpha,
+      name: 'ایجاد تسک پیگیری پس از تبدیل موفق سرنخ به مشتری',
+      trigger: 'LEAD_CONVERTED',
+      conditionField: null,
+      conditionValue: null,
+      actionType: 'ASSIGN_USER',
+      actionPayload: { title: 'جلسه آشنایی و تحویل قرارداد مشتری جدید' },
+      enabled: true,
+      executionCount: 1,
+      lastExecutedAt: new Date(Date.now() - 7200000).toISOString(),
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 7200000).toISOString(),
     };
     this.rules.set(rule1.id, rule1);
+    this.rules.set(rule2.id, rule2);
+  }
+
+  private seedDefaultRuns() {
+    const orgAlpha = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    this.runs.push(
+      {
+        id: 'run-001',
+        organizationId: orgAlpha,
+        ruleId: '88000000-0000-0000-0000-000000000001',
+        ruleName: 'اطلاع‌رسانی خودکار برای وظایف با اولویت فوری',
+        trigger: 'TASK_CREATED',
+        status: 'SUCCESS',
+        executedAction: 'SEND_NOTIFICATION',
+        actionDetails: 'ارسال اعلان فوری به مدیر سیستم و کارشناس عملیات',
+        payloadSummary: 'Task: TSK-1004 (priority: URGENT)',
+        executedAt: new Date(Date.now() - 3600000).toISOString(),
+        durationMs: 42,
+      },
+      {
+        id: 'run-002',
+        organizationId: orgAlpha,
+        ruleId: '88000000-0000-0000-0000-000000000002',
+        ruleName: 'ایجاد تسک پیگیری پس از تبدیل موفق سرنخ به مشتری',
+        trigger: 'LEAD_CONVERTED',
+        status: 'SUCCESS',
+        executedAction: 'ASSIGN_USER',
+        actionDetails: 'تخصیص تسک پذیرش به تیم فروش سازمانی',
+        payloadSummary: 'Lead: پتروشیمی سپهر (CONVERTED)',
+        executedAt: new Date(Date.now() - 7200000).toISOString(),
+        durationMs: 65,
+      },
+    );
   }
 
   async findByOrg(organizationId: string): Promise<AutomationRuleEntity[]> {
@@ -96,5 +164,23 @@ export class InMemoryAutomationRepository implements IAutomationRepository {
     return Array.from(this.rules.values()).filter(
       (r) => r.organizationId === organizationId && r.trigger === trigger && r.enabled,
     );
+  }
+
+  /* Run History */
+
+  async createRun(data: Omit<AutomationRunEntity, 'id' | 'executedAt'>): Promise<AutomationRunEntity> {
+    const entity: AutomationRunEntity = {
+      ...data,
+      id: randomUUID(),
+      executedAt: new Date().toISOString(),
+    };
+    this.runs.unshift(entity);
+    return entity;
+  }
+
+  async findRuns(organizationId: string, limit = 50): Promise<AutomationRunEntity[]> {
+    return this.runs
+      .filter((r) => r.organizationId === organizationId)
+      .slice(0, limit);
   }
 }

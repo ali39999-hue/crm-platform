@@ -6,7 +6,10 @@
 
 import type {
   AutomationRuleDto,
+  AutomationRunDto,
   CreateAutomationRuleRequest,
+  SimulateAutomationRequest,
+  SimulateAutomationResponse,
   CreateSavedViewRequest,
   CrmFunnelReport,
   CustomReportQueryDto,
@@ -1380,6 +1383,47 @@ export class ApiClient {
       executionCount: 2,
       lastExecutedAt: new Date(Date.now() - 3600000).toISOString(),
     },
+    {
+      id: '88000000-0000-0000-0000-000000000002',
+      name: 'ایجاد تسک پیگیری پس از تبدیل موفق سرنخ به مشتری',
+      trigger: 'LEAD_CONVERTED',
+      conditionField: null,
+      conditionValue: null,
+      actionType: 'ASSIGN_USER',
+      actionPayload: { title: 'جلسه آشنایی و تحویل قرارداد مشتری جدید' },
+      enabled: true,
+      executionCount: 1,
+      lastExecutedAt: new Date(Date.now() - 7200000).toISOString(),
+    },
+  ];
+
+  private fallbackRuns: AutomationRunDto[] = [
+    {
+      id: 'run-001',
+      organizationId: DEFAULT_ORG_ID,
+      ruleId: '88000000-0000-0000-0000-000000000001',
+      ruleName: 'اطلاع‌رسانی خودکار برای وظایف با اولویت فوری',
+      trigger: 'TASK_CREATED',
+      status: 'SUCCESS',
+      executedAction: 'SEND_NOTIFICATION',
+      actionDetails: 'ارسال اعلان فوری به مدیر سیستم و کارشناس عملیات',
+      payloadSummary: 'Task: TSK-1004 (priority: URGENT)',
+      executedAt: new Date(Date.now() - 3600000).toISOString(),
+      durationMs: 42,
+    },
+    {
+      id: 'run-002',
+      organizationId: DEFAULT_ORG_ID,
+      ruleId: '88000000-0000-0000-0000-000000000002',
+      ruleName: 'ایجاد تسک پیگیری پس از تبدیل موفق سرنخ به مشتری',
+      trigger: 'LEAD_CONVERTED',
+      status: 'SUCCESS',
+      executedAction: 'ASSIGN_USER',
+      actionDetails: 'تخصیص تسک پذیرش به تیم فروش سازمانی',
+      payloadSummary: 'Lead: پتروشیمی سپهر (CONVERTED)',
+      executedAt: new Date(Date.now() - 7200000).toISOString(),
+      durationMs: 65,
+    },
   ];
 
   /* ---------------- Support & Ticketing ---------------- */
@@ -1646,6 +1690,100 @@ export class ApiClient {
           found.enabled = enabled;
           return { ...found };
         }
+      }
+      throw err;
+    }
+  }
+
+  async createAutomationRule(dto: CreateAutomationRuleRequest): Promise<AutomationRuleDto> {
+    try {
+      return await this.request<AutomationRuleDto>('/automation/rules', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const newRule: AutomationRuleDto = {
+          id: `rule-${Date.now()}`,
+          name: dto.name.trim(),
+          trigger: dto.trigger,
+          conditionField: dto.conditionField ?? null,
+          conditionValue: dto.conditionValue ?? null,
+          actionType: dto.actionType,
+          actionPayload: dto.actionPayload ?? {},
+          enabled: dto.enabled !== false,
+          executionCount: 0,
+          lastExecutedAt: null,
+        };
+        this.fallbackRules.unshift(newRule);
+        return { ...newRule };
+      }
+      throw err;
+    }
+  }
+
+  async deleteAutomationRule(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(`/automation/rules/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackRules.findIndex((r) => r.id === id);
+        if (idx !== -1) {
+          this.fallbackRules.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
+
+  async getAutomationRuns(limit = 50): Promise<AutomationRunDto[]> {
+    try {
+      return await this.request<AutomationRunDto[]>(`/automation/rules/runs?limit=${limit}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackRuns.slice(0, limit).map((r) => ({ ...r }));
+      }
+      throw err;
+    }
+  }
+
+  async simulateAutomationRule(
+    id: string,
+    testPayload: Record<string, any>,
+  ): Promise<SimulateAutomationResponse> {
+    try {
+      return await this.request<SimulateAutomationResponse>(
+        `/automation/rules/${encodeURIComponent(id)}/simulate`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ testPayload }),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const rule = this.fallbackRules.find((r) => r.id === id);
+        if (!rule) {
+          throw new ApiClientError(`Rule ${id} not found`, 404, 'NOT_FOUND');
+        }
+        let matched = true;
+        if (rule.conditionField && rule.conditionValue) {
+          matched = String(testPayload[rule.conditionField]) === String(rule.conditionValue);
+        }
+        return {
+          matched,
+          wouldExecute: matched
+            ? `قانون «${rule.name}» مطابقت دارد و اقدام ${rule.actionType} اجرا خواهد شد.`
+            : `شرط قانون برقرار نیست (مقدار فیلد ${rule.conditionField} با ${rule.conditionValue} مطابقت ندارد).`,
+          details: {
+            conditionField: rule.conditionField,
+            conditionValue: rule.conditionValue,
+            payloadValue: rule.conditionField ? testPayload[rule.conditionField] : undefined,
+            operator: 'EQUALS',
+          },
+        };
       }
       throw err;
     }

@@ -40,6 +40,7 @@ import {
   TaskCalendar,
   TaskStatusBadge,
   TicketStatusBadge,
+  WorkflowAutomationView,
 } from '../components';
 
 type AuditItem = {
@@ -1001,71 +1002,8 @@ export default function WorkspaceApp() {
 
         {/* Automation Rules Tab */}
         {activeTab === 'automation' && (
-          <div
-            style={{
-              background: 'var(--paper)',
-              border: '1px solid var(--line)',
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
-            <h3 style={{ margin: '0 0 8px' }}>
-              موتور قوانین اتوماسیون (Automation Rules Engine - AUTO-001)
-            </h3>
-            <p className="muted" style={{ marginBottom: '20px' }}>
-              تعریف تریگر، شرط، اقدام و کلید قطع اضطراری (Kill Switch) جهت جلوگیری از چرخه‌های
-              بی‌پایان.
-            </p>
-
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>نام قانون</th>
-                  <th>رویداد محرک (Trigger)</th>
-                  <th>شرط (Condition)</th>
-                  <th>اقدام (Action)</th>
-                  <th>دفعات اجرا</th>
-                  <th>کلید اضطراری (Kill Switch)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <strong>{r.name}</strong>
-                    </td>
-                    <td>
-                      <span className="task-key">{r.trigger}</span>
-                    </td>
-                    <td>
-                      {r.conditionField
-                        ? `${r.conditionField} == ${r.conditionValue}`
-                        : 'بدون شرط (همیشه)'}
-                    </td>
-                    <td>
-                      <span className="badge badge-in_progress">{r.actionType}</span>
-                    </td>
-                    <td>{r.executionCount} مرتبه</td>
-                    <td>
-                      <button
-                        type="button"
-                        className={r.enabled ? 'primary-button' : 'secondary-button'}
-                        style={{
-                          fontSize: '11px',
-                          padding: '4px 10px',
-                          background: r.enabled ? 'var(--success)' : '#e2e8f0',
-                          borderColor: r.enabled ? 'var(--success)' : '#cbd5e1',
-                          color: r.enabled ? '#fff' : '#64748b',
-                        }}
-                        onClick={() => handleToggleRule(r.id, r.enabled)}
-                      >
-                        {r.enabled ? 'فعال (روشن)' : 'غیرفعال (خاموش)'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <WorkflowAutomationView onNotify={(msg) => showToast(msg)} />
           </div>
         )}
 
