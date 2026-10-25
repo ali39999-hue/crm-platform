@@ -16,6 +16,9 @@ import { WebhookController } from './modules/integrations/webhook.controller.js'
 import { FilesController } from './modules/files/files.controller.js';
 import { BackupController } from './modules/operations/backup.controller.js';
 import { JobController } from './modules/jobs/job.controller.js';
+import { DocumentsController } from './modules/documents/document.controller.js';
+import { DocumentsService } from './modules/documents/document.service.js';
+import { InMemoryDocumentRepository } from './modules/documents/document.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -81,6 +84,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     FilesController,
     BackupController,
     JobController,
+    DocumentsController,
   ],
   providers: [
     AuthService,
@@ -140,6 +144,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     },
     InMemoryJobRepository,
     JobWorkerService,
+    InMemoryDocumentRepository,
+    DocumentsService,
   ],
   exports: [
     AuthService,
@@ -178,6 +184,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     'JOB_REPOSITORY',
     InMemoryJobRepository,
     JobWorkerService,
+    InMemoryDocumentRepository,
+    DocumentsService,
   ],
 })
 export class AppModule implements NestModule {

@@ -611,5 +611,91 @@ export type UpdateSavedViewRequest = {
   isDefault?: boolean | undefined;
 };
 
+/* Enterprise Documents & Knowledge Base Contracts */
+
+export type DocumentVisibility = 'PRIVATE' | 'TEAM' | 'WORKSPACE' | 'CUSTOMER_VISIBLE';
+
+export type DocumentSpaceDto = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  icon?: string | undefined;
+  isDefault?: boolean | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateDocumentSpaceRequest = {
+  name: string;
+  description?: string | undefined;
+  icon?: string | undefined;
+};
+
+export type DocumentSummaryDto = {
+  id: string;
+  organizationId: string;
+  spaceId: string;
+  spaceName?: string | undefined;
+  title: string;
+  slug: string;
+  visibility: DocumentVisibility;
+  isPublished: boolean;
+  authorId: string;
+  authorName: string;
+  version: number;
+  tags: string[];
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DocumentRevisionDto = {
+  id: string;
+  documentId: string;
+  version: number;
+  title: string;
+  content: string;
+  summaryChange?: string | undefined;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+};
+
+export type DocumentDetailDto = DocumentSummaryDto & {
+  content: string;
+  revisions?: DocumentRevisionDto[] | undefined;
+};
+
+export type CreateDocumentRequest = {
+  spaceId: string;
+  title: string;
+  content: string;
+  visibility: DocumentVisibility;
+  isPublished?: boolean | undefined;
+  tags?: string[] | undefined;
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+};
+
+export type UpdateDocumentRequest = {
+  title?: string | undefined;
+  content?: string | undefined;
+  visibility?: DocumentVisibility | undefined;
+  isPublished?: boolean | undefined;
+  tags?: string[] | undefined;
+  summaryChange?: string | undefined;
+  expectedVersion?: number | undefined;
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+};
+
+export type RestoreDocumentRevisionRequest = {
+  revisionVersion: number;
+  summaryChange?: string | undefined;
+};
+
 
 

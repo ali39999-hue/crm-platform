@@ -11,11 +11,13 @@ import {
   LoadingSkeleton,
   PriorityBadge,
   TicketStatusBadge,
+  DocumentsView,
 } from '../../components';
 
 const CUSTOMER_ACCOUNT_ID = '50000000-0000-0000-0000-000000000001';
 
 export default function CustomerPortalPage() {
+  const [portalTab, setPortalTab] = useState<'tickets' | 'documents'>('tickets');
   const [tickets, setTickets] = useState<TicketDto[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, TicketMessageDto[]>>({});
@@ -184,6 +186,37 @@ export default function CustomerPortalPage() {
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{
+              fontSize: '13px',
+              background: portalTab === 'tickets' ? '#0284c7' : 'transparent',
+              color: portalTab === 'tickets' ? '#fff' : 'var(--ink)',
+              borderColor: portalTab === 'tickets' ? '#0284c7' : 'var(--line)',
+            }}
+            onClick={() => setPortalTab('tickets')}
+            data-testid="portal-tab-tickets"
+          >
+            🎫 تیکت‌های من ({tickets.length})
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{
+              fontSize: '13px',
+              background: portalTab === 'documents' ? '#0284c7' : 'transparent',
+              color: portalTab === 'documents' ? '#fff' : 'var(--ink)',
+              borderColor: portalTab === 'documents' ? '#0284c7' : 'var(--line)',
+            }}
+            onClick={() => setPortalTab('documents')}
+            data-testid="portal-tab-documents"
+          >
+            📚 راهنماها و پایگاه دانش
+          </button>
+        </div>
+
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <a href="/" className="secondary-button" style={{ fontSize: '12px' }}>
             ← بازگشت به پنل داخلی
@@ -212,13 +245,18 @@ export default function CustomerPortalPage() {
           <ErrorBanner message={error} onRetry={loadTickets} onDismiss={() => setError(null)} />
         )}
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '380px 1fr',
-            gap: '24px',
-          }}
-        >
+        {portalTab === 'documents' ? (
+          <div style={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <DocumentsView isCustomerPortal={true} onNotify={(msg) => showToast(msg)} />
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '380px 1fr',
+              gap: '24px',
+            }}
+          >
           {/* Ticket List Column */}
           <section
             style={{
@@ -515,6 +553,7 @@ export default function CustomerPortalPage() {
             <div className="empty-state">یک تیکت را برای مشاهده گفتگو انتخاب کنید.</div>
           )}
         </div>
+        )}
       </div>
 
       {/* New Ticket Modal */}

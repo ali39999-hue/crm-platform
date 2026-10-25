@@ -26,6 +26,7 @@ import {
   CreateTaskModal,
   type CreateTaskFormData,
   Customer360Drawer,
+  DocumentsView,
   EmptyState,
   ErrorBanner,
   getPriorityLabel,
@@ -73,6 +74,7 @@ export default function WorkspaceApp() {
     | 'my-work'
     | 'crm'
     | 'support'
+    | 'docs'
     | 'notifications'
     | 'reports'
     | 'automation'
@@ -440,6 +442,14 @@ export default function WorkspaceApp() {
             data-testid="nav-support"
           >
             <span>🎫</span> تیکت‌ها و پشتیبانی ({tickets.length})
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'docs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('docs')}
+            data-testid="nav-docs"
+          >
+            <span>📚</span> پایگاه دانش و اسناد
           </button>
           <button
             type="button"
@@ -869,6 +879,13 @@ export default function WorkspaceApp() {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {activeTab === 'docs' && (
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <DocumentsView onNotify={(msg) => showToast(msg)} />
           </div>
         )}
 

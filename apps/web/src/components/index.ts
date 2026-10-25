@@ -10,3 +10,5 @@ export * from './CreateTaskModal';
 export * from './Customer360Drawer';
 export * from './CommandPalette';
 export * from './SavedViewsSelector';
+export * from './DocumentsView';
+export * from './CreateDocumentModal';

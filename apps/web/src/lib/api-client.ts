@@ -48,10 +48,20 @@ import type {
   TicketPriority,
   TransitionTaskRequest,
   WorkspaceDto,
+  CreateDocumentRequest,
+  CreateDocumentSpaceRequest,
+  DocumentDetailDto,
+  DocumentRevisionDto,
+  DocumentSpaceDto,
+  DocumentSummaryDto,
+  DocumentVisibility,
+  UpdateDocumentRequest,
 } from '@crm/contracts';
 
 import {
   canTransitionTask,
+  sanitizeDocumentContent,
+  generateSlug,
   type TransitionActorCapabilities,
 } from '@crm/domain';
 
@@ -502,6 +512,124 @@ export class ApiClient {
       isDefault: false,
       createdAt: '2026-10-22T10:00:00.000Z',
       updatedAt: '2026-10-22T10:00:00.000Z',
+    },
+  ];
+
+  private fallbackSpaces: DocumentSpaceDto[] = [
+    {
+      id: 'space-general-001',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'پایگاه دانش عمومی',
+      slug: 'general-knowledge-base',
+      description: 'مستندات استاندارد، فرآیندهای کاری و راهنماهای سازمانی',
+      icon: 'book',
+      isDefault: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'space-customer-portal-002',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'راهنماهای مشتریان',
+      slug: 'customer-portal-guides',
+      description: 'اسناد و مستندات آموزشی قابل مشاهده در پورتال مشتریان',
+      icon: 'globe',
+      isDefault: false,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackDocuments: DocumentDetailDto[] = [
+    {
+      id: 'doc-101',
+      organizationId: DEFAULT_ORG_ID,
+      spaceId: 'space-general-001',
+      spaceName: 'پایگاه دانش عمومی',
+      title: 'دستورالعمل امنیت داده‌ها و حریم خصوصی کارکنان',
+      slug: 'security-data-privacy-policy',
+      content: '# سیاست‌های امنیت اطلاعات\nکلیه کارکنان موظف به رعایت اصول محرمانگی داده‌ها، عدم افشای رمز عبور و استفاده از احراز هویت دو مرحله‌ای هستند.',
+      visibility: 'WORKSPACE',
+      isPublished: true,
+      authorId: DEFAULT_EMPLOYEE_ID,
+      authorName: 'سارا احمدی',
+      version: 1,
+      tags: ['امنیت', 'سیاست‌ها'],
+      createdAt: '2026-10-10T10:00:00.000Z',
+      updatedAt: '2026-10-10T10:00:00.000Z',
+      revisions: [
+        {
+          id: 'rev-001',
+          documentId: 'doc-101',
+          version: 1,
+          title: 'دستورالعمل امنیت داده‌ها و حریم خصوصی کارکنان',
+          content: '# سیاست‌های امنیت اطلاعات\nکلیه کارکنان موظف به رعایت اصول محرمانگی داده‌ها، عدم افشای رمز عبور و استفاده از احراز هویت دو مرحله‌ای هستند.',
+          summaryChange: 'نسخه اولیه سند',
+          authorId: DEFAULT_EMPLOYEE_ID,
+          authorName: 'سارا احمدی',
+          createdAt: '2026-10-10T10:00:00.000Z',
+        },
+      ],
+    },
+    {
+      id: 'doc-102',
+      organizationId: DEFAULT_ORG_ID,
+      spaceId: 'space-customer-portal-002',
+      spaceName: 'راهنماهای مشتریان',
+      title: 'راهنمای جامع ثبت تیکت و پیگیری پشتیبانی در پورتال',
+      slug: 'customer-ticket-guide',
+      content: '# راهنمای سامانه پشتیبانی\nمشتریان گرامی می‌توانند از طریق این راهنما با نحوه ثبت درخواست، الصاق مستندات و پیگیری پاسخ‌های تیم فنی آشنا شوند.',
+      visibility: 'CUSTOMER_VISIBLE',
+      isPublished: true,
+      authorId: '55555555-5555-5555-5555-555555555555',
+      authorName: 'پویا مرادی',
+      version: 1,
+      tags: ['پشتیبانی', 'آموزش'],
+      createdAt: '2026-10-12T14:00:00.000Z',
+      updatedAt: '2026-10-12T14:00:00.000Z',
+      revisions: [
+        {
+          id: 'rev-002',
+          documentId: 'doc-102',
+          version: 1,
+          title: 'راهنمای جامع ثبت تیکت و پیگیری پشتیبانی در پورتال',
+          content: '# راهنمای سامانه پشتیبانی\nمشتریان گرامی می‌توانند از طریق این راهنما با نحوه ثبت درخواست، الصاق مستندات و پیگیری پاسخ‌های تیم فنی آشنا شوند.',
+          summaryChange: 'انتشار راهنمای کاربری برای مشتریان',
+          authorId: '55555555-5555-5555-5555-555555555555',
+          authorName: 'پویا مرادی',
+          createdAt: '2026-10-12T14:00:00.000Z',
+        },
+      ],
+    },
+    {
+      id: 'doc-103',
+      organizationId: DEFAULT_ORG_ID,
+      spaceId: 'space-general-001',
+      spaceName: 'پایگاه دانش عمومی',
+      title: 'پیش‌نویس محرمانه استراتژی تجاری فصل پاییز',
+      slug: 'private-sales-strategy',
+      content: '# استراتژی پاییز\nمذاکرات تجاری با مشتریان سطح بالا در حال برنامه‌ریزی است و تارگت فروش سازمانی تعیین گردید.',
+      visibility: 'PRIVATE',
+      isPublished: false,
+      authorId: DEFAULT_EMPLOYEE_ID,
+      authorName: 'سارا احمدی',
+      version: 1,
+      tags: ['استراتژی', 'محرمانه'],
+      createdAt: '2026-10-15T09:00:00.000Z',
+      updatedAt: '2026-10-15T09:00:00.000Z',
+      revisions: [
+        {
+          id: 'rev-003',
+          documentId: 'doc-103',
+          version: 1,
+          title: 'پیش‌نویس محرمانه استراتژی تجاری فصل پاییز',
+          content: '# استراتژی پاییز\nمذاکرات تجاری با مشتریان سطح بالا در حال برنامه‌ریزی است و تارگت فروش سازمانی تعیین گردید.',
+          summaryChange: 'پیش‌نویس خصوصی',
+          authorId: DEFAULT_EMPLOYEE_ID,
+          authorName: 'سارا احمدی',
+          createdAt: '2026-10-15T09:00:00.000Z',
+        },
+      ],
     },
   ];
 
@@ -1683,9 +1811,316 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Enterprise Documents & Collaboration ---------------- */
+
+  async getSpaces(): Promise<DocumentSpaceDto[]> {
+    try {
+      return await this.request<DocumentSpaceDto[]>('/documents/spaces');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackSpaces.map((s) => ({ ...s }));
+      }
+      throw err;
+    }
+  }
+
+  async createSpace(dto: CreateDocumentSpaceRequest): Promise<DocumentSpaceDto> {
+    try {
+      return await this.request<DocumentSpaceDto>('/documents/spaces', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const space: DocumentSpaceDto = {
+          id: `space-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          name: dto.name.trim(),
+          slug: generateSlug(dto.name),
+          ...(dto.description ? { description: dto.description } : {}),
+          icon: dto.icon || 'folder',
+          isDefault: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackSpaces.push(space);
+        return { ...space };
+      }
+      throw err;
+    }
+  }
+
+  async getDocuments(filters?: {
+    spaceId?: string;
+    visibility?: DocumentVisibility;
+    isPublished?: boolean;
+    search?: string;
+  }): Promise<DocumentSummaryDto[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.spaceId) params.set('spaceId', filters.spaceId);
+      if (filters?.visibility) params.set('visibility', filters.visibility);
+      if (filters?.isPublished !== undefined)
+        params.set('isPublished', String(filters.isPublished));
+      if (filters?.search) params.set('search', filters.search);
+
+      const qs = params.toString();
+      return await this.request<DocumentSummaryDto[]>(
+        `/documents${qs ? `?${qs}` : ''}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const isCustomer = this.token === DEFAULT_CUSTOMER_ID;
+
+        return this.fallbackDocuments
+          .filter((d) => {
+            if (isCustomer) {
+              // Customer portal only sees published CUSTOMER_VISIBLE docs
+              return d.visibility === 'CUSTOMER_VISIBLE' && d.isPublished;
+            }
+            if (filters?.spaceId && d.spaceId !== filters.spaceId) return false;
+            if (filters?.visibility && d.visibility !== filters.visibility)
+              return false;
+            if (
+              filters?.isPublished !== undefined &&
+              d.isPublished !== filters.isPublished
+            )
+              return false;
+            if (filters?.search) {
+              const q = filters.search.toLowerCase();
+              const mTitle = d.title.toLowerCase().includes(q);
+              const mTags = d.tags.some((t) => t.toLowerCase().includes(q));
+              if (!mTitle && !mTags) return false;
+            }
+            return true;
+          })
+          .map((d) => {
+            const { content, revisions, ...summary } = d;
+            return { ...summary };
+          });
+      }
+      throw err;
+    }
+  }
+
+  async getDocumentDetail(id: string): Promise<DocumentDetailDto> {
+    try {
+      return await this.request<DocumentDetailDto>(
+        `/documents/${encodeURIComponent(id)}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const isCustomer = this.token === DEFAULT_CUSTOMER_ID;
+        const doc = this.fallbackDocuments.find((d) => d.id === id);
+        if (!doc) {
+          throw new ApiClientError(`Document ${id} not found`, 404, 'NOT_FOUND');
+        }
+        if (isCustomer && (doc.visibility !== 'CUSTOMER_VISIBLE' || !doc.isPublished)) {
+          throw new ApiClientError(
+            'محدودیت دسترسی: دسترسی به اسناد داخلی برای کاربران پورتال مشتریان مجاز نیست',
+            403,
+            'FORBIDDEN',
+          );
+        }
+        return { ...doc, revisions: doc.revisions?.map((r) => ({ ...r })) };
+      }
+      throw err;
+    }
+  }
+
+  async createDocument(dto: CreateDocumentRequest): Promise<DocumentDetailDto> {
+    try {
+      return await this.request<DocumentDetailDto>('/documents', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const space = this.fallbackSpaces.find((s) => s.id === dto.spaceId);
+        const newId = `doc-${Date.now()}`;
+        const cleanContent = sanitizeDocumentContent(dto.content);
+
+        const initialRevision: DocumentRevisionDto = {
+          id: `rev-${Date.now()}`,
+          documentId: newId,
+          version: 1,
+          title: dto.title.trim(),
+          content: cleanContent,
+          summaryChange: 'نسخه اولیه سند',
+          authorId: this.token,
+          authorName: 'سارا احمدی',
+          createdAt: now,
+        };
+
+        const newDoc: DocumentDetailDto = {
+          id: newId,
+          organizationId: DEFAULT_ORG_ID,
+          spaceId: dto.spaceId,
+          ...(space ? { spaceName: space.name } : {}),
+          title: dto.title.trim(),
+          slug: generateSlug(dto.title),
+          content: cleanContent,
+          visibility: dto.visibility,
+          isPublished: dto.isPublished ?? true,
+          authorId: this.token,
+          authorName: 'سارا احمدی',
+          version: 1,
+          tags: dto.tags ?? [],
+          ...(dto.associatedEntityType ? { associatedEntityType: dto.associatedEntityType } : {}),
+          ...(dto.associatedEntityId ? { associatedEntityId: dto.associatedEntityId } : {}),
+          createdAt: now,
+          updatedAt: now,
+          revisions: [initialRevision],
+        };
+
+        this.fallbackDocuments.unshift(newDoc);
+        return { ...newDoc };
+      }
+      throw err;
+    }
+  }
+
+  async updateDocument(
+    id: string,
+    dto: UpdateDocumentRequest,
+  ): Promise<DocumentDetailDto> {
+    try {
+      return await this.request<DocumentDetailDto>(
+        `/documents/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const docIndex = this.fallbackDocuments.findIndex((d) => d.id === id);
+        if (docIndex === -1) {
+          throw new ApiClientError(`Document ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackDocuments[docIndex]!;
+
+        if (
+          dto.expectedVersion !== undefined &&
+          existing.version !== dto.expectedVersion
+        ) {
+          throw new ApiClientError(
+            `تعارض ویرایش همزمان: نسخه سند تغییر کرده است`,
+            409,
+            'VERSION_CONFLICT',
+          );
+        }
+
+        const now = new Date().toISOString();
+        const nextVersion = existing.version + 1;
+        const newTitle = dto.title !== undefined ? dto.title.trim() : existing.title;
+        const newContent =
+          dto.content !== undefined
+            ? sanitizeDocumentContent(dto.content)
+            : existing.content;
+
+        const rev: DocumentRevisionDto = {
+          id: `rev-${Date.now()}`,
+          documentId: existing.id,
+          version: nextVersion,
+          title: newTitle,
+          content: newContent,
+          summaryChange: dto.summaryChange || `ویرایش نسخه ${nextVersion}`,
+          authorId: this.token,
+          authorName: 'سارا احمدی',
+          createdAt: now,
+        };
+
+        const updated: DocumentDetailDto = {
+          ...existing,
+          title: newTitle,
+          slug: generateSlug(newTitle),
+          content: newContent,
+          ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
+          ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
+          ...(dto.tags !== undefined ? { tags: dto.tags } : {}),
+          version: nextVersion,
+          updatedAt: now,
+          revisions: [rev, ...(existing.revisions || [])],
+        };
+
+        this.fallbackDocuments[docIndex] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async restoreDocumentRevision(
+    id: string,
+    revisionVersion: number,
+    summaryChange?: string,
+  ): Promise<DocumentDetailDto> {
+    try {
+      return await this.request<DocumentDetailDto>(
+        `/documents/${encodeURIComponent(id)}/restore`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ revisionVersion, summaryChange }),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const doc = this.fallbackDocuments.find((d) => d.id === id);
+        if (!doc) {
+          throw new ApiClientError(`Document ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const targetRev = doc.revisions?.find((r) => r.version === revisionVersion);
+        if (!targetRev) {
+          throw new ApiClientError(
+            `Revision ${revisionVersion} not found`,
+            404,
+            'NOT_FOUND',
+          );
+        }
+        return this.updateDocument(id, {
+          title: targetRev.title,
+          content: targetRev.content,
+          summaryChange:
+            summaryChange || `بازیابی سند به نسخه ${revisionVersion}`,
+        });
+      }
+      throw err;
+    }
+  }
+
+  async deleteDocument(id: string): Promise<boolean> {
+    try {
+      await this.request<{ success: boolean }>(
+        `/documents/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      return true;
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackDocuments.findIndex((d) => d.id === id);
+        if (idx !== -1) {
+          this.fallbackDocuments.splice(idx, 1);
+        }
+        return true;
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  CreateDocumentRequest,
+  CreateDocumentSpaceRequest,
+  DocumentDetailDto,
+  DocumentRevisionDto,
+  DocumentSpaceDto,
+  DocumentSummaryDto,
+  DocumentVisibility,
+  UpdateDocumentRequest,
   CreateSavedViewRequest,
   SavedViewDto,
   SavedViewEntityType,
