@@ -14,3 +14,4 @@ export * from './DocumentsView';
 export * from './CreateDocumentModal';
 export * from './ActivityComposerModal';
 export * from './AdminSettingsView';
+export * from './AnalyticsDashboardView';

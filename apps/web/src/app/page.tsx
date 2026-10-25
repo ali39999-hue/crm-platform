@@ -23,6 +23,7 @@ import { canTransitionTask } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
 import {
   AdminSettingsView,
+  AnalyticsDashboardView,
   CommandPalette,
   CreateTaskModal,
   type CreateTaskFormData,
@@ -987,92 +988,14 @@ export default function WorkspaceApp() {
           </div>
         )}
 
-        {/* Reports & KPI Tab */}
+        {/* Reports & Analytics Tab */}
         {activeTab === 'reports' && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            {/* KPI Cards */}
-            <div className="summary-grid">
-              <article className="summary-card">
-                <p>نرخ تبدیل سرنخ (Funnel)</p>
-                <strong style={{ color: 'var(--accent)' }}>
-                  {reports?.crmFunnel.conversionRatePercent ?? 0}٪
-                </strong>
-                <small>
-                  {reports?.crmFunnel.convertedLeads ?? 0} از {reports?.crmFunnel.totalLeads ?? 0}{' '}
-                  سرنخ
-                </small>
-              </article>
-              <article className="summary-card">
-                <p>ارزش کل پایپ‌لاین</p>
-                <strong>
-                  {((reports?.crmFunnel.totalDealsValue ?? 0) / 1000000).toLocaleString('fa-IR')}{' '}
-                  م.ر
-                </strong>
-                <small>
-                  وزنی:{' '}
-                  {((reports?.crmFunnel.weightedPipelineValue ?? 0) / 1000000).toLocaleString(
-                    'fa-IR',
-                  )}{' '}
-                  م.ر
-                </small>
-              </article>
-              <article className="summary-card">
-                <p>تیکت‌های در دست اقدام</p>
-                <strong style={{ color: 'var(--warning)' }}>
-                  {reports?.supportSla.openTickets ?? 0}
-                </strong>
-                <small>از مجموع {reports?.supportSla.totalTickets ?? 0} تیکت</small>
-              </article>
-              <article className="summary-card">
-                <p>نرخ نقض SLA</p>
-                <strong
-                  style={{
-                    color: reports?.supportSla.slaBreachRatePercent
-                      ? 'var(--danger)'
-                      : 'var(--success)',
-                  }}
-                >
-                  {reports?.supportSla.slaBreachRatePercent ?? 0}٪
-                </strong>
-                <small>میانگین حل: {reports?.supportSla.averageResolutionHours ?? 0} ساعت</small>
-              </article>
-            </div>
-
-            {/* Workload Table */}
-            <div
-              style={{
-                background: 'var(--paper)',
-                border: '1px solid var(--line)',
-                borderRadius: '12px',
-                padding: '24px',
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px' }}>گزارش بار کاری تیم (Workload Report)</h3>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>کاربر / مسئول</th>
-                    <th>وظایف فعال</th>
-                    <th>وظایف سررسیدگذشته (Overdue)</th>
-                    <th>وظایف تکمیل‌شده</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports?.workload.map((w) => (
-                    <tr key={w.userId}>
-                      <td>
-                        <strong>{w.userName}</strong>
-                      </td>
-                      <td>{w.activeTasksCount}</td>
-                      <td style={{ color: w.overdueTasksCount > 0 ? 'var(--danger)' : 'inherit' }}>
-                        {w.overdueTasksCount}
-                      </td>
-                      <td style={{ color: 'var(--success)' }}>{w.completedTasksCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <AnalyticsDashboardView
+              reports={reports}
+              onRefresh={loadData}
+              onNotify={(msg) => showToast(msg)}
+            />
           </div>
         )}
 

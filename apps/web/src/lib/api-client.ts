@@ -9,6 +9,10 @@ import type {
   CreateAutomationRuleRequest,
   CreateSavedViewRequest,
   CrmFunnelReport,
+  CustomReportQueryDto,
+  CustomReportResultDto,
+  AnalyticsTimeframe,
+  ReportGroupBreakdown,
   DashboardKpiReport,
   NotificationDto,
   NotificationPreferencesDto,
@@ -2601,6 +2605,131 @@ export class ApiClient {
             'IntegrationAccount',
           ],
           matrix: {},
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Custom Reporting & Analytics ---------------- */
+
+  async getCustomReport(query: CustomReportQueryDto): Promise<CustomReportResultDto> {
+    try {
+      const params = new URLSearchParams({ metric: query.metric });
+      if (query.groupBy) params.set('groupBy', query.groupBy);
+      if (query.timeframe) params.set('timeframe', query.timeframe);
+
+      return await this.request<CustomReportResultDto>(
+        `/reporting/custom?${params.toString()}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const timeframe = query.timeframe || 'MONTH';
+        const groupBy = query.groupBy || 'STATUS';
+        const groups: ReportGroupBreakdown[] = [];
+        let totalCount = 0;
+        let totalValue: number | undefined = undefined;
+
+        if (query.metric === 'DEALS') {
+          totalCount = this.fallbackDeals.length;
+          totalValue = this.fallbackDeals.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
+          const map = new Map<string, { count: number; value: number }>();
+          for (const d of this.fallbackDeals) {
+            const cur = map.get(d.stage) || { count: 0, value: 0 };
+            cur.count += 1;
+            cur.value += d.amountMinor ?? 0;
+            map.set(d.stage, cur);
+          }
+          for (const [key, info] of map.entries()) {
+            groups.push({
+              key,
+              label: key,
+              count: info.count,
+              value: info.value,
+              percentage: totalCount > 0 ? Math.round((info.count / totalCount) * 100) : 0,
+            });
+          }
+        } else if (query.metric === 'LEADS') {
+          totalCount = this.fallbackLeads.length;
+          const map = new Map<string, number>();
+          for (const l of this.fallbackLeads) {
+            map.set(l.status, (map.get(l.status) || 0) + 1);
+          }
+          for (const [key, count] of map.entries()) {
+            groups.push({
+              key,
+              label: key,
+              count,
+              percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+            });
+          }
+        } else if (query.metric === 'TASKS') {
+          totalCount = this.fallbackTasks.length;
+          const map = new Map<string, number>();
+          for (const t of this.fallbackTasks) {
+            const k = groupBy === 'PRIORITY' ? t.priority : t.status;
+            map.set(k, (map.get(k) || 0) + 1);
+          }
+          for (const [key, count] of map.entries()) {
+            groups.push({
+              key,
+              label: key,
+              count,
+              percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+            });
+          }
+        } else {
+          totalCount = this.fallbackTickets.length;
+          const map = new Map<string, number>();
+          for (const t of this.fallbackTickets) {
+            const k = groupBy === 'PRIORITY' ? t.priority : t.status;
+            map.set(k, (map.get(k) || 0) + 1);
+          }
+          for (const [key, count] of map.entries()) {
+            groups.push({
+              key,
+              label: key,
+              count,
+              percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+            });
+          }
+        }
+
+        const res: CustomReportResultDto = {
+          metric: query.metric,
+          groupBy,
+          timeframe,
+          totalCount,
+          groups,
+          generatedAt: new Date().toISOString(),
+        };
+        if (totalValue !== undefined) res.totalValue = totalValue;
+        return res;
+      }
+      throw err;
+    }
+  }
+
+  async exportReport(query: CustomReportQueryDto): Promise<{ csv: string; filename: string }> {
+    try {
+      return await this.request<{ csv: string; filename: string }>('/reporting/export', {
+        method: 'POST',
+        body: JSON.stringify(query),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const report = await this.getCustomReport(query);
+        const headers = ['گروه', 'تعداد', 'درصد'];
+        if (report.totalValue !== undefined) headers.push('ارزش ریالی');
+        const rows = report.groups.map((g) => {
+          const r = [g.label, String(g.count), `${g.percentage}%`];
+          if (g.value !== undefined) r.push(String(g.value));
+          return r.join(',');
+        });
+        const csv = [headers.join(','), ...rows].join('\n');
+        return {
+          csv,
+          filename: `report-${query.metric.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`,
         };
       }
       throw err;

@@ -812,5 +812,33 @@ export type UpdateMemberRoleRequest = {
   role: string;
 };
 
+/* Enterprise Analytics & Custom Reporting Contracts */
+
+export type AnalyticsTimeframe = 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
+
+export type CustomReportQueryDto = {
+  metric: 'LEADS' | 'DEALS' | 'TASKS' | 'TICKETS';
+  groupBy?: 'STATUS' | 'ASSIGNEE' | 'STAGE' | 'PRIORITY' | undefined;
+  timeframe?: AnalyticsTimeframe | undefined;
+};
+
+export type ReportGroupBreakdown = {
+  key: string;
+  label: string;
+  count: number;
+  value?: number | undefined;
+  percentage: number;
+};
+
+export type CustomReportResultDto = {
+  metric: string;
+  groupBy: string;
+  timeframe: AnalyticsTimeframe;
+  totalCount: number;
+  totalValue?: number | undefined;
+  groups: ReportGroupBreakdown[];
+  generatedAt: string;
+};
+
 
 

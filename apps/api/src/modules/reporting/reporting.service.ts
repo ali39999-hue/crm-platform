@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
   CrmFunnelReport,
+  CustomReportQueryDto,
+  CustomReportResultDto,
   DashboardKpiReport,
+  ReportGroupBreakdown,
   SupportSlaReport,
   WorkloadReportItem,
 } from '@crm/contracts';
@@ -9,6 +12,7 @@ import { isSlaBreached } from '@crm/domain';
 import type { ITaskRepository } from '../tasks/task.repository.js';
 import { InMemoryCrmRepository } from '../crm/crm.repository.js';
 import { InMemorySupportRepository } from '../support/support.repository.js';
+import { AuditService } from '../audit/audit.service.js';
 
 @Injectable()
 export class ReportingService {
@@ -16,6 +20,7 @@ export class ReportingService {
     @Inject('TASK_REPOSITORY') private readonly taskRepo: ITaskRepository,
     private readonly crmRepo: InMemoryCrmRepository,
     private readonly supportRepo: InMemorySupportRepository,
+    private readonly auditService: AuditService,
   ) {}
 
   async getWorkloadReport(organizationId: string): Promise<WorkloadReportItem[]> {
@@ -137,5 +142,165 @@ export class ReportingService {
       supportSla,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  /* Custom Report Builder Engine */
+
+  async generateCustomReport(
+    organizationId: string,
+    query: CustomReportQueryDto,
+  ): Promise<CustomReportResultDto> {
+    const timeframe = query.timeframe || 'MONTH';
+    const groupBy = query.groupBy || 'STATUS';
+    const groups: ReportGroupBreakdown[] = [];
+
+    let totalCount = 0;
+    let totalValue: number | undefined = undefined;
+
+    if (query.metric === 'LEADS') {
+      const leads = await this.crmRepo.findLeads(organizationId);
+      totalCount = leads.length;
+      const map = new Map<string, number>();
+
+      for (const lead of leads) {
+        const key = lead.status;
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+
+      for (const [key, count] of map.entries()) {
+        groups.push({
+          key,
+          label: this.getLeadStatusLabel(key),
+          count,
+          percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+        });
+      }
+    } else if (query.metric === 'DEALS') {
+      const deals = await this.crmRepo.findDeals(organizationId);
+      totalCount = deals.length;
+      totalValue = deals.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
+      const map = new Map<string, { count: number; value: number }>();
+
+      for (const deal of deals) {
+        const key = deal.stage;
+        const cur = map.get(key) || { count: 0, value: 0 };
+        cur.count += 1;
+        cur.value += deal.amountMinor ?? 0;
+        map.set(key, cur);
+      }
+
+      for (const [key, info] of map.entries()) {
+        groups.push({
+          key,
+          label: key,
+          count: info.count,
+          value: info.value,
+          percentage: totalCount > 0 ? Math.round((info.count / totalCount) * 100) : 0,
+        });
+      }
+    } else if (query.metric === 'TASKS') {
+      const tasks = await this.taskRepo.findAll(organizationId, { limit: 1000 });
+      totalCount = tasks.length;
+      const map = new Map<string, number>();
+
+      for (const task of tasks) {
+        const key = groupBy === 'PRIORITY' ? task.priority : task.status;
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+
+      for (const [key, count] of map.entries()) {
+        groups.push({
+          key,
+          label: key,
+          count,
+          percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+        });
+      }
+    } else if (query.metric === 'TICKETS') {
+      const tickets = await this.supportRepo.findTickets(organizationId);
+      totalCount = tickets.length;
+      const map = new Map<string, number>();
+
+      for (const ticket of tickets) {
+        const key = groupBy === 'PRIORITY' ? ticket.priority : ticket.status;
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+
+      for (const [key, count] of map.entries()) {
+        groups.push({
+          key,
+          label: key,
+          count,
+          percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0,
+        });
+      }
+    }
+
+    const result: CustomReportResultDto = {
+      metric: query.metric,
+      groupBy,
+      timeframe,
+      totalCount,
+      groups,
+      generatedAt: new Date().toISOString(),
+    };
+    if (totalValue !== undefined) {
+      result.totalValue = totalValue;
+    }
+
+    return result;
+  }
+
+  async exportReport(
+    organizationId: string,
+    actorId: string,
+    query: CustomReportQueryDto,
+  ): Promise<{ csv: string; filename: string }> {
+    const report = await this.generateCustomReport(organizationId, query);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `report-${query.metric.toLowerCase()}-${dateStr}.csv`;
+
+    const headers = ['گروه', 'تعداد', 'درصد'];
+    if (report.totalValue !== undefined) {
+      headers.push('ارزش ریالی');
+    }
+
+    const rows = report.groups.map((g) => {
+      const row = [g.label, String(g.count), `${g.percentage}%`];
+      if (g.value !== undefined) {
+        row.push(String(g.value));
+      }
+      return row.join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'REPORT_EXPORTED',
+      entityType: 'Report',
+      entityId: query.metric,
+      metadata: { metric: query.metric, timeframe: query.timeframe },
+    });
+
+    return { csv, filename };
+  }
+
+  private getLeadStatusLabel(status: string): string {
+    switch (status) {
+      case 'NEW':
+        return 'سرنخ جدید';
+      case 'CONTACTED':
+        return 'تماس گرفته شده';
+      case 'QUALIFIED':
+        return 'واجد شرایط';
+      case 'UNQUALIFIED':
+        return 'فاقد شرایط';
+      case 'CONVERTED':
+        return 'تبدیل‌شده به مشتری';
+      default:
+        return status;
+    }
   }
 }
