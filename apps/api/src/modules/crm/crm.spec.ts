@@ -185,4 +185,53 @@ describe('CRM Module, Deduplication, and Idempotent Conversion', () => {
       expect(() => customGuard.canActivate(mockContext)).toThrow(ForbiddenException);
     });
   });
+
+  describe('6. Duplicate Candidate Detection and Merging', () => {
+    it('detects duplicate lead candidates with email or phone match', async () => {
+      // Create duplicate lead
+      await crmService.createLead(orgAlphaId, employeeAlphaId, {
+        displayName: 'حسین حسینی (کپی)',
+        email: 'hosseini@dadevarz.com', // Matches seeded lead
+        phone: '09129876543',
+      });
+
+      const duplicates = await crmService.getDuplicateCandidates(orgAlphaId);
+      expect(duplicates.length).toBeGreaterThan(0);
+      const leadDup = duplicates.find((d) => d.entityType === 'LEAD');
+      expect(leadDup).toBeDefined();
+      expect(leadDup?.confidenceScore).toBe(95);
+      expect(leadDup?.matchReason).toContain('ایمیل');
+    });
+
+    it('merges duplicate lead records and removes source record', async () => {
+      const lead2 = await crmService.createLead(orgAlphaId, employeeAlphaId, {
+        displayName: 'تست برای ادغام',
+        email: 'merge.test@example.com',
+        phone: '09120000001',
+      });
+
+      const lead3 = await crmService.createLead(orgAlphaId, employeeAlphaId, {
+        displayName: 'تست برای ادغام (دوم)',
+        email: 'merge.test@example.com',
+        phone: '09120000001',
+      });
+
+      const mergeResult = await crmService.mergeRecords(orgAlphaId, employeeAlphaId, {
+        entityType: 'LEAD',
+        targetRecordId: lead2.lead.id,
+        sourceRecordId: lead3.lead.id,
+      });
+
+      expect(mergeResult.success).toBe(true);
+      expect(mergeResult.mergedId).toBe(lead2.lead.id);
+
+      // Verify source lead is removed
+      const leads = await crmService.getLeads(orgAlphaId);
+      expect(leads.some((l) => l.id === lead3.lead.id)).toBe(false);
+
+      // Audit recorded
+      const audit = auditService.getEvents(orgAlphaId).find((a) => a.action === 'CRM_RECORDS_MERGED');
+      expect(audit).toBeDefined();
+    });
+  });
 });

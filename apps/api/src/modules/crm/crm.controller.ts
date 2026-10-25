@@ -22,6 +22,7 @@ import { ConvertLeadDto } from './dto/convert-lead.dto.js';
 import { CreateDealDto } from './dto/create-deal.dto.js';
 import { UpdateDealDto } from './dto/update-deal.dto.js';
 import type { Request } from 'express';
+import type { DuplicateCandidateDto, MergeRecordsRequest } from '@crm/contracts';
 
 @Controller('crm')
 @UseGuards(AuthGuard, PermissionsGuard)
@@ -170,6 +171,32 @@ export class CrmController {
       user.id,
       user.activeOrganization.role,
       id,
+      dto,
+      requestId,
+    );
+  }
+
+  /* Duplicate Resolution & Merging */
+  @Get('duplicates/candidates')
+  @RequirePermission('edit_crm')
+  async getDuplicateCandidates(
+    @CurrentUser() user: UserContext,
+  ): Promise<DuplicateCandidateDto[]> {
+    return this.crmService.getDuplicateCandidates(user.activeOrganization.id);
+  }
+
+  @Post('duplicates/merge')
+  @RequirePermission('edit_crm')
+  async mergeDuplicates(
+    @CurrentUser() user: UserContext,
+    @Body() dto: MergeRecordsRequest,
+    @Req() req: Request,
+  ): Promise<{ success: boolean; mergedId: string }> {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.mergeRecords(
+      user.activeOrganization.id,
+      user.id,
       dto,
       requestId,
     );

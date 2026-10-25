@@ -178,6 +178,12 @@ export class InMemoryCrmRepository {
     return entity;
   }
 
+  async updateAccount(account: AccountEntity): Promise<AccountEntity> {
+    const updated = { ...account, updatedAt: new Date().toISOString() };
+    this.accounts.set(account.id, updated);
+    return updated;
+  }
+
   /* Contacts */
   async findContacts(organizationId: string, accountId?: string): Promise<ContactEntity[]> {
     return Array.from(this.contacts.values()).filter(
@@ -201,6 +207,12 @@ export class InMemoryCrmRepository {
     };
     this.contacts.set(id, entity);
     return entity;
+  }
+
+  async updateContact(contact: ContactEntity): Promise<ContactEntity> {
+    const updated = { ...contact, updatedAt: new Date().toISOString() };
+    this.contacts.set(contact.id, updated);
+    return updated;
   }
 
   /* Leads */
@@ -263,5 +275,33 @@ export class InMemoryCrmRepository {
     const updated = { ...deal, updatedAt: new Date().toISOString() };
     this.deals.set(deal.id, updated);
     return updated;
+  }
+
+  async deleteAccount(organizationId: string, id: string): Promise<boolean> {
+    const acc = this.accounts.get(id);
+    if (!acc || acc.organizationId !== organizationId) return false;
+    this.accounts.delete(id);
+    return true;
+  }
+
+  async deleteContact(organizationId: string, id: string): Promise<boolean> {
+    const con = this.contacts.get(id);
+    if (!con || con.organizationId !== organizationId) return false;
+    this.contacts.delete(id);
+    return true;
+  }
+
+  async deleteLead(organizationId: string, id: string): Promise<boolean> {
+    const lead = this.leads.get(id);
+    if (!lead || lead.organizationId !== organizationId) return false;
+    this.leads.delete(id);
+    return true;
+  }
+
+  async deleteDeal(organizationId: string, id: string): Promise<boolean> {
+    const deal = this.deals.get(id);
+    if (!deal || deal.organizationId !== organizationId) return false;
+    this.deals.delete(id);
+    return true;
   }
 }

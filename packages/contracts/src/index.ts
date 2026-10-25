@@ -264,6 +264,7 @@ export type UpdateDealRequest = {
   targetCloseAt?: string;
   ownerId?: string;
 };
+export type UpdateDealDto = UpdateDealRequest;
 
 export type PipelineStageDto = {
   id: string;
@@ -867,6 +868,33 @@ export type CustomReportResultDto = {
   totalValue?: number | undefined;
   groups: ReportGroupBreakdown[];
   generatedAt: string;
+};
+
+/* Duplicate Resolution & Merge Contracts */
+
+export type DuplicateCandidateDto = {
+  id: string;
+  entityType: 'ACCOUNT' | 'CONTACT' | 'LEAD';
+  primaryRecord: {
+    id: string;
+    title: string;
+    email?: string | undefined;
+    phone?: string | undefined;
+  };
+  duplicateRecord: {
+    id: string;
+    title: string;
+    email?: string | undefined;
+    phone?: string | undefined;
+  };
+  matchReason: string;
+  confidenceScore: number;
+};
+
+export type MergeRecordsRequest = {
+  entityType: 'ACCOUNT' | 'CONTACT' | 'LEAD';
+  targetRecordId: string;
+  sourceRecordId: string;
 };
 
 

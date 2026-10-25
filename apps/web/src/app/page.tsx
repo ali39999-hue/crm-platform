@@ -28,7 +28,9 @@ import {
   CreateTaskModal,
   type CreateTaskFormData,
   Customer360Drawer,
+  DealsPipelineKanban,
   DocumentsView,
+  DuplicateReviewView,
   EmptyState,
   ErrorBanner,
   getPriorityLabel,
@@ -85,6 +87,7 @@ export default function WorkspaceApp() {
     | 'settings'
   >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
+  const [crmSubTab, setCrmSubTab] = useState<'accounts' | 'pipeline' | 'duplicates'>('accounts');
 
   // Domain & Entity States
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
@@ -728,108 +731,179 @@ export default function WorkspaceApp() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '8px',
+                marginBottom: '16px',
                 flexWrap: 'wrap',
-                gap: '8px',
+                gap: '12px',
               }}
             >
-              <h3 style={{ margin: 0 }}>مشتریان و خط‌لوله فروش (CRM Core)</h3>
-              <span
+              <div>
+                <h3 style={{ margin: 0 }}>مشتریان و خط‌لوله فروش (CRM Core)</h3>
+                <p className="muted" style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                  مدیریت ۳۶۰ درجه شرکت‌ها، معاملات در پایپ‌لاین و رفع هوشمند رکوردهای تکراری
+                </p>
+              </div>
+
+              {/* CRM Sub-tabs Switcher */}
+              <div
                 style={{
-                  fontSize: '12px',
-                  color: 'var(--muted)',
+                  display: 'flex',
                   background: 'var(--soft)',
-                  padding: '4px 10px',
+                  padding: '3px',
                   borderRadius: '8px',
+                  border: '1px solid var(--line)',
                 }}
               >
-                💡 برای مشاهده نمای جامع ۳۶۰°، اطلاعات تماس، فرصت‌ها و تایم‌لاین، روی هر سطر کلیک
-                کنید
-              </span>
+                <button
+                  type="button"
+                  onClick={() => setCrmSubTab('accounts')}
+                  data-testid="crm-tab-accounts"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: crmSubTab === 'accounts' ? 'var(--paper)' : 'transparent',
+                    fontWeight: crmSubTab === 'accounts' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🏢 شرکت‌ها و حساب‌ها ({accounts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCrmSubTab('pipeline')}
+                  data-testid="crm-tab-pipeline"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: crmSubTab === 'pipeline' ? 'var(--paper)' : 'transparent',
+                    fontWeight: crmSubTab === 'pipeline' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📊 برد کانبان معاملات ({deals.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCrmSubTab('duplicates')}
+                  data-testid="crm-tab-duplicates"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: crmSubTab === 'duplicates' ? 'var(--paper)' : 'transparent',
+                    fontWeight: crmSubTab === 'duplicates' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔍 رکوردهای تکراری
+                </button>
+              </div>
             </div>
-            <p className="muted" style={{ marginBottom: '20px' }}>
-              ماژول مدیریت شرکت‌ها (Accounts)، مخاطبان (Contacts)، سرنخ‌ها (Leads) و فرصت‌های فروش
-              (Deals).
-            </p>
 
-            {isLoading ? (
-              <LoadingSkeleton variant="table" count={3} />
-            ) : accounts.length === 0 ? (
-              <EmptyState
-                title="هیچ حسابی ثبت نشده است"
-                description="می‌توانید مشتریان جدید را از طریق سرنخ‌ها یا ثبت مستقیم اضافه نمایید."
-              />
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>نام شرکت / حساب</th>
-                    <th>صنعت / نوع</th>
-                    <th>تلفن تماس</th>
-                    <th>فرصت‌های فعال</th>
-                    <th>وضعیت</th>
-                    <th style={{ textAlign: 'center' }}>نمای ۳۶۰°</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((acc) => {
-                    const accDeals = deals.filter((d) => d.accountId === acc.id);
-                    const totalAmount = accDeals.reduce((sum, d) => sum + (d.amountMinor || 0), 0);
-
-                    return (
-                      <tr
-                        key={acc.id}
-                        className="table-row-clickable"
-                        onClick={() => handleOpenCustomerDrawer(acc)}
-                        title="برای مشاهده پرونده کامل ۳۶۰ درجه کلیک کنید"
-                      >
-                        <td>
-                          <strong>{acc.name}</strong>
-                          {acc.website && (
-                            <small
-                              style={{
-                                display: 'block',
-                                color: 'var(--muted)',
-                                direction: 'ltr',
-                                textAlign: 'right',
-                              }}
-                            >
-                              {acc.website}
-                            </small>
-                          )}
-                        </td>
-                        <td>{acc.type === 'CUSTOMER' ? 'مشتری سازمانی' : 'مشتری بالقوه'}</td>
-                        <td>{acc.phone ?? '—'}</td>
-                        <td>
-                          {accDeals.length > 0
-                            ? `${accDeals.length} فرصت (${totalAmount.toLocaleString('fa-IR')} ریال)`
-                            : 'بدون فرصت جاری'}
-                        </td>
-                        <td>
-                          <span
-                            className={`badge ${acc.status === 'ACTIVE' ? 'badge-done' : 'badge-todo'}`}
-                          >
-                            {acc.status === 'ACTIVE' ? 'فعال' : acc.status}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            style={{ fontSize: '11px', padding: '4px 10px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenCustomerDrawer(acc);
-                            }}
-                          >
-                            نمای ۳۶۰°
-                          </button>
-                        </td>
+            {/* Sub-tab 1: Accounts List */}
+            {crmSubTab === 'accounts' && (
+              <>
+                {isLoading ? (
+                  <LoadingSkeleton variant="table" count={3} />
+                ) : accounts.length === 0 ? (
+                  <EmptyState
+                    title="هیچ حسابی ثبت نشده است"
+                    description="می‌توانید مشتریان جدید را از طریق سرنخ‌ها یا ثبت مستقیم اضافه نمایید."
+                  />
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>نام شرکت / حساب</th>
+                        <th>صنعت / نوع</th>
+                        <th>تلفن تماس</th>
+                        <th>فرصت‌های فعال</th>
+                        <th>وضعیت</th>
+                        <th style={{ textAlign: 'center' }}>نمای ۳۶۰°</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {accounts.map((acc) => {
+                        const accDeals = deals.filter((d) => d.accountId === acc.id);
+                        const totalAmount = accDeals.reduce((sum, d) => sum + (d.amountMinor || 0), 0);
+
+                        return (
+                          <tr
+                            key={acc.id}
+                            className="table-row-clickable"
+                            onClick={() => handleOpenCustomerDrawer(acc)}
+                            title="برای مشاهده پرونده کامل ۳۶۰ درجه کلیک کنید"
+                          >
+                            <td>
+                              <strong>{acc.name}</strong>
+                              {acc.website && (
+                                <small
+                                  style={{
+                                    display: 'block',
+                                    color: 'var(--muted)',
+                                    direction: 'ltr',
+                                    textAlign: 'right',
+                                  }}
+                                >
+                                  {acc.website}
+                                </small>
+                              )}
+                            </td>
+                            <td>{acc.type === 'CUSTOMER' ? 'مشتری سازمانی' : 'مشتری بالقوه'}</td>
+                            <td>{acc.phone ?? '—'}</td>
+                            <td>
+                              {accDeals.length > 0
+                                ? `${accDeals.length} فرصت (${totalAmount.toLocaleString('fa-IR')} ریال)`
+                                : 'بدون فرصت جاری'}
+                            </td>
+                            <td>
+                              <span
+                                className={`badge ${acc.status === 'ACTIVE' ? 'badge-done' : 'badge-todo'}`}
+                              >
+                                {acc.status === 'ACTIVE' ? 'فعال' : acc.status}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                style={{ fontSize: '11px', padding: '4px 10px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenCustomerDrawer(acc);
+                                }}
+                              >
+                                نمای ۳۶۰°
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </>
+            )}
+
+            {/* Sub-tab 2: Deals Pipeline Kanban */}
+            {crmSubTab === 'pipeline' && (
+              <DealsPipelineKanban
+                initialDeals={deals}
+                onNotify={(msg) => showToast(msg)}
+                onSelectDeal={(d) => showToast(`فرصت «${d.name}» انتخاب شد`)}
+              />
+            )}
+
+            {/* Sub-tab 3: Duplicate Records Review */}
+            {crmSubTab === 'duplicates' && (
+              <DuplicateReviewView onNotify={(msg) => showToast(msg)} />
             )}
           </div>
         )}

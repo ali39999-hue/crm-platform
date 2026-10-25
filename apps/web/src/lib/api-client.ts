@@ -74,6 +74,10 @@ import type {
   OrganizationSettingsDto,
   UpdateMemberRoleRequest,
   UpdateOrganizationSettingsRequest,
+  DuplicateCandidateDto,
+  MergeRecordsRequest,
+  PipelineStageDto,
+  UpdateDealDto,
 } from '@crm/contracts';
 
 import {
@@ -757,6 +761,95 @@ export class ApiClient {
       role: 'SupportAgent',
       active: true,
       joinedAt: '2026-09-15T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackPipelineStages: PipelineStageDto[] = [
+    {
+      id: 'stg-1',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'کشف و صلاحیت‌سنجی',
+      key: 'DISCOVERY',
+      order: 1,
+      defaultProbability: 20,
+      isWon: false,
+      isLost: false,
+      color: '#6366f1',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'stg-2',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'ارائه پروپوزال',
+      key: 'PROPOSAL',
+      order: 2,
+      defaultProbability: 50,
+      isWon: false,
+      isLost: false,
+      color: '#3b82f6',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'stg-3',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'مذاکره و پیش‌قرارداد',
+      key: 'NEGOTIATION',
+      order: 3,
+      defaultProbability: 80,
+      isWon: false,
+      isLost: false,
+      color: '#f59e0b',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'stg-4',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'موفق و نهایی‌شده',
+      key: 'WON',
+      order: 4,
+      defaultProbability: 100,
+      isWon: true,
+      isLost: false,
+      color: '#10b981',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'stg-5',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'از دست رفته',
+      key: 'LOST',
+      order: 5,
+      defaultProbability: 0,
+      isWon: false,
+      isLost: true,
+      color: '#ef4444',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackDuplicates: DuplicateCandidateDto[] = [
+    {
+      id: 'dup-1',
+      entityType: 'LEAD',
+      primaryRecord: {
+        id: '70000000-0000-0000-0000-000000000001',
+        title: 'علیرضا حسینی',
+        email: 'hosseini@dadevarz.com',
+        phone: '09129876543',
+      },
+      duplicateRecord: {
+        id: 'lead-dup-sample',
+        title: 'ع. حسینی (ثبت از وبسایت)',
+        email: 'hosseini@dadevarz.com',
+        phone: '09129876543',
+      },
+      matchReason: 'ایمیل و شماره تماس یکسان',
+      confidenceScore: 98,
     },
   ];
 
@@ -2873,9 +2966,89 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Sales Pipelines & Duplicate Management ---------------- */
+
+  async getPipelineStages(): Promise<PipelineStageDto[]> {
+    try {
+      return await this.request<PipelineStageDto[]>('/crm/pipeline-stages');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackPipelineStages.map((s) => ({ ...s }));
+      }
+      throw err;
+    }
+  }
+
+  async updateDeal(dealId: string, dto: UpdateDealDto): Promise<DealDto> {
+    try {
+      return await this.request<DealDto>(`/crm/deals/${encodeURIComponent(dealId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackDeals.findIndex((d) => d.id === dealId);
+        if (idx === -1) {
+          throw new ApiClientError(`Deal ${dealId} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackDeals[idx]!;
+        const updated: DealDto = {
+          ...existing,
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.stage !== undefined ? { stage: dto.stage } : {}),
+          ...(dto.amountMinor !== undefined ? { amountMinor: dto.amountMinor } : {}),
+          ...(dto.probability !== undefined ? { probability: dto.probability } : {}),
+          ...(dto.targetCloseAt !== undefined ? { targetCloseAt: dto.targetCloseAt } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackDeals[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async getDuplicateCandidates(): Promise<DuplicateCandidateDto[]> {
+    try {
+      return await this.request<DuplicateCandidateDto[]>('/crm/duplicates/candidates');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackDuplicates.map((d) => ({ ...d }));
+      }
+      throw err;
+    }
+  }
+
+  async mergeRecords(dto: MergeRecordsRequest): Promise<{ success: boolean; mergedId: string }> {
+    try {
+      return await this.request<{ success: boolean; mergedId: string }>('/crm/duplicates/merge', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackDuplicates.findIndex(
+          (d) =>
+            d.entityType === dto.entityType &&
+            (d.primaryRecord.id === dto.targetRecordId ||
+              d.duplicateRecord.id === dto.sourceRecordId),
+        );
+        if (idx !== -1) {
+          this.fallbackDuplicates.splice(idx, 1);
+        }
+        return { success: true, mergedId: dto.targetRecordId };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  DuplicateCandidateDto,
+  MergeRecordsRequest,
+  PipelineStageDto,
+  UpdateDealDto,
   InviteMemberRequest,
   OrganizationMemberDto,
   OrganizationSettingsDto,

@@ -33,7 +33,9 @@ import type {
   ConvertLeadResponse,
   CustomerTimelineItem,
   DealDto,
+  DuplicateCandidateDto,
   LeadDto,
+  MergeRecordsRequest,
 } from '@crm/contracts';
 
 @Injectable()
@@ -537,6 +539,167 @@ export class CrmService {
     }
 
     return timeline.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+  }
+
+  /* Duplicate Detection & Merging */
+  async getDuplicateCandidates(organizationId: string): Promise<DuplicateCandidateDto[]> {
+    const candidates: DuplicateCandidateDto[] = [];
+
+    // 1. Check Leads for duplicates
+    const leads = await this.crmRepo.findLeads(organizationId);
+    for (let i = 0; i < leads.length; i++) {
+      for (let j = i + 1; j < leads.length; j++) {
+        const a = leads[i]!;
+        const b = leads[j]!;
+        if (a.status === 'CONVERTED' || b.status === 'CONVERTED') continue;
+
+        if (isDuplicateCandidate(a, b)) {
+          const matchReason =
+            normalizeEmail(a.email) === normalizeEmail(b.email)
+              ? 'ایمیل یکسان'
+              : 'شماره تماس یکسان';
+          candidates.push({
+            id: `dup-lead-${a.id}-${b.id}`,
+            entityType: 'LEAD',
+            primaryRecord: {
+              id: a.id,
+              title: a.displayName,
+              ...(a.email ? { email: a.email } : {}),
+              ...(a.phone ? { phone: a.phone } : {}),
+            },
+            duplicateRecord: {
+              id: b.id,
+              title: b.displayName,
+              ...(b.email ? { email: b.email } : {}),
+              ...(b.phone ? { phone: b.phone } : {}),
+            },
+            matchReason,
+            confidenceScore: 95,
+          });
+        }
+      }
+    }
+
+    // 2. Check Contacts for duplicates
+    const contacts = await this.crmRepo.findContacts(organizationId);
+    for (let i = 0; i < contacts.length; i++) {
+      for (let j = i + 1; j < contacts.length; j++) {
+        const a = contacts[i]!;
+        const b = contacts[j]!;
+        if (isDuplicateCandidate(a, b)) {
+          const matchReason =
+            normalizeEmail(a.email) === normalizeEmail(b.email)
+              ? 'ایمیل یکسان'
+              : 'شماره تماس یکسان';
+          candidates.push({
+            id: `dup-contact-${a.id}-${b.id}`,
+            entityType: 'CONTACT',
+            primaryRecord: {
+              id: a.id,
+              title: `${a.firstName} ${a.lastName}`,
+              ...(a.email ? { email: a.email } : {}),
+              ...(a.phone ? { phone: a.phone } : {}),
+            },
+            duplicateRecord: {
+              id: b.id,
+              title: `${b.firstName} ${b.lastName}`,
+              ...(b.email ? { email: b.email } : {}),
+              ...(b.phone ? { phone: b.phone } : {}),
+            },
+            matchReason,
+            confidenceScore: 90,
+          });
+        }
+      }
+    }
+
+    // 3. Check Accounts for duplicates by phone or normalized name
+    const accounts = await this.crmRepo.findAccounts(organizationId);
+    for (let i = 0; i < accounts.length; i++) {
+      for (let j = i + 1; j < accounts.length; j++) {
+        const a = accounts[i]!;
+        const b = accounts[j]!;
+        const matchPhone =
+          a.phone && b.phone && normalizePhone(a.phone) === normalizePhone(b.phone);
+        const matchName =
+          a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+
+        if (matchPhone || matchName) {
+          candidates.push({
+            id: `dup-account-${a.id}-${b.id}`,
+            entityType: 'ACCOUNT',
+            primaryRecord: {
+              id: a.id,
+              title: a.name,
+              ...(a.phone ? { phone: a.phone } : {}),
+            },
+            duplicateRecord: {
+              id: b.id,
+              title: b.name,
+              ...(b.phone ? { phone: b.phone } : {}),
+            },
+            matchReason: matchPhone ? 'شماره تماس یکسان' : 'نام شرکت یکسان',
+            confidenceScore: matchPhone ? 95 : 85,
+          });
+        }
+      }
+    }
+
+    return candidates;
+  }
+
+  async mergeRecords(
+    organizationId: string,
+    actorId: string,
+    dto: MergeRecordsRequest,
+    requestId?: string,
+  ): Promise<{ success: boolean; mergedId: string }> {
+    if (dto.entityType === 'LEAD') {
+      const target = await this.crmRepo.findLeadById(organizationId, dto.targetRecordId);
+      const source = await this.crmRepo.findLeadById(organizationId, dto.sourceRecordId);
+      if (!target || !source) {
+        throw new NotFoundException('رکورد سرنخ مورد نظر برای ادغام یافت نشد');
+      }
+      if (!target.email && source.email) target.email = source.email;
+      if (!target.phone && source.phone) target.phone = source.phone;
+      await this.crmRepo.updateLead(target);
+      await this.crmRepo.deleteLead(organizationId, source.id);
+    } else if (dto.entityType === 'CONTACT') {
+      const target = await this.crmRepo.findContactById(organizationId, dto.targetRecordId);
+      const source = await this.crmRepo.findContactById(organizationId, dto.sourceRecordId);
+      if (!target || !source) {
+        throw new NotFoundException('رکورد مخاطب مورد نظر برای ادغام یافت نشد');
+      }
+      if (!target.email && source.email) target.email = source.email;
+      if (!target.phone && source.phone) target.phone = source.phone;
+      await this.crmRepo.updateContact(target);
+      await this.crmRepo.deleteContact(organizationId, source.id);
+    } else if (dto.entityType === 'ACCOUNT') {
+      const target = await this.crmRepo.findAccountById(organizationId, dto.targetRecordId);
+      const source = await this.crmRepo.findAccountById(organizationId, dto.sourceRecordId);
+      if (!target || !source) {
+        throw new NotFoundException('حساب شرکت مورد نظر برای ادغام یافت نشد');
+      }
+      if (!target.phone && source.phone) target.phone = source.phone;
+      if (!target.website && source.website) target.website = source.website;
+      await this.crmRepo.updateAccount(target);
+      await this.crmRepo.deleteAccount(organizationId, source.id);
+    }
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_RECORDS_MERGED',
+      entityType: dto.entityType,
+      entityId: dto.targetRecordId,
+      requestId,
+      metadata: {
+        targetRecordId: dto.targetRecordId,
+        sourceRecordId: dto.sourceRecordId,
+      },
+    });
+
+    return { success: true, mergedId: dto.targetRecordId };
   }
 
   private mapAccount(a: AccountEntity): AccountDto {
