@@ -19,6 +19,8 @@ import { JobController } from './modules/jobs/job.controller.js';
 import { DocumentsController } from './modules/documents/document.controller.js';
 import { DocumentsService } from './modules/documents/document.service.js';
 import { InMemoryDocumentRepository } from './modules/documents/document.repository.js';
+import { OrganizationController } from './modules/organization/organization.controller.js';
+import { OrganizationService } from './modules/organization/organization.service.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -85,6 +87,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     BackupController,
     JobController,
     DocumentsController,
+    OrganizationController,
   ],
   providers: [
     AuthService,
@@ -146,6 +149,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     JobWorkerService,
     InMemoryDocumentRepository,
     DocumentsService,
+    OrganizationService,
   ],
   exports: [
     AuthService,

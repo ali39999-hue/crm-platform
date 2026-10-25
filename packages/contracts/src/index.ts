@@ -759,5 +759,58 @@ export type CalendarConflictDto = {
   conflictingActivities: ActivityDto[];
 };
 
+/* Enterprise Organization Settings & Member Management Contracts */
+
+export type OrganizationSettingsDto = {
+  id: string;
+  name: string;
+  slug: string;
+  timezone: string;
+  locale: string;
+  branding?: {
+    logoUrl?: string | undefined;
+    primaryColor?: string | undefined;
+  } | undefined;
+  retentionPolicy?: {
+    auditLogsDays: number;
+    tempFilesDays: number;
+  } | undefined;
+  updatedAt: string;
+};
+
+export type UpdateOrganizationSettingsRequest = {
+  name?: string | undefined;
+  timezone?: string | undefined;
+  locale?: string | undefined;
+  branding?: {
+    logoUrl?: string | undefined;
+    primaryColor?: string | undefined;
+  } | undefined;
+  retentionPolicy?: {
+    auditLogsDays?: number | undefined;
+    tempFilesDays?: number | undefined;
+  } | undefined;
+};
+
+export type OrganizationMemberDto = {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  active: boolean;
+  joinedAt: string;
+};
+
+export type InviteMemberRequest = {
+  email: string;
+  displayName: string;
+  role: string;
+};
+
+export type UpdateMemberRoleRequest = {
+  role: string;
+};
+
 
 

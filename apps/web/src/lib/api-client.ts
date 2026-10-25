@@ -62,6 +62,11 @@ import type {
   DocumentVisibility,
   UpdateActivityRequest,
   UpdateDocumentRequest,
+  InviteMemberRequest,
+  OrganizationMemberDto,
+  OrganizationSettingsDto,
+  UpdateMemberRoleRequest,
+  UpdateOrganizationSettingsRequest,
 } from '@crm/contracts';
 
 import {
@@ -699,6 +704,52 @@ export class ApiClient {
       reminderMinutesBefore: 60,
       createdAt: '2026-10-24T12:00:00.000Z',
       updatedAt: '2026-10-24T12:00:00.000Z',
+    },
+  ];
+
+  private fallbackOrganizationSettings: OrganizationSettingsDto = {
+    id: DEFAULT_ORG_ID,
+    name: 'شرکت آلفا (اصلی)',
+    slug: 'alpha',
+    timezone: 'Asia/Tehran',
+    locale: 'fa-IR',
+    branding: {
+      primaryColor: '#6366f1',
+    },
+    retentionPolicy: {
+      auditLogsDays: 90,
+      tempFilesDays: 7,
+    },
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  };
+
+  private fallbackMembers: OrganizationMemberDto[] = [
+    {
+      id: 'mem-001',
+      userId: '11111111-1111-1111-1111-111111111111',
+      email: 'admin@org-alpha.com',
+      displayName: 'علی مدیر',
+      role: 'SystemOwner',
+      active: true,
+      joinedAt: '2026-09-01T00:00:00.000Z',
+    },
+    {
+      id: 'mem-002',
+      userId: '22222222-2222-2222-2222-222222222222',
+      email: 'employee@org-alpha.com',
+      displayName: 'سارا احمدی',
+      role: 'Employee',
+      active: true,
+      joinedAt: '2026-09-10T00:00:00.000Z',
+    },
+    {
+      id: 'mem-003',
+      userId: '55555555-5555-5555-5555-555555555555',
+      email: 'support@org-alpha.com',
+      displayName: 'پویا مرادی',
+      role: 'SupportAgent',
+      active: true,
+      joinedAt: '2026-09-15T00:00:00.000Z',
     },
   ];
 
@@ -2394,9 +2445,175 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Organization Workspace & Member Management ---------------- */
+
+  async getOrganizationSettings(): Promise<OrganizationSettingsDto> {
+    try {
+      return await this.request<OrganizationSettingsDto>('/organization/settings');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return { ...this.fallbackOrganizationSettings };
+      }
+      throw err;
+    }
+  }
+
+  async updateOrganizationSettings(
+    dto: UpdateOrganizationSettingsRequest,
+  ): Promise<OrganizationSettingsDto> {
+    try {
+      return await this.request<OrganizationSettingsDto>('/organization/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const updated: OrganizationSettingsDto = {
+          ...this.fallbackOrganizationSettings,
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
+          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+          ...(dto.branding !== undefined ? { branding: { ...dto.branding } } : {}),
+          ...(dto.retentionPolicy !== undefined
+            ? {
+                retentionPolicy: {
+                  auditLogsDays:
+                    dto.retentionPolicy.auditLogsDays ??
+                    this.fallbackOrganizationSettings.retentionPolicy?.auditLogsDays ??
+                    90,
+                  tempFilesDays:
+                    dto.retentionPolicy.tempFilesDays ??
+                    this.fallbackOrganizationSettings.retentionPolicy?.tempFilesDays ??
+                    7,
+                },
+              }
+            : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackOrganizationSettings = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async getOrganizationMembers(): Promise<OrganizationMemberDto[]> {
+    try {
+      return await this.request<OrganizationMemberDto[]>('/organization/members');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackMembers.map((m) => ({ ...m }));
+      }
+      throw err;
+    }
+  }
+
+  async inviteOrganizationMember(dto: InviteMemberRequest): Promise<OrganizationMemberDto> {
+    try {
+      return await this.request<OrganizationMemberDto>('/organization/members/invite', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const newMember: OrganizationMemberDto = {
+          id: `mem-${Date.now()}`,
+          userId: `usr-${Date.now()}`,
+          email: dto.email.trim().toLowerCase(),
+          displayName: dto.displayName.trim(),
+          role: dto.role,
+          active: true,
+          joinedAt: new Date().toISOString(),
+        };
+        this.fallbackMembers.push(newMember);
+        return { ...newMember };
+      }
+      throw err;
+    }
+  }
+
+  async updateOrganizationMemberRole(
+    memberId: string,
+    dto: UpdateMemberRoleRequest,
+  ): Promise<OrganizationMemberDto> {
+    try {
+      return await this.request<OrganizationMemberDto>(
+        `/organization/members/${encodeURIComponent(memberId)}/role`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackMembers.findIndex((m) => m.id === memberId);
+        if (idx === -1) {
+          throw new ApiClientError(`Member ${memberId} not found`, 404, 'NOT_FOUND');
+        }
+        const member = this.fallbackMembers[idx]!;
+        member.role = dto.role;
+        return { ...member };
+      }
+      throw err;
+    }
+  }
+
+  async revokeOrganizationMember(memberId: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(
+        `/organization/members/${encodeURIComponent(memberId)}/revoke`,
+        { method: 'POST' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackMembers.findIndex((m) => m.id === memberId);
+        if (idx !== -1) {
+          this.fallbackMembers[idx]!.active = false;
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
+
+  async getRolesMatrix(): Promise<{
+    roles: string[];
+    matrix: Record<string, Record<string, string>>;
+  }> {
+    try {
+      return await this.request<{
+        roles: string[];
+        matrix: Record<string, Record<string, string>>;
+      }>('/organization/roles');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          roles: [
+            'SystemOwner',
+            'OrganizationAdmin',
+            'Manager',
+            'Employee',
+            'Sales',
+            'SupportAgent',
+            'CustomerPortalUser',
+            'Auditor',
+            'IntegrationAccount',
+          ],
+          matrix: {},
+        };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  InviteMemberRequest,
+  OrganizationMemberDto,
+  OrganizationSettingsDto,
+  UpdateMemberRoleRequest,
+  UpdateOrganizationSettingsRequest,
   ActivityDto,
   ActivityStatus,
   ActivityType,

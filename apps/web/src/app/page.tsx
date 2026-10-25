@@ -22,6 +22,7 @@ import type {
 import { canTransitionTask } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
 import {
+  AdminSettingsView,
   CommandPalette,
   CreateTaskModal,
   type CreateTaskFormData,
@@ -79,6 +80,7 @@ export default function WorkspaceApp() {
     | 'reports'
     | 'automation'
     | 'audit'
+    | 'settings'
   >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
 
@@ -484,6 +486,14 @@ export default function WorkspaceApp() {
             data-testid="nav-audit"
           >
             <span>📜</span> رویدادهای ممیزی ({audits.length})
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+            data-testid="nav-settings"
+          >
+            <span>⚙️</span> تنظیمات و مدیریت سازمان
           </button>
         </nav>
 
@@ -1175,6 +1185,13 @@ export default function WorkspaceApp() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Organization Settings Tab */}
+        {activeTab === 'settings' && (
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <AdminSettingsView onNotify={(msg) => showToast(msg)} />
           </div>
         )}
       </main>
