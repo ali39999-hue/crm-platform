@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import crypto, { randomBytes, randomUUID } from 'crypto';
+import net from 'net';
 import { InMemoryWebhookRepository, type IWebhookRepository } from './webhook.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 import type {
@@ -36,6 +37,8 @@ export class WebhookService {
   public readonly INITIAL_BACKOFF_MS = 1000; // 1 second
   public readonly BACKOFF_MULTIPLIER = 2;
 
+  public allowLocalhostTest = false;
+
   private httpDispatcher: HttpDispatcher;
 
   constructor(
@@ -50,6 +53,10 @@ export class WebhookService {
    */
   setHttpDispatcher(dispatcher: HttpDispatcher): void {
     this.httpDispatcher = dispatcher;
+  }
+
+  setAllowLocalhostTest(allowed: boolean): void {
+    this.allowLocalhostTest = allowed;
   }
 
   private async defaultDispatcher(
@@ -269,7 +276,7 @@ export class WebhookService {
     dto: CreateWebhookSubscriptionDto,
     actorId?: string,
   ): Promise<WebhookSubscription> {
-    this.validateUrl(dto.url);
+    this.validateWebhookUrl(dto.url);
 
     if (!dto.events || dto.events.length === 0) {
       throw new BadRequestException('At least one event must be subscribed');
@@ -317,7 +324,7 @@ export class WebhookService {
     actorId?: string,
   ): Promise<WebhookSubscription> {
     if (dto.url) {
-      this.validateUrl(dto.url);
+      this.validateWebhookUrl(dto.url);
     }
     if (dto.events !== undefined && dto.events.length === 0) {
       throw new BadRequestException('Events array cannot be empty');
@@ -414,6 +421,7 @@ export class WebhookService {
     const results: WebhookDelivery[] = [];
 
     for (const sub of subscriptions) {
+      this.validateWebhookUrl(sub.url);
       const delivery = await this.executeDelivery(sub, event, payload, 1);
       results.push(delivery);
     }
@@ -427,6 +435,7 @@ export class WebhookService {
     dto?: TestWebhookSubscriptionDto,
   ): Promise<WebhookDelivery> {
     const sub = await this.getSubscription(organizationId, subscriptionId);
+    this.validateWebhookUrl(sub.url);
     const event = dto?.event ?? sub.events[0] ?? 'test.ping';
     const payload = dto?.payload ?? {
       event,
@@ -445,6 +454,8 @@ export class WebhookService {
     payload: Record<string, any>,
     attemptNumber: number,
   ): Promise<WebhookDelivery> {
+    this.validateWebhookUrl(subscription.url);
+
     const timestamp = Date.now();
     const nonce = randomUUID();
     const rawPayload = JSON.stringify(payload);
@@ -648,15 +659,175 @@ export class WebhookService {
     return delivery;
   }
 
-  private validateUrl(url: string): void {
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new BadRequestException('Invalid webhook URL protocol. Only HTTP and HTTPS are permitted.');
-      }
-    } catch (err: any) {
-      if (err instanceof BadRequestException) throw err;
-      throw new BadRequestException('Malformed webhook URL');
+  /**
+   * SSRF Protection Validator (CRM-040)
+   * Enforces protocol safety and blocks loopback, private ranges, link-local,
+   * cloud metadata endpoints, IPv6 mapped IPv4, and obfuscated IP formats.
+   */
+  validateWebhookUrl(url: string): void {
+    if (!url || typeof url !== 'string' || url.trim().length === 0) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
     }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url.trim());
+    } catch {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    if (parsed.protocol === 'http:' && isProduction && !this.allowLocalhostTest) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+
+    // Extract raw host from authority before WHATWG parser normalizes
+    const match = url.trim().match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/?#]+)/);
+    if (!match || !match[1]) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    let rawAuthority: string = match[1];
+    const atIdx = rawAuthority.lastIndexOf('@');
+    if (atIdx !== -1) {
+      rawAuthority = rawAuthority.slice(atIdx + 1);
+    }
+    let rawHost: string;
+    if (rawAuthority.startsWith('[')) {
+      const closeBracket = rawAuthority.indexOf(']');
+      if (closeBracket === -1) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      rawHost = rawAuthority.slice(0, closeBracket + 1);
+    } else {
+      rawHost = rawAuthority.split(':')[0] ?? '';
+    }
+
+    // Reject obfuscated formats:
+    // 1. Hex IP (e.g. 0x7f.0.0.1, 0x7f000001)
+    if (/0x[0-9a-fA-F]+/i.test(rawHost)) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    // 2. Octal IP (e.g. 0177.0.0.1, 017700000001, or leading 0 in IPv4 segment)
+    if (/(^|\.)0[0-7]+(\.|$)/.test(rawHost)) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    // 3. Decimal IP (pure dword integer, e.g. 2130706433)
+    if (/^\d+$/.test(rawHost)) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    // 4. IPv6-mapped IPv4 or IPv4-compatible (e.g. ::ffff:127.0.0.1, [::127.0.0.1], or ffff:)
+    if (rawHost.includes(':') && rawHost.includes('.')) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+    if (/ffff/i.test(rawHost) || /ffff/i.test(parsed.hostname)) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Loopback / localhost checks
+    if (!this.allowLocalhostTest) {
+      if (
+        hostname === 'localhost' ||
+        hostname.endsWith('.localhost') ||
+        hostname.endsWith('.local') ||
+        hostname.endsWith('.internal') ||
+        hostname.endsWith('.lan')
+      ) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+    }
+
+    // Cloud metadata endpoints
+    if (
+      hostname === 'metadata.google.internal' ||
+      hostname === 'metadata' ||
+      hostname === 'instance-data' ||
+      hostname === '169.254.169.254'
+    ) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+
+    // Embedded private IP in hostname (DNS rebinding / nip.io / etc)
+    if (
+      /(^|\.)(127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+|0\.0\.0\.0)(\.|$)/.test(
+        hostname,
+      )
+    ) {
+      throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    }
+
+    // IPv6 checks
+    if (hostname.startsWith('[') && hostname.endsWith(']')) {
+      const ipv6 = hostname.slice(1, -1).toLowerCase();
+      if (
+        !this.allowLocalhostTest &&
+        (ipv6 === '::1' || ipv6 === '::' || ipv6 === '0:0:0:0:0:0:0:1' || ipv6 === '0:0:0:0:0:0:0:0')
+      ) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // Link-local IPv6: fe80::/10
+      if (/^fe[89ab][0-9a-f]/i.test(ipv6) || ipv6.startsWith('fe80:')) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // Unique local IPv6: fc00::/7
+      if (/^f[cd][0-9a-f]{2}:/i.test(ipv6)) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // IPv6 mapped IPv4
+      if (ipv6.includes('ffff:') || ipv6.includes('::ffff')) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+    }
+
+    // IPv4 checks
+    const ipType = net.isIP(hostname);
+    if (ipType === 4) {
+      const parts = hostname.split('.').map(Number);
+      const p0 = parts[0] ?? -1;
+      const p1 = parts[1] ?? -1;
+      const p2 = parts[2] ?? -1;
+      const p3 = parts[3] ?? -1;
+
+      // 127.0.0.0/8 (Loopback)
+      if (p0 === 127 && !this.allowLocalhostTest) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 0.0.0.0/8 (Current network)
+      if (p0 === 0) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 10.0.0.0/8 (RFC 1918 Private)
+      if (p0 === 10) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 172.16.0.0/12 (RFC 1918 Private: 172.16.0.0 - 172.31.255.255)
+      if (p0 === 172 && p1 >= 16 && p1 <= 31) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 192.168.0.0/16 (RFC 1918 Private)
+      if (p0 === 192 && p1 === 168) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 169.254.0.0/16 (Link-local & AWS metadata 169.254.169.254)
+      if (p0 === 169 && p1 === 254) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // 100.64.0.0/10 (Carrier-grade NAT)
+      if (p0 === 100 && p1 >= 64 && p1 <= 127) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+      // Broadcast 255.255.255.255
+      if (p0 === 255 && p1 === 255 && p2 === 255 && p3 === 255) {
+        throw new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+      }
+    }
+  }
+
+  private validateUrl(url: string): void {
+    this.validateWebhookUrl(url);
   }
 }

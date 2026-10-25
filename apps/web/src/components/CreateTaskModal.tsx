@@ -55,9 +55,17 @@ export function CreateTaskModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      data-testid="create-task-modal"
     >
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+          }}
+        >
           <h2 id="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
             ایجاد تسک جدید
           </h2>
@@ -65,6 +73,7 @@ export function CreateTaskModal({
             type="button"
             onClick={onClose}
             aria-label="بستن پنجره"
+            data-testid="task-cancel-header-btn"
             style={{
               background: 'transparent',
               border: 'none',
@@ -79,7 +88,7 @@ export function CreateTaskModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-testid="create-task-form">
           <div className="form-group">
             <label htmlFor="task-title">
               عنوان تسک <span style={{ color: 'var(--danger)' }}>*</span>
@@ -94,6 +103,7 @@ export function CreateTaskModal({
               onChange={(e) => setTitle(e.target.value)}
               disabled={isSubmitting}
               autoFocus
+              data-testid="task-title-input"
             />
           </div>
 
@@ -107,6 +117,7 @@ export function CreateTaskModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
+              data-testid="task-desc-input"
             />
           </div>
 
@@ -119,6 +130,7 @@ export function CreateTaskModal({
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 disabled={isSubmitting}
+                data-testid="task-priority-select"
               >
                 <option value="LOW">پایین</option>
                 <option value="MEDIUM">متوسط</option>
@@ -137,6 +149,7 @@ export function CreateTaskModal({
                 value={dueAt}
                 onChange={(e) => setDueAt(e.target.value)}
                 disabled={isSubmitting}
+                data-testid="task-due-input"
               />
             </div>
           </div>
@@ -147,6 +160,7 @@ export function CreateTaskModal({
               className="secondary-button"
               onClick={onClose}
               disabled={isSubmitting}
+              data-testid="task-cancel-btn"
             >
               انصراف
             </button>
@@ -154,6 +168,7 @@ export function CreateTaskModal({
               type="submit"
               className="primary-button"
               disabled={isSubmitting || !title.trim()}
+              data-testid="task-submit-btn"
             >
               {isSubmitting ? 'در حال ثبت...' : 'ثبت و ایجاد تسک'}
             </button>

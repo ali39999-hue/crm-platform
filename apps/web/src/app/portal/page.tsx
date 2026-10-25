@@ -67,9 +67,7 @@ export default function CustomerPortalPage() {
       try {
         const rawMessages = await customerApiClient.getTicketMessages(ticketId);
         // Security gate: customer portal NEVER displays internal notes!
-        const customerVisibleMessages = rawMessages.filter(
-          (m) => m.visibility !== 'INTERNAL',
-        );
+        const customerVisibleMessages = rawMessages.filter((m) => m.visibility !== 'INTERNAL');
 
         setMessages((prev) => ({
           ...prev,
@@ -92,7 +90,7 @@ export default function CustomerPortalPage() {
   }, [selectedTicketId, loadMessages]);
 
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId);
-  const currentMessages = selectedTicketId ? messages[selectedTicketId] ?? [] : [];
+  const currentMessages = selectedTicketId ? (messages[selectedTicketId] ?? []) : [];
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +141,7 @@ export default function CustomerPortalPage() {
       // Update ticket message count in state
       setTickets((prev) =>
         prev.map((t) =>
-          t.id === selectedTicketId
-            ? { ...t, messagesCount: t.messagesCount + 1 }
-            : t,
+          t.id === selectedTicketId ? { ...t, messagesCount: t.messagesCount + 1 } : t,
         ),
       );
 
@@ -159,7 +155,10 @@ export default function CustomerPortalPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--canvas)', color: 'var(--ink)' }}>
+    <div
+      style={{ minHeight: '100vh', background: 'var(--canvas)', color: 'var(--ink)' }}
+      data-testid="customer-portal"
+    >
       {/* Portal Top Bar */}
       <header
         style={{
@@ -194,6 +193,7 @@ export default function CustomerPortalPage() {
             className="primary-button"
             style={{ background: '#0284c7', borderColor: '#0284c7' }}
             onClick={() => setIsNewTicketModalOpen(true)}
+            data-testid="create-ticket-btn"
           >
             + ثبت درخواست جدید
           </button>
@@ -209,11 +209,7 @@ export default function CustomerPortalPage() {
         }}
       >
         {error && (
-          <ErrorBanner
-            message={error}
-            onRetry={loadTickets}
-            onDismiss={() => setError(null)}
-          />
+          <ErrorBanner message={error} onRetry={loadTickets} onDismiss={() => setError(null)} />
         )}
 
         <div
@@ -237,7 +233,14 @@ export default function CustomerPortalPage() {
               overflowY: 'auto',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px',
+              }}
+            >
               <h2 style={{ fontSize: '16px', margin: 0, fontWeight: 700 }}>
                 درخواست‌های من ({tickets.length})
               </h2>
@@ -271,6 +274,9 @@ export default function CustomerPortalPage() {
                     <div
                       key={t.id}
                       onClick={() => setSelectedTicketId(t.id)}
+                      data-testid="customer-ticket-item"
+                      data-ticket-id={t.id}
+                      data-ticket-ref={t.reference}
                       style={{
                         padding: '14px',
                         borderRadius: '10px',
@@ -351,7 +357,12 @@ export default function CustomerPortalPage() {
                   </span>
                   <PriorityBadge priority={selectedTicket.priority} prefix="اولویت" />
                 </div>
-                <h2 style={{ fontSize: '18px', margin: '0 0 8px' }}>{selectedTicket.title}</h2>
+                <h2
+                  style={{ fontSize: '18px', margin: '0 0 8px' }}
+                  data-testid="selected-ticket-title"
+                >
+                  {selectedTicket.title}
+                </h2>
                 <div
                   style={{
                     fontSize: '12px',
@@ -365,7 +376,8 @@ export default function CustomerPortalPage() {
                     وضعیت: <strong>{getTicketStatusLabel(selectedTicket.status)}</strong>
                   </span>
                   <span>
-                    زمان هدف تعهد پاسخ (SLA): <strong>{selectedTicket.targetResolutionAt ?? '۲۴ ساعت'}</strong>
+                    زمان هدف تعهد پاسخ (SLA):{' '}
+                    <strong>{selectedTicket.targetResolutionAt ?? '۲۴ ساعت'}</strong>
                   </span>
                 </div>
               </div>
@@ -381,11 +393,28 @@ export default function CustomerPortalPage() {
                   marginBottom: '20px',
                   overflowY: 'auto',
                 }}
+                data-testid="ticket-messages-list"
               >
                 {isMessagesLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div className="skeleton" style={{ width: '60%', height: '60px', alignSelf: 'flex-end', borderRadius: '12px' }} />
-                    <div className="skeleton" style={{ width: '65%', height: '60px', alignSelf: 'flex-start', borderRadius: '12px' }} />
+                    <div
+                      className="skeleton"
+                      style={{
+                        width: '60%',
+                        height: '60px',
+                        alignSelf: 'flex-end',
+                        borderRadius: '12px',
+                      }}
+                    />
+                    <div
+                      className="skeleton"
+                      style={{
+                        width: '65%',
+                        height: '60px',
+                        alignSelf: 'flex-start',
+                        borderRadius: '12px',
+                      }}
+                    />
                   </div>
                 ) : currentMessages.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
@@ -403,6 +432,9 @@ export default function CustomerPortalPage() {
                     return (
                       <div
                         key={m.id}
+                        data-testid="ticket-message-item"
+                        data-message-id={m.id}
+                        data-author={m.authorName}
                         style={{
                           alignSelf: isCustomer ? 'flex-end' : 'flex-start',
                           maxWidth: '75%',
@@ -426,7 +458,9 @@ export default function CustomerPortalPage() {
                           <strong>{m.authorName ?? 'کارشناس پشتیبانی'}</strong>
                           <span>{m.createdAt}</span>
                         </div>
-                        <div style={{ fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+                        <div
+                          style={{ fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}
+                        >
                           {m.body}
                         </div>
                       </div>
@@ -439,6 +473,7 @@ export default function CustomerPortalPage() {
               <form
                 onSubmit={handleSendReply}
                 style={{ borderTop: '1px solid var(--line)', paddingTop: '16px' }}
+                data-testid="ticket-reply-form"
               >
                 <div style={{ marginBottom: '10px' }}>
                   <textarea
@@ -449,6 +484,7 @@ export default function CustomerPortalPage() {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     disabled={isSubmitting}
+                    data-testid="ticket-reply-textarea"
                   />
                 </div>
                 <div
@@ -468,6 +504,7 @@ export default function CustomerPortalPage() {
                     className="primary-button"
                     style={{ background: '#0284c7', borderColor: '#0284c7' }}
                     disabled={isSubmitting || !replyText.trim()}
+                    data-testid="ticket-reply-submit-btn"
                   >
                     {isSubmitting ? 'در حال ارسال...' : 'ارسال پیام'}
                   </button>
@@ -487,10 +524,11 @@ export default function CustomerPortalPage() {
           onClick={() => setIsNewTicketModalOpen(false)}
           role="dialog"
           aria-modal="true"
+          data-testid="create-ticket-modal"
         >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 16px' }}>ثبت تیکت پشتیبانی جدید</h2>
-            <form onSubmit={handleCreateTicket}>
+            <form onSubmit={handleCreateTicket} data-testid="create-ticket-form">
               <div className="form-group">
                 <label>موضوع درخواست (اجباری)</label>
                 <input
@@ -501,6 +539,7 @@ export default function CustomerPortalPage() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   disabled={isSubmitting}
+                  data-testid="new-ticket-title-input"
                 />
               </div>
 
@@ -511,6 +550,7 @@ export default function CustomerPortalPage() {
                   value={newPriority}
                   onChange={(e) => setNewPriority(e.target.value as TicketPriority)}
                   disabled={isSubmitting}
+                  data-testid="new-ticket-priority-select"
                 >
                   <option value="LOW">پایین (سؤال عمومی یا راهنمایی)</option>
                   <option value="NORMAL">عادی (عملکرد عادی با اختلال جزیی)</option>
@@ -529,6 +569,7 @@ export default function CustomerPortalPage() {
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   disabled={isSubmitting}
+                  data-testid="new-ticket-desc-input"
                 />
               </div>
 
@@ -538,6 +579,7 @@ export default function CustomerPortalPage() {
                   className="secondary-button"
                   onClick={() => setIsNewTicketModalOpen(false)}
                   disabled={isSubmitting}
+                  data-testid="new-ticket-cancel-btn"
                 >
                   انصراف
                 </button>
@@ -546,6 +588,7 @@ export default function CustomerPortalPage() {
                   className="primary-button"
                   style={{ background: '#0284c7', borderColor: '#0284c7' }}
                   disabled={isSubmitting || !newTitle.trim() || !newDesc.trim()}
+                  data-testid="new-ticket-submit-btn"
                 >
                   {isSubmitting ? 'در حال ثبت...' : 'ثبت تیکت'}
                 </button>
@@ -556,7 +599,11 @@ export default function CustomerPortalPage() {
       )}
 
       {/* Toast */}
-      {toastMessage && <div className="toast">{toastMessage}</div>}
+      {toastMessage && (
+        <div className="toast" data-testid="toast-notification">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

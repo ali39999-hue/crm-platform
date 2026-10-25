@@ -10,6 +10,8 @@ import type {
   DealDto,
   LeadDto,
   NotificationDto,
+  SavedViewDto,
+  SearchResultItem,
   TaskDetails,
   TaskPriority,
   TaskStatus,
@@ -20,6 +22,7 @@ import type {
 import { canTransitionTask } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
 import {
+  CommandPalette,
   CreateTaskModal,
   type CreateTaskFormData,
   Customer360Drawer,
@@ -66,7 +69,14 @@ const INITIAL_AUDITS: AuditItem[] = [
 
 export default function WorkspaceApp() {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'my-work' | 'crm' | 'support' | 'notifications' | 'reports' | 'automation' | 'audit'
+    | 'overview'
+    | 'my-work'
+    | 'crm'
+    | 'support'
+    | 'notifications'
+    | 'reports'
+    | 'automation'
+    | 'audit'
   >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
 
@@ -93,13 +103,71 @@ export default function WorkspaceApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [activeSavedView, setActiveSavedView] = useState<SavedViewDto | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  // Global Ctrl+K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isK =
+        e.key === 'k' || e.key === 'K' || e.key.toLowerCase() === 'k' || e.code === 'KeyK';
+      if ((e.ctrlKey || e.metaKey) && isK) {
+        e.preventDefault();
+        setIsPaletteOpen((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setIsPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSelectSearchResult = (item: SearchResultItem) => {
+    setIsPaletteOpen(false);
+    if (item.entityType === 'TASK') {
+      setActiveTab('my-work');
+      const foundTask = tasks.find((t) => t.id === item.id);
+      if (foundTask) {
+        showToast(`وظیفه «${foundTask.key} - ${foundTask.title}» انتخاب شد`);
+      } else {
+        showToast(`وظیفه «${item.title}» انتخاب شد`);
+      }
+    } else if (item.entityType === 'ACCOUNT') {
+      setActiveTab('crm');
+      const acc = accounts.find((a) => a.id === item.id);
+      if (acc) {
+        handleOpenCustomerDrawer(acc);
+      } else {
+        showToast(`حساب مشتری «${item.title}» انتخاب شد`);
+      }
+    } else if (item.entityType === 'CONTACT') {
+      setActiveTab('crm');
+      const contact = contacts.find((c) => c.id === item.id);
+      if (contact?.accountId) {
+        const acc = accounts.find((a) => a.id === contact.accountId);
+        if (acc) {
+          handleOpenCustomerDrawer(acc);
+          return;
+        }
+      }
+      showToast(`مخاطب «${item.title}» انتخاب شد`);
+    } else if (item.entityType === 'LEAD') {
+      setActiveTab('crm');
+      showToast(`سرنخ فروش «${item.title}» انتخاب شد`);
+    } else if (item.entityType === 'TICKET') {
+      setActiveTab('support');
+      showToast(
+        `تیکت پشتیبانی «${item.subtitle ? `${item.subtitle} - ` : ''}${item.title}» انتخاب شد`,
+      );
+    }
+  };
 
   const handleOpenCustomerDrawer = (acc: AccountDto) => {
     setSelectedAccount(acc);
@@ -150,9 +218,7 @@ export default function WorkspaceApp() {
   const handleMarkAllAsRead = async () => {
     try {
       await apiClient.markAllNotificationsAsRead();
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, readAt: new Date().toISOString() })),
-      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
       showToast('همه اعلان‌ها به عنوان خوانده‌شده علامت‌گذاری شدند');
     } catch {
       showToast('خطا در علامت‌گذاری اعلان‌ها');
@@ -347,6 +413,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveTab('overview')}
+            data-testid="nav-overview"
           >
             <span>📊</span> نمای کلی
           </button>
@@ -354,6 +421,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'my-work' ? 'active' : ''}`}
             onClick={() => setActiveTab('my-work')}
+            data-testid="nav-my-work"
           >
             <span>✓</span> کارهای من ({tasks.filter((t) => t.status !== 'DONE').length})
           </button>
@@ -361,6 +429,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'crm' ? 'active' : ''}`}
             onClick={() => setActiveTab('crm')}
+            data-testid="nav-crm"
           >
             <span>👥</span> مشتریان و فرصت‌ها ({accounts.length})
           </button>
@@ -368,6 +437,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'support' ? 'active' : ''}`}
             onClick={() => setActiveTab('support')}
+            data-testid="nav-support"
           >
             <span>🎫</span> تیکت‌ها و پشتیبانی ({tickets.length})
           </button>
@@ -375,13 +445,17 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'notifications' ? 'active' : ''}`}
             onClick={() => setActiveTab('notifications')}
+            data-testid="nav-notifications"
           >
-            <span>🔔</span> اعلان‌ها {notifications.filter((n) => !n.readAt).length > 0 && `(${notifications.filter((n) => !n.readAt).length})`}
+            <span>🔔</span> اعلان‌ها{' '}
+            {notifications.filter((n) => !n.readAt).length > 0 &&
+              `(${notifications.filter((n) => !n.readAt).length})`}
           </button>
           <button
             type="button"
             className={`nav-button ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
+            data-testid="nav-reports"
           >
             <span>📈</span> گزارش‌ها و KPI
           </button>
@@ -389,6 +463,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'automation' ? 'active' : ''}`}
             onClick={() => setActiveTab('automation')}
+            data-testid="nav-automation"
           >
             <span>⚙️</span> اتوماسیون‌ها ({rules.length})
           </button>
@@ -396,6 +471,7 @@ export default function WorkspaceApp() {
             type="button"
             className={`nav-button ${activeTab === 'audit' ? 'active' : ''}`}
             onClick={() => setActiveTab('audit')}
+            data-testid="nav-audit"
           >
             <span>📜</span> رویدادهای ممیزی ({audits.length})
           </button>
@@ -426,11 +502,7 @@ export default function WorkspaceApp() {
       <main className="main-area">
         {/* Error Banner if any */}
         {error && (
-          <ErrorBanner
-            message={error}
-            onRetry={loadData}
-            onDismiss={() => setError(null)}
-          />
+          <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />
         )}
 
         {/* Top Header */}
@@ -451,11 +523,38 @@ export default function WorkspaceApp() {
               {activeTab === 'audit' && 'تاریخچه رویدادهای ممیزی (Audit Trail)'}
             </h1>
             <p className="muted">
-              کارت‌ها را بکشید و در ستون مورد نظر رها کنید؛ ماشین حالت دامنه انتقال‌های نامعتبر را کنترل می‌کند.
+              کارت‌ها را بکشید و در ستون مورد نظر رها کنید؛ ماشین حالت دامنه انتقال‌های نامعتبر را
+              کنترل می‌کند.
             </p>
           </div>
 
           <div className="top-actions">
+            <button
+              type="button"
+              className="topbar-search-trigger"
+              data-testid="search-trigger-btn"
+              onClick={() => setIsPaletteOpen(true)}
+              title="جستجوی سراسری و پالت دستورات (Ctrl+K)"
+              aria-label="جستجوی سراسری (Ctrl+K)"
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span>جستجو در سیستم...</span>
+              </span>
+              <kbd className="kbd-shortcut">Ctrl+K</kbd>
+            </button>
             {activeTab === 'my-work' && (
               <>
                 <div className="view-switcher" role="radiogroup" aria-label="حالت نمایش">
@@ -463,6 +562,7 @@ export default function WorkspaceApp() {
                     type="button"
                     className={`view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
                     onClick={() => setViewMode('kanban')}
+                    data-testid="view-btn-kanban"
                   >
                     <span>▦</span> برد کانبان
                   </button>
@@ -470,6 +570,7 @@ export default function WorkspaceApp() {
                     type="button"
                     className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                     onClick={() => setViewMode('list')}
+                    data-testid="view-btn-list"
                   >
                     <span>☰</span> فهرست
                   </button>
@@ -477,6 +578,7 @@ export default function WorkspaceApp() {
                     type="button"
                     className={`view-btn ${viewMode === 'calendar' ? 'active' : ''}`}
                     onClick={() => setViewMode('calendar')}
+                    data-testid="view-btn-calendar"
                   >
                     <span>📅</span> تقویم
                   </button>
@@ -485,17 +587,14 @@ export default function WorkspaceApp() {
                   type="button"
                   className="primary-button"
                   onClick={() => setIsModalOpen(true)}
+                  data-testid="create-task-btn"
                 >
                   + تسک جدید
                 </button>
               </>
             )}
             {activeTab === 'notifications' && notifications.some((n) => !n.readAt) && (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={handleMarkAllAsRead}
-              >
+              <button type="button" className="secondary-button" onClick={handleMarkAllAsRead}>
                 ✓ خواندن همه اعلان‌ها
               </button>
             )}
@@ -546,9 +645,10 @@ export default function WorkspaceApp() {
             >
               <h3 style={{ margin: '0 0 12px' }}>معماری و امنیت سیستم</h3>
               <p className="muted" style={{ lineHeight: '1.8' }}>
-                پلتفرم از معماری <strong>Modular Monolith</strong> با جداسازی دقیق دامنه، لایه کاربرد و زیرساخت استفاده می‌کند.
-                قوانین مجوزدهی و تفکیک سازمانی (Multi-tenant Scope) به طور کامل در سطح API و سرویس‌ها اعمال شده و از دستکاری غیرمجاز
-                داده‌ها و آسیب‌پذیری‌های IDOR ممانعت به عمل می‌آورد.
+                پلتفرم از معماری <strong>Modular Monolith</strong> با جداسازی دقیق دامنه، لایه
+                کاربرد و زیرساخت استفاده می‌کند. قوانین مجوزدهی و تفکیک سازمانی (Multi-tenant Scope)
+                به طور کامل در سطح API و سرویس‌ها اعمال شده و از دستکاری غیرمجاز داده‌ها و
+                آسیب‌پذیری‌های IDOR ممانعت به عمل می‌آورد.
               </p>
             </div>
           </div>
@@ -568,6 +668,8 @@ export default function WorkspaceApp() {
                 tasks={tasks}
                 onTransition={handleTransition}
                 onError={showToast}
+                activeSavedView={activeSavedView}
+                onSelectSavedView={setActiveSavedView}
               />
             ) : viewMode === 'calendar' ? (
               <TaskCalendar
@@ -582,6 +684,8 @@ export default function WorkspaceApp() {
                 onStatusFilterChange={setStatusFilter}
                 onTransition={handleTransition}
                 onError={showToast}
+                activeSavedView={activeSavedView}
+                onSelectSavedView={setActiveSavedView}
               />
             )}
           </div>
@@ -597,14 +701,33 @@ export default function WorkspaceApp() {
               padding: '24px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
               <h3 style={{ margin: 0 }}>مشتریان و خط‌لوله فروش (CRM Core)</h3>
-              <span style={{ fontSize: '12px', color: 'var(--muted)', background: 'var(--soft)', padding: '4px 10px', borderRadius: '8px' }}>
-                💡 برای مشاهده نمای جامع ۳۶۰°، اطلاعات تماس، فرصت‌ها و تایم‌لاین، روی هر سطر کلیک کنید
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--muted)',
+                  background: 'var(--soft)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                }}
+              >
+                💡 برای مشاهده نمای جامع ۳۶۰°، اطلاعات تماس، فرصت‌ها و تایم‌لاین، روی هر سطر کلیک
+                کنید
               </span>
             </div>
             <p className="muted" style={{ marginBottom: '20px' }}>
-              ماژول مدیریت شرکت‌ها (Accounts)، مخاطبان (Contacts)، سرنخ‌ها (Leads) و فرصت‌های فروش (Deals).
+              ماژول مدیریت شرکت‌ها (Accounts)، مخاطبان (Contacts)، سرنخ‌ها (Leads) و فرصت‌های فروش
+              (Deals).
             </p>
 
             {isLoading ? (
@@ -641,7 +764,14 @@ export default function WorkspaceApp() {
                         <td>
                           <strong>{acc.name}</strong>
                           {acc.website && (
-                            <small style={{ display: 'block', color: 'var(--muted)', direction: 'ltr', textAlign: 'right' }}>
+                            <small
+                              style={{
+                                display: 'block',
+                                color: 'var(--muted)',
+                                direction: 'ltr',
+                                textAlign: 'right',
+                              }}
+                            >
                               {acc.website}
                             </small>
                           )}
@@ -654,7 +784,9 @@ export default function WorkspaceApp() {
                             : 'بدون فرصت جاری'}
                         </td>
                         <td>
-                          <span className={`badge ${acc.status === 'ACTIVE' ? 'badge-done' : 'badge-todo'}`}>
+                          <span
+                            className={`badge ${acc.status === 'ACTIVE' ? 'badge-done' : 'badge-todo'}`}
+                          >
                             {acc.status === 'ACTIVE' ? 'فعال' : acc.status}
                           </span>
                         </td>
@@ -692,7 +824,8 @@ export default function WorkspaceApp() {
           >
             <h3 style={{ margin: '0 0 8px' }}>صندوق تیکت‌ها و پشتیبانی (Support)</h3>
             <p className="muted" style={{ marginBottom: '20px' }}>
-              تفکیک قطعی میان یادداشت‌های محرمانه داخلی کارشناسان (Internal Notes) و پیام‌های قابل مشاهده برای مشتری.
+              تفکیک قطعی میان یادداشت‌های محرمانه داخلی کارشناسان (Internal Notes) و پیام‌های قابل
+              مشاهده برای مشتری.
             </p>
 
             {isLoading ? (
@@ -749,9 +882,18 @@ export default function WorkspaceApp() {
               padding: '24px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+              }}
+            >
               <div>
-                <h3 style={{ margin: '0 0 4px' }}>اعلان‌ها و رخدادهای درون‌برنامه‌ای (In-App Notifications)</h3>
+                <h3 style={{ margin: '0 0 4px' }}>
+                  اعلان‌ها و رخدادهای درون‌برنامه‌ای (In-App Notifications)
+                </h3>
                 <p className="muted" style={{ margin: 0 }}>
                   اعلان‌های خودکار حاصل از رویدادهای Outbox و تغییرات در وظایف و تیکت‌ها
                 </p>
@@ -759,7 +901,10 @@ export default function WorkspaceApp() {
             </div>
 
             {notifications.length === 0 ? (
-              <EmptyState title="هیچ اعلانی ندارید" description="همه اعلان‌ها مشاهده و بررسی شده‌اند." />
+              <EmptyState
+                title="هیچ اعلانی ندارید"
+                description="همه اعلان‌ها مشاهده و بررسی شده‌اند."
+              />
             ) : (
               <div style={{ display: 'grid', gap: '10px' }}>
                 {notifications.map((n) => (
@@ -777,11 +922,24 @@ export default function WorkspaceApp() {
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: n.readAt ? 'normal' : '700', fontSize: '14px', marginBottom: '4px' }}>
+                      <div
+                        style={{
+                          fontWeight: n.readAt ? 'normal' : '700',
+                          fontSize: '14px',
+                          marginBottom: '4px',
+                        }}
+                      >
                         {n.title}
                       </div>
                       <div style={{ color: 'var(--muted)', fontSize: '13px' }}>{n.message}</div>
-                      <small style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                      <small
+                        style={{
+                          color: '#94a3b8',
+                          fontSize: '11px',
+                          marginTop: '4px',
+                          display: 'block',
+                        }}
+                      >
                         {new Date(n.createdAt).toLocaleTimeString('fa-IR')}
                       </small>
                     </div>
@@ -812,14 +970,24 @@ export default function WorkspaceApp() {
                 <strong style={{ color: 'var(--accent)' }}>
                   {reports?.crmFunnel.conversionRatePercent ?? 0}٪
                 </strong>
-                <small>{reports?.crmFunnel.convertedLeads ?? 0} از {reports?.crmFunnel.totalLeads ?? 0} سرنخ</small>
+                <small>
+                  {reports?.crmFunnel.convertedLeads ?? 0} از {reports?.crmFunnel.totalLeads ?? 0}{' '}
+                  سرنخ
+                </small>
               </article>
               <article className="summary-card">
                 <p>ارزش کل پایپ‌لاین</p>
                 <strong>
-                  {((reports?.crmFunnel.totalDealsValue ?? 0) / 1000000).toLocaleString('fa-IR')} م.ر
+                  {((reports?.crmFunnel.totalDealsValue ?? 0) / 1000000).toLocaleString('fa-IR')}{' '}
+                  م.ر
                 </strong>
-                <small>وزنی: {((reports?.crmFunnel.weightedPipelineValue ?? 0) / 1000000).toLocaleString('fa-IR')} م.ر</small>
+                <small>
+                  وزنی:{' '}
+                  {((reports?.crmFunnel.weightedPipelineValue ?? 0) / 1000000).toLocaleString(
+                    'fa-IR',
+                  )}{' '}
+                  م.ر
+                </small>
               </article>
               <article className="summary-card">
                 <p>تیکت‌های در دست اقدام</p>
@@ -830,7 +998,13 @@ export default function WorkspaceApp() {
               </article>
               <article className="summary-card">
                 <p>نرخ نقض SLA</p>
-                <strong style={{ color: reports?.supportSla.slaBreachRatePercent ? 'var(--danger)' : 'var(--success)' }}>
+                <strong
+                  style={{
+                    color: reports?.supportSla.slaBreachRatePercent
+                      ? 'var(--danger)'
+                      : 'var(--success)',
+                  }}
+                >
                   {reports?.supportSla.slaBreachRatePercent ?? 0}٪
                 </strong>
                 <small>میانگین حل: {reports?.supportSla.averageResolutionHours ?? 0} ساعت</small>
@@ -838,7 +1012,14 @@ export default function WorkspaceApp() {
             </div>
 
             {/* Workload Table */}
-            <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: '12px', padding: '24px' }}>
+            <div
+              style={{
+                background: 'var(--paper)',
+                border: '1px solid var(--line)',
+                borderRadius: '12px',
+                padding: '24px',
+              }}
+            >
               <h3 style={{ margin: '0 0 12px' }}>گزارش بار کاری تیم (Workload Report)</h3>
               <table className="data-table">
                 <thead>
@@ -852,7 +1033,9 @@ export default function WorkspaceApp() {
                 <tbody>
                   {reports?.workload.map((w) => (
                     <tr key={w.userId}>
-                      <td><strong>{w.userName}</strong></td>
+                      <td>
+                        <strong>{w.userName}</strong>
+                      </td>
                       <td>{w.activeTasksCount}</td>
                       <td style={{ color: w.overdueTasksCount > 0 ? 'var(--danger)' : 'inherit' }}>
                         {w.overdueTasksCount}
@@ -876,9 +1059,12 @@ export default function WorkspaceApp() {
               padding: '24px',
             }}
           >
-            <h3 style={{ margin: '0 0 8px' }}>موتور قوانین اتوماسیون (Automation Rules Engine - AUTO-001)</h3>
+            <h3 style={{ margin: '0 0 8px' }}>
+              موتور قوانین اتوماسیون (Automation Rules Engine - AUTO-001)
+            </h3>
             <p className="muted" style={{ marginBottom: '20px' }}>
-              تعریف تریگر، شرط، اقدام و کلید قطع اضطراری (Kill Switch) جهت جلوگیری از چرخه‌های بی‌پایان.
+              تعریف تریگر، شرط، اقدام و کلید قطع اضطراری (Kill Switch) جهت جلوگیری از چرخه‌های
+              بی‌پایان.
             </p>
 
             <table className="data-table">
@@ -895,10 +1081,20 @@ export default function WorkspaceApp() {
               <tbody>
                 {rules.map((r) => (
                   <tr key={r.id}>
-                    <td><strong>{r.name}</strong></td>
-                    <td><span className="task-key">{r.trigger}</span></td>
-                    <td>{r.conditionField ? `${r.conditionField} == ${r.conditionValue}` : 'بدون شرط (همیشه)'}</td>
-                    <td><span className="badge badge-in_progress">{r.actionType}</span></td>
+                    <td>
+                      <strong>{r.name}</strong>
+                    </td>
+                    <td>
+                      <span className="task-key">{r.trigger}</span>
+                    </td>
+                    <td>
+                      {r.conditionField
+                        ? `${r.conditionField} == ${r.conditionValue}`
+                        : 'بدون شرط (همیشه)'}
+                    </td>
+                    <td>
+                      <span className="badge badge-in_progress">{r.actionType}</span>
+                    </td>
                     <td>{r.executionCount} مرتبه</td>
                     <td>
                       <button
@@ -935,7 +1131,8 @@ export default function WorkspaceApp() {
           >
             <h3 style={{ margin: '0 0 8px' }}>تاریخچه ممیزی امنیتی (Audit Trail)</h3>
             <p className="muted" style={{ marginBottom: '20px' }}>
-              ثبت غیرقابل تغییر (Immutable) تمامی تغییرات حساس و گذارهای حالت همراه با Actor، Action و شناسه رهگیری درخواست.
+              ثبت غیرقابل تغییر (Immutable) تمامی تغییرات حساس و گذارهای حالت همراه با Actor، Action
+              و شناسه رهگیری درخواست.
             </p>
             <table className="data-table">
               <thead>
@@ -989,8 +1186,33 @@ export default function WorkspaceApp() {
         onToast={showToast}
       />
 
+      {/* Command Palette / Global Search */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        onOpen={() => setIsPaletteOpen(true)}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as any);
+          setIsPaletteOpen(false);
+        }}
+        onOpenCreateTask={() => {
+          setIsPaletteOpen(false);
+          setIsModalOpen(true);
+        }}
+        onOpenCreateLead={() => {
+          setIsPaletteOpen(false);
+          setActiveTab('crm');
+          showToast('بخش مشتریان باز شد؛ می‌توانید سرنخ یا حساب جدید ثبت نمایید');
+        }}
+        onSelectResult={handleSelectSearchResult}
+      />
+
       {/* Toast Notification */}
-      {toastMessage && <div className="toast">{toastMessage}</div>}
+      {toastMessage && (
+        <div className="toast" data-testid="toast-notification">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

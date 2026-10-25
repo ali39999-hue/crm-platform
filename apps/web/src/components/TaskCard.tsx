@@ -28,6 +28,9 @@ export function TaskCard({
       <article
         className={`task-card ${className}`.trim()}
         onClick={() => onClick?.(task)}
+        data-testid={`task-card-${task.key}`}
+        data-task-key={task.key}
+        data-task-status={task.status}
       >
         <div style={{ flex: 1 }}>
           <div className="task-meta">
@@ -48,6 +51,7 @@ export function TaskCard({
               <button
                 type="button"
                 className="primary-button"
+                data-testid={`transition-btn-${task.status}`}
                 onClick={() => onTransition(task.id, 'IN_PROGRESS')}
               >
                 ▶ شروع کار
@@ -58,6 +62,7 @@ export function TaskCard({
               <button
                 type="button"
                 className="secondary-button"
+                data-testid={`transition-btn-${task.status}`}
                 style={{ borderColor: 'var(--warning)', color: 'var(--warning)' }}
                 onClick={() => onTransition(task.id, 'IN_REVIEW')}
               >
@@ -69,6 +74,7 @@ export function TaskCard({
               <button
                 type="button"
                 className="primary-button"
+                data-testid={`transition-btn-${task.status}`}
                 style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
                 onClick={() => onTransition(task.id, 'DONE')}
               >
@@ -80,6 +86,7 @@ export function TaskCard({
               <button
                 type="button"
                 className="secondary-button"
+                data-testid={`transition-btn-${task.status}`}
                 onClick={() => onTransition(task.id, 'TODO')}
               >
                 ↺ بازگشایی مجدد
@@ -90,11 +97,36 @@ export function TaskCard({
               <button
                 type="button"
                 className="primary-button"
+                data-testid={`transition-btn-${task.status}`}
                 onClick={() => onTransition(task.id, 'IN_PROGRESS')}
               >
                 رفع انسداد
               </button>
             )}
+
+            <select
+              aria-label="انتقال دستی وضعیت"
+              data-testid={`manual-transition-select-${task.key}`}
+              className="secondary-button"
+              style={{ fontSize: '11px', padding: '4px 6px', cursor: 'pointer' }}
+              value=""
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                if (e.target.value) {
+                  onTransition(task.id, e.target.value as TaskStatus);
+                  e.target.value = '';
+                }
+              }}
+            >
+              <option value="" disabled>
+                انتقال مستقیم...
+              </option>
+              <option value="TODO">در انتظار شروع</option>
+              <option value="IN_PROGRESS">در حال انجام</option>
+              <option value="IN_REVIEW">در انتظار بازبینی</option>
+              <option value="DONE">تکمیل‌شده</option>
+            </select>
           </div>
         )}
       </article>
@@ -108,6 +140,9 @@ export function TaskCard({
       onDragStart={onDragStart ? (e) => onDragStart(e, task.id) : undefined}
       className={`kanban-card ${isDragging ? 'dragging' : ''} ${className}`.trim()}
       onClick={() => onClick?.(task)}
+      data-testid={`task-card-${task.key}`}
+      data-task-key={task.key}
+      data-task-status={task.status}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="task-key">{task.key}</span>
@@ -127,6 +162,7 @@ export function TaskCard({
             <button
               type="button"
               className="quick-action-btn"
+              data-testid={`transition-btn-${task.status}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTransition(task.id, 'IN_PROGRESS');
@@ -139,6 +175,7 @@ export function TaskCard({
             <button
               type="button"
               className="quick-action-btn"
+              data-testid={`transition-btn-${task.status}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTransition(task.id, 'IN_REVIEW');
@@ -151,6 +188,7 @@ export function TaskCard({
             <button
               type="button"
               className="quick-action-btn"
+              data-testid={`transition-btn-${task.status}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTransition(task.id, 'DONE');
@@ -163,6 +201,7 @@ export function TaskCard({
             <button
               type="button"
               className="quick-action-btn"
+              data-testid={`transition-btn-${task.status}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTransition(task.id, 'TODO');
@@ -175,6 +214,7 @@ export function TaskCard({
             <button
               type="button"
               className="quick-action-btn"
+              data-testid={`transition-btn-${task.status}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTransition(task.id, 'IN_PROGRESS');
@@ -183,6 +223,30 @@ export function TaskCard({
               رفع مسدودی
             </button>
           )}
+
+          <select
+            aria-label="انتقال دستی وضعیت"
+            data-testid={`manual-transition-select-${task.key}`}
+            className="quick-action-btn"
+            style={{ fontSize: '10px', padding: '2px 4px', cursor: 'pointer' }}
+            value=""
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              if (e.target.value) {
+                onTransition(task.id, e.target.value as TaskStatus);
+                e.target.value = '';
+              }
+            }}
+          >
+            <option value="" disabled>
+              انتقال مستقیم...
+            </option>
+            <option value="TODO">در انتظار شروع</option>
+            <option value="IN_PROGRESS">در حال انجام</option>
+            <option value="IN_REVIEW">در انتظار بازبینی</option>
+            <option value="DONE">تکمیل‌شده</option>
+          </select>
         </div>
       )}
     </article>

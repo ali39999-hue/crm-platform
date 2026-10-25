@@ -1,0 +1,106 @@
+﻿category,repository,url,research_purpose,priority,license_review_required,integration_status
+CRM,twentyhq/twenty,https://github.com/twentyhq/twenty,"CRM records, relationships, saved views, activity timeline",P0,YES,REFERENCE_ONLY
+CRM,frappe/crm,https://github.com/frappe/crm,Lead/deal workflows and activity history,P0,YES,REFERENCE_ONLY
+CRM,espocrm/espocrm,https://github.com/espocrm/espocrm,Configurable CRM entities and layouts,P1,YES,REFERENCE_ONLY
+ERP,odoo/odoo,https://github.com/odoo/odoo,Business modules and workflow integrations,P2,YES,REFERENCE_ONLY
+ERP,frappe/erpnext,https://github.com/frappe/erpnext,ERP/CRM lifecycle and permissions,P1,YES,REFERENCE_ONLY
+Support,chatwoot/chatwoot,https://github.com/chatwoot/chatwoot,Conversations and omnichannel inbox,P0,YES,REFERENCE_ONLY
+Support,zammad/zammad,https://github.com/zammad/zammad,"Tickets, queues, SLA and support operations",P1,YES,REFERENCE_ONLY
+Project,makeplane/plane,https://github.com/makeplane/plane,"Issues, projects, cycles and roadmaps",P0,YES,REFERENCE_ONLY
+Project,opf/openproject,https://github.com/opf/openproject,"Gantt, project portfolio and work planning",P1,YES,REFERENCE_ONLY
+Project,taigaio/taiga,https://github.com/taigaio/taiga,Agile boards and backlog,P1,YES,REFERENCE_ONLY
+Project,go-vikunja/vikunja,https://github.com/go-vikunja/vikunja,"Task lists, filters and personal work",P2,YES,REFERENCE_ONLY
+Project,wekan/wekan,https://github.com/wekan/wekan,Kanban interaction patterns,P2,YES,REFERENCE_ONLY
+Work OS,hcengineering/platform,https://github.com/hcengineering/platform,Work collaboration and document patterns,P1,YES,REFERENCE_ONLY
+Project,Leantime/leantime,https://github.com/Leantime/leantime,Project-oriented UX and dashboards,P2,YES,REFERENCE_ONLY
+Frontend,vercel/next.js,https://github.com/vercel/next.js,App Router rendering and routing patterns,P0,YES,REFERENCE_ONLY
+UI,shadcn-ui/ui,https://github.com/shadcn-ui/ui,Composable components; copy/license audit required,P0,YES,REFERENCE_ONLY
+UI,radix-ui/primitives,https://github.com/radix-ui/primitives,Accessible interaction primitives,P0,YES,REFERENCE_ONLY
+UI,adobe/react-spectrum,https://github.com/adobe/react-spectrum,Accessible component behavior,P1,YES,REFERENCE_ONLY
+UI,mantinedev/mantine,https://github.com/mantinedev/mantine,"Form, overlay and component API patterns",P1,YES,REFERENCE_ONLY
+UI,ant-design/ant-design,https://github.com/ant-design/ant-design,Dense enterprise data-entry patterns,P1,YES,REFERENCE_ONLY
+UI,chakra-ui/chakra-ui,https://github.com/chakra-ui/chakra-ui,Accessible component composition,P2,YES,REFERENCE_ONLY
+CSS,tailwindlabs/tailwindcss,https://github.com/tailwindlabs/tailwindcss,Utility and theme token implementation,P0,YES,REFERENCE_ONLY
+UI,tailwindlabs/headlessui,https://github.com/tailwindlabs/headlessui,Headless accessible components,P2,YES,REFERENCE_ONLY
+Icons,lucide-icons/lucide,https://github.com/lucide-icons/lucide,Consistent icon system,P0,YES,REFERENCE_ONLY
+Visual QA,storybookjs/storybook,https://github.com/storybookjs/storybook,"Component catalog, interaction and visual tests",P0,YES,REFERENCE_ONLY
+Visual QA,chromaui/chromatic,https://github.com/chromaui/chromatic,Visual change review workflow,P2,YES,REFERENCE_ONLY
+Command UI,pacocoursey/cmdk,https://github.com/pacocoursey/cmdk,Command palette interaction,P1,YES,REFERENCE_ONLY
+Drag/drop,clauderic/dnd-kit,https://github.com/clauderic/dnd-kit,Accessible sortable/board behaviors,P1,YES,REFERENCE_ONLY
+Table,TanStack/table,https://github.com/TanStack/table,Headless table sort/filter/selection/grouping,P0,YES,REFERENCE_ONLY
+Server state,TanStack/query,https://github.com/TanStack/query,Server cache and mutation lifecycle,P0,YES,REFERENCE_ONLY
+Virtualization,TanStack/virtual,https://github.com/TanStack/virtual,Large lists and virtual scrolling,P1,YES,REFERENCE_ONLY
+Forms,react-hook-form/react-hook-form,https://github.com/react-hook-form/react-hook-form,Large form state and validation ergonomics,P0,YES,REFERENCE_ONLY
+Validation,colinhacks/zod,https://github.com/colinhacks/zod,Runtime schema validation and typed DTOs,P0,YES,REFERENCE_ONLY
+Date,date-fns/date-fns,https://github.com/date-fns/date-fns,Date parsing/formatting,P1,YES,REFERENCE_ONLY
+Calendar,fullcalendar/fullcalendar,https://github.com/fullcalendar/fullcalendar,Calendar interaction and resource views,P1,YES,REFERENCE_ONLY
+Charts,recharts/recharts,https://github.com/recharts/recharts,React chart patterns,P2,YES,REFERENCE_ONLY
+Charts,apache/echarts,https://github.com/apache/echarts,Complex analytics visualizations,P2,YES,REFERENCE_ONLY
+Charts,plouc/nivo,https://github.com/plouc/nivo,Chart options and data display,P2,YES,REFERENCE_ONLY
+i18n,amannn/next-intl,https://github.com/amannn/next-intl,Next.js localization,P0,YES,REFERENCE_ONLY
+i18n,i18next/i18next,https://github.com/i18next/i18next,Translation lifecycle/pluralization,P1,YES,REFERENCE_ONLY
+A11y,dequelabs/axe-core,https://github.com/dequelabs/axe-core,Automated accessibility checks,P0,YES,REFERENCE_ONLY
+A11y,pa11y/pa11y,https://github.com/pa11y/pa11y,Automated route accessibility checks,P2,YES,REFERENCE_ONLY
+E2E,microsoft/playwright,https://github.com/microsoft/playwright,Browser automation and screenshots,P0,YES,REFERENCE_ONLY
+Unit test,vitest-dev/vitest,https://github.com/vitest-dev/vitest,Unit/component tests,P0,YES,REFERENCE_ONLY
+Testing,testing-library/react-testing-library,https://github.com/testing-library/react-testing-library,User-centered component tests,P0,YES,REFERENCE_ONLY
+Backend,nestjs/nest,https://github.com/nestjs/nest,"Module, guard and service patterns",P0,YES,REFERENCE_ONLY
+ORM,prisma/prisma,https://github.com/prisma/prisma,Schema/client/migrations practices,P0,YES,REFERENCE_ONLY
+Database,postgres/postgres,https://github.com/postgres/postgres,"Constraints, indexing and transactions",P0,YES,REFERENCE_ONLY
+Cache/Queue,redis/redis,https://github.com/redis/redis,Cache/queue building blocks,P1,YES,REFERENCE_ONLY
+Queue,taskforcesh/bullmq,https://github.com/taskforcesh/bullmq,"Jobs, retry and DLQ mechanics",P1,YES,REFERENCE_ONLY
+Workflow,temporalio/temporal,https://github.com/temporalio/temporal,Durable orchestration patterns,P2,YES,REFERENCE_ONLY
+Realtime,socketio/socket.io,https://github.com/socketio/socket.io,Realtime collaboration/event delivery,P2,YES,REFERENCE_ONLY
+API spec,OAI/OpenAPI-Specification,https://github.com/OAI/OpenAPI-Specification,API schema standards,P0,YES,REFERENCE_ONLY
+API client,orval-labs/orval,https://github.com/orval-labs/orval,Generated client and schema sync,P1,YES,REFERENCE_ONLY
+Workflow,triggerdotdev/trigger.dev,https://github.com/triggerdotdev/trigger.dev,Background workflow patterns,P2,YES,REFERENCE_ONLY
+Automation,n8n-io/n8n,https://github.com/n8n-io/n8n,Node workflow UX/integration contracts,P2,YES,REFERENCE_ONLY
+Notifications,novuhq/novu,https://github.com/novuhq/novu,Notification preferences/delivery patterns,P1,YES,REFERENCE_ONLY
+Storage,minio/minio,https://github.com/minio/minio,S3-compatible object storage,P1,YES,REFERENCE_ONLY
+Scheduling,calcom/cal.com,https://github.com/calcom/cal.com,Booking/calendar workflows,P2,YES,REFERENCE_ONLY
+Search,meilisearch/meilisearch,https://github.com/meilisearch/meilisearch,Search UX/backend capability,P1,YES,REFERENCE_ONLY
+Search,typesense/typesense,https://github.com/typesense/typesense,Typo-tolerant search patterns,P2,YES,REFERENCE_ONLY
+Errors,getsentry/sentry,https://github.com/getsentry/sentry,Frontend/backend error observability,P0,YES,REFERENCE_ONLY
+Telemetry,open-telemetry/opentelemetry-js,https://github.com/open-telemetry/opentelemetry-js,Trace/metric instrumentation,P1,YES,REFERENCE_ONLY
+Metrics,prometheus/prometheus,https://github.com/prometheus/prometheus,Operational metrics,P2,YES,REFERENCE_ONLY
+Dashboards,grafana/grafana,https://github.com/grafana/grafana,Observability dashboards,P2,YES,REFERENCE_ONLY
+Identity,keycloak/keycloak,https://github.com/keycloak/keycloak,OIDC/SSO and identity integration,P2,YES,REFERENCE_ONLY
+Identity,better-auth/better-auth,https://github.com/better-auth/better-auth,Modern application auth patterns,P1,YES,REFERENCE_ONLY
+Email,resend/react-email,https://github.com/resend/react-email,Email template development,P2,YES,REFERENCE_ONLY
+Feature flags,Unleash/unleash,https://github.com/Unleash/unleash,Feature release gates,P2,YES,REFERENCE_ONLY
+Monorepo,vercel/turborepo,https://github.com/vercel/turborepo,Build graph/cache patterns,P0,YES,REFERENCE_ONLY
+Package manager,pnpm/pnpm,https://github.com/pnpm/pnpm,Workspace reproducibility,P0,YES,REFERENCE_ONLY
+License,google/go-licenses,https://github.com/google/go-licenses,License inventory patterns,P2,YES,REFERENCE_ONLY
+Security,aquasecurity/trivy,https://github.com/aquasecurity/trivy,Dependency/container scan,P1,YES,REFERENCE_ONLY
+Secrets,gitleaks/gitleaks,https://github.com/gitleaks/gitleaks,Secret scanning,P0,YES,REFERENCE_ONLY
+Security,OWASP/API-Security,https://github.com/OWASP/API-Security,API security risk guidance,P0,YES,REFERENCE_ONLY
+CRM,salesagility/SuiteCRM,https://github.com/salesagility/SuiteCRM,Open-source CRM workflows and record model,P1,YES,REFERENCE_ONLY
+CRM,YetiForceCompany/YetiForceCRM,https://github.com/YetiForceCompany/YetiForceCRM,"CRM permissions, modules and relationship screens",P2,YES,REFERENCE_ONLY
+Business OS,cortezaproject/corteza,https://github.com/cortezaproject/corteza,Low-code business apps and data model patterns,P2,YES,REFERENCE_ONLY
+Support,freescout-helpdesk/freescout,https://github.com/freescout-helpdesk/freescout,Mailbox and customer support workflow,P2,YES,REFERENCE_ONLY
+ITSM,glpi-project/glpi,https://github.com/glpi-project/glpi,"Service desk, asset and request lifecycle",P2,YES,REFERENCE_ONLY
+Data app,nocodb/nocodb,https://github.com/nocodb/nocodb,"Table views, filters and forms",P1,YES,REFERENCE_ONLY
+Data app,baserow/baserow,https://github.com/bramw/baserow,No-code databases and grid UX,P1,YES,REFERENCE_ONLY
+CMS/Data,directus/directus,https://github.com/directus/directus,"Data API, permissions and admin interface",P1,YES,REFERENCE_ONLY
+CMS,strapi/strapi,https://github.com/strapi/strapi,"Content types, roles and administration UX",P2,YES,REFERENCE_ONLY
+CMS,payloadcms/payload,https://github.com/payloadcms/payload,Typed CMS/admin panels and access control,P1,YES,REFERENCE_ONLY
+Internal tools,appsmithorg/appsmith,https://github.com/appsmithorg/appsmith,Internal tool builder and data-source integration,P2,YES,REFERENCE_ONLY
+Internal tools,ToolJet/ToolJet,https://github.com/ToolJet/ToolJet,Admin console patterns and integration surfaces,P2,YES,REFERENCE_ONLY
+Internal tools,Budibase/budibase,https://github.com/Budibase/budibase,Business app builder and automation patterns,P2,YES,REFERENCE_ONLY
+Admin framework,refinedev/refine,https://github.com/refinedev/refine,"CRUD, routing and provider abstraction patterns",P1,YES,REFERENCE_ONLY
+Admin framework,marmelab/react-admin,https://github.com/marmelab/react-admin,Admin CRUD/forms/filters and data providers,P1,YES,REFERENCE_ONLY
+UI,ant-design/pro-components,https://github.com/ant-design/pro-components,Enterprise table/form/page templates,P1,YES,REFERENCE_ONLY
+Workflow UI,xyflow/xyflow,https://github.com/xyflow/xyflow,Node graph editor patterns for automation builder,P1,YES,REFERENCE_ONLY
+Rich text,ueberdosis/tiptap,https://github.com/ueberdosis/tiptap,Rich-text collaboration/editor behavior,P2,YES,REFERENCE_ONLY
+Calendar,jquense/react-big-calendar,https://github.com/jquense/react-big-calendar,Event/calendar views and interactions,P2,YES,REFERENCE_ONLY
+Authorization,stalniy/casl,https://github.com/stalniy/casl,Frontend ability modeling; server enforcement still required,P1,YES,REFERENCE_ONLY
+API mocking,mswjs/msw,https://github.com/mswjs/msw,Deterministic API mocking for tests only,P0,YES,REFERENCE_ONLY
+Test data,faker-js/faker,https://github.com/faker-js/faker,Deterministic synthetic test data,P1,YES,REFERENCE_ONLY
+Integration test,testcontainers/testcontainers-node,https://github.com/testcontainers/testcontainers-node,Real dependency integration tests in containers,P1,YES,REFERENCE_ONLY
+E2E,cypress-io/cypress,https://github.com/cypress-io/cypress,Alternative browser testing and component testing,P2,YES,REFERENCE_ONLY
+Load test,grafana/k6,https://github.com/grafana/k6,Repeatable API/browser load testing,P1,YES,REFERENCE_ONLY
+Security,semgrep/semgrep,https://github.com/semgrep/semgrep,Static code pattern scanning,P1,YES,REFERENCE_ONLY
+Security guidance,OWASP/CheatSheetSeries,https://github.com/OWASP/CheatSheetSeries,Secure implementation guidance,P0,YES,REFERENCE_ONLY
+Identity,authjs/authjs,https://github.com/nextauthjs/next-auth,Session/auth integration patterns for Next.js; validate current repo name,P1,YES,REFERENCE_ONLY
+Platform,appwrite/appwrite,https://github.com/appwrite/appwrite,"Auth, storage and platform API patterns",P2,YES,REFERENCE_ONLY
+Platform,supabase/supabase,https://github.com/supabase/supabase,Postgres platform/Auth/storage/row security patterns,P2,YES,REFERENCE_ONLY

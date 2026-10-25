@@ -10,6 +10,7 @@ import { AutomationController } from './modules/automation/automation.controller
 import { ActivityController } from './modules/activity/activity.controller.js';
 import { ImportExportController } from './modules/crm/csv/import-export.controller.js';
 import { PipelineStageController } from './modules/crm/pipeline/pipeline-stage.controller.js';
+import { SavedViewController } from './modules/crm/saved-views/saved-view.controller.js';
 import { SearchController } from './modules/search/search.controller.js';
 import { WebhookController } from './modules/integrations/webhook.controller.js';
 import { FilesController } from './modules/files/files.controller.js';
@@ -32,6 +33,8 @@ import { TasksService } from './modules/tasks/tasks.service.js';
 import { InMemoryCrmRepository } from './modules/crm/crm.repository.js';
 import { PipelineStageRepository } from './modules/crm/pipeline/pipeline-stage.repository.js';
 import { PipelineStageService } from './modules/crm/pipeline/pipeline-stage.service.js';
+import { SavedViewRepository } from './modules/crm/saved-views/saved-view.repository.js';
+import { SavedViewService } from './modules/crm/saved-views/saved-view.service.js';
 import { CrmService } from './modules/crm/crm.service.js';
 import { InMemorySupportRepository } from './modules/support/support.repository.js';
 import { SupportService } from './modules/support/support.service.js';
@@ -66,6 +69,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     TasksController,
     CrmController,
     PipelineStageController,
+    SavedViewController,
     ImportExportController,
     SupportController,
     NotificationController,
@@ -97,6 +101,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     InMemoryCrmRepository,
     PipelineStageRepository,
     PipelineStageService,
+    SavedViewRepository,
+    SavedViewService,
     CrmService,
     ImportExportService,
     InMemorySupportRepository,
@@ -149,6 +155,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     InMemoryCrmRepository,
     PipelineStageRepository,
     PipelineStageService,
+    SavedViewRepository,
+    SavedViewService,
     CrmService,
     ImportExportService,
     InMemorySupportRepository,

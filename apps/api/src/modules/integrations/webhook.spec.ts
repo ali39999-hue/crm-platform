@@ -796,4 +796,161 @@ describe('Webhook Integrations (F8-04)', () => {
       expect(delRes.success).toBe(true);
     });
   });
+
+  // =========================================================================
+  // 6. SSRF PROTECTION (CRM-040)
+  // =========================================================================
+  describe('6. SSRF Protection (CRM-040)', () => {
+    const forbiddenUrls = [
+      // Loopback / local IPs
+      'http://127.0.0.1/webhook',
+      'http://127.0.0.2/webhook',
+      'http://127.255.255.254/webhook',
+      'http://localhost/webhook',
+      'http://sub.localhost/webhook',
+      'http://0.0.0.0/webhook',
+      'http://[::1]/webhook',
+      'http://[0:0:0:0:0:0:0:1]/webhook',
+      'http://service.local/webhook',
+      'http://api.internal/webhook',
+
+      // Private IP ranges (RFC 1918)
+      'http://10.0.0.1/webhook',
+      'http://10.254.254.254/webhook',
+      'http://172.16.0.1/webhook',
+      'http://172.24.1.1/webhook',
+      'http://172.31.255.255/webhook',
+      'http://192.168.0.1/webhook',
+      'http://192.168.1.100/webhook',
+
+      // Link-local addresses
+      'http://169.254.1.1/webhook',
+      'http://169.254.169.254/latest/meta-data',
+      'http://[fe80::1]/webhook',
+      'http://[fe80::1234:5678:9abc:def0]/webhook',
+
+      // Cloud metadata endpoints
+      'http://metadata.google.internal/computeMetadata/v1',
+      'http://metadata/v1',
+      'http://instance-data/latest/meta-data',
+
+      // Obfuscated formats & IPv6 mapped IPv4
+      'http://2130706433/webhook', // Decimal IP (127.0.0.1)
+      'http://2852039166/webhook', // Decimal IP (169.254.169.254)
+      'http://0x7f000001/webhook', // Hex IP
+      'http://0x7f.0.0.1/webhook',
+      'http://0177.0.0.1/webhook', // Octal IP
+      'http://[::ffff:127.0.0.1]/webhook', // IPv6 mapped IPv4
+      'http://[::ffff:7f00:1]/webhook',
+      'http://[::ffff:169.254.169.254]/webhook',
+
+      // DNS rebinding / embedded private IP
+      'http://127.0.0.1.nip.io/webhook',
+      'http://169.254.169.254.nip.io/webhook',
+
+      // Non-HTTP/HTTPS schemes
+      'ftp://fileserver.local/webhook',
+      'file:///etc/passwd',
+      'gopher://127.0.0.1:70/',
+      'dict://127.0.0.1:11211/',
+    ];
+
+    it.each(forbiddenUrls)('rejects forbidden SSRF URL: %s', (url) => {
+      expect(() => webhookService.validateWebhookUrl(url)).toThrow(
+        new BadRequestException('SECURITY_ERROR: Webhook URL points to a forbidden destination'),
+      );
+    });
+
+    it('rejects http in production mode unless localhost test toggle is explicitly enabled', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'production';
+        webhookService.setAllowLocalhostTest(false);
+
+        expect(() =>
+          webhookService.validateWebhookUrl('http://public-api.example.com/webhook'),
+        ).toThrow('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+
+        expect(() =>
+          webhookService.validateWebhookUrl('https://public-api.example.com/webhook'),
+        ).not.toThrow();
+
+        // With explicit localhost toggle enabled
+        webhookService.setAllowLocalhostTest(true);
+        expect(() =>
+          webhookService.validateWebhookUrl('http://localhost:3000/webhook'),
+        ).not.toThrow();
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+        webhookService.setAllowLocalhostTest(false);
+      }
+    });
+
+    it('allows valid public HTTPS webhook URLs', () => {
+      expect(() =>
+        webhookService.validateWebhookUrl('https://api.example.com/webhook'),
+      ).not.toThrow();
+      expect(() =>
+        webhookService.validateWebhookUrl('https://hooks.slack.com/services/T00/B00/X00'),
+      ).not.toThrow();
+      expect(() =>
+        webhookService.validateWebhookUrl('https://93.184.216.34/webhook'),
+      ).not.toThrow();
+    });
+
+    it('enforces validateWebhookUrl on createSubscription', async () => {
+      await expect(
+        webhookService.createSubscription(orgAlpha, {
+          url: 'http://169.254.169.254/latest/meta-data',
+          events: ['task.created'],
+        }),
+      ).rejects.toThrow('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    });
+
+    it('enforces validateWebhookUrl on updateSubscription', async () => {
+      const sub = await webhookService.createSubscription(orgAlpha, {
+        url: 'https://valid.example.com/webhook',
+        events: ['task.created'],
+      });
+
+      await expect(
+        webhookService.updateSubscription(orgAlpha, sub.id, {
+          url: 'http://10.0.0.1/internal-admin',
+        }),
+      ).rejects.toThrow('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    });
+
+    it('enforces validateWebhookUrl on testSubscription', async () => {
+      // Create valid subscription first
+      const sub = await webhookService.createSubscription(orgAlpha, {
+        url: 'https://valid.example.com/webhook',
+        events: ['task.created'],
+      });
+
+      // Mutate underlying repository record directly to simulate stored malicious/bypassed URL
+      await webhookRepo.updateSubscription(orgAlpha, sub.id, {
+        url: 'http://169.254.169.254/latest/meta-data',
+      });
+
+      await expect(
+        webhookService.testSubscription(orgAlpha, sub.id),
+      ).rejects.toThrow('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    });
+
+    it('enforces validateWebhookUrl before dispatching in dispatchWebhook', async () => {
+      const sub = await webhookService.createSubscription(orgAlpha, {
+        url: 'https://valid.example.com/webhook',
+        events: ['task.created'],
+      });
+
+      // Mutate to private IP in repo
+      await webhookRepo.updateSubscription(orgAlpha, sub.id, {
+        url: 'http://192.168.1.1/hook',
+      });
+
+      await expect(
+        webhookService.dispatchWebhook(orgAlpha, 'task.created', { id: 'task-1' }),
+      ).rejects.toThrow('SECURITY_ERROR: Webhook URL points to a forbidden destination');
+    });
+  });
 });

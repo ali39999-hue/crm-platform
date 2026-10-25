@@ -7,10 +7,16 @@
 import type {
   AutomationRuleDto,
   CreateAutomationRuleRequest,
+  CreateSavedViewRequest,
   CrmFunnelReport,
   DashboardKpiReport,
   NotificationDto,
   NotificationPreferencesDto,
+  SavedViewDto,
+  SavedViewEntityType,
+  SearchQueryDto,
+  SearchResultDto,
+  SearchResultItem,
   SupportSlaReport,
   WorkloadReportItem,
   AccountDto,
@@ -61,6 +67,7 @@ export class ApiClientError extends Error {
   }
 }
 
+const DEFAULT_ORG_ID = '11111111-1111-1111-1111-111111111111';
 const DEFAULT_EMPLOYEE_ID = '22222222-2222-2222-2222-222222222222';
 const DEFAULT_API_URL = 'http://localhost:4000/api/v1';
 
@@ -432,6 +439,69 @@ export class ApiClient {
       summary: 'بررسی نیازمندی‌های یکپارچه‌سازی با سامانه احراز هویت تک‌مرحله‌ای (SSO)',
       occurredAt: '2026-10-21T16:45:00.000Z',
       actorName: 'مدیر فنی',
+    },
+  ];
+
+  private fallbackSavedViews: SavedViewDto[] = [
+    {
+      id: 'view-all',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'همه وظایف',
+      entityType: 'TASK',
+      filters: { status: 'ALL' },
+      isShared: true,
+      createdBy: DEFAULT_EMPLOYEE_ID,
+      isDefault: true,
+      createdAt: '2026-10-20T08:00:00.000Z',
+      updatedAt: '2026-10-20T08:00:00.000Z',
+    },
+    {
+      id: 'view-my-tasks',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'وظایف من',
+      entityType: 'TASK',
+      filters: { assigneeId: DEFAULT_EMPLOYEE_ID },
+      isShared: false,
+      createdBy: DEFAULT_EMPLOYEE_ID,
+      isDefault: false,
+      createdAt: '2026-10-20T08:00:00.000Z',
+      updatedAt: '2026-10-20T08:00:00.000Z',
+    },
+    {
+      id: 'view-urgent',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'کارهای فوری',
+      entityType: 'TASK',
+      filters: { priority: 'URGENT' },
+      isShared: true,
+      createdBy: DEFAULT_EMPLOYEE_ID,
+      isDefault: false,
+      createdAt: '2026-10-21T09:00:00.000Z',
+      updatedAt: '2026-10-21T09:00:00.000Z',
+    },
+    {
+      id: 'view-pending',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'کارهای در انتظار',
+      entityType: 'TASK',
+      filters: { status: 'TODO' },
+      isShared: true,
+      createdBy: DEFAULT_EMPLOYEE_ID,
+      isDefault: false,
+      createdAt: '2026-10-21T09:30:00.000Z',
+      updatedAt: '2026-10-21T09:30:00.000Z',
+    },
+    {
+      id: 'view-in-progress',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'در حال انجام',
+      entityType: 'TASK',
+      filters: { status: 'IN_PROGRESS' },
+      isShared: true,
+      createdBy: DEFAULT_EMPLOYEE_ID,
+      isDefault: false,
+      createdAt: '2026-10-22T10:00:00.000Z',
+      updatedAt: '2026-10-22T10:00:00.000Z',
     },
   ];
 
@@ -1393,8 +1463,236 @@ export class ApiClient {
     this.fallbackTimeline.unshift(newItem);
     return newItem;
   }
+
+  /* ---------------- Global Search ---------------- */
+
+  async search(query: SearchQueryDto): Promise<SearchResultDto> {
+    try {
+      const params = new URLSearchParams();
+      if (query.q) {
+        params.set('q', query.q);
+      }
+      if (query.entityTypes && query.entityTypes.length > 0) {
+        params.set('entityTypes', query.entityTypes.join(','));
+      }
+      if (query.limit) {
+        params.set('limit', String(query.limit));
+      }
+      const qs = params.toString();
+      return await this.request<SearchResultDto>(`/search${qs ? `?${qs}` : ''}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const rawQ = query.q ?? '';
+        const term = rawQ.trim().toLowerCase();
+        if (!term) {
+          return { query: rawQ, totalHits: 0, items: [] };
+        }
+
+        const isCustomer = this.token === DEFAULT_CUSTOMER_ID;
+        const requestedTypes =
+          query.entityTypes && query.entityTypes.length > 0
+            ? new Set(query.entityTypes.map((t) => t.toUpperCase()))
+            : null;
+
+        const shouldInclude = (type: string) => {
+          if (isCustomer) {
+            return type === 'TICKET' && (!requestedTypes || requestedTypes.has('TICKET'));
+          }
+          return !requestedTypes || requestedTypes.has(type);
+        };
+
+        const results: SearchResultItem[] = [];
+
+        // 1. Tasks
+        if (shouldInclude('TASK')) {
+          for (const task of this.fallbackTasks) {
+            const matchesTitle = task.title.toLowerCase().includes(term);
+            const matchesKey = task.key.toLowerCase().includes(term);
+            const matchesDesc = task.description?.toLowerCase().includes(term) ?? false;
+            if (matchesTitle || matchesKey || matchesDesc) {
+              results.push({
+                id: task.id,
+                entityType: 'TASK',
+                title: task.title,
+                subtitle: task.key,
+                status: task.status,
+                url: `/tasks/${task.id}`,
+                createdAt: task.createdAt,
+              });
+            }
+          }
+        }
+
+        // 2. Accounts
+        if (shouldInclude('ACCOUNT')) {
+          for (const acc of this.fallbackAccounts) {
+            const matchesName = acc.name.toLowerCase().includes(term);
+            const matchesPhone = acc.phone?.toLowerCase().includes(term) ?? false;
+            const matchesWeb = acc.website?.toLowerCase().includes(term) ?? false;
+            const matchesType = acc.type.toLowerCase().includes(term);
+            if (matchesName || matchesPhone || matchesWeb || matchesType) {
+              results.push({
+                id: acc.id,
+                entityType: 'ACCOUNT',
+                title: acc.name,
+                subtitle: acc.phone || acc.website || acc.type || null,
+                status: acc.status,
+                url: `/crm/accounts/${acc.id}`,
+                createdAt: acc.createdAt,
+              });
+            }
+          }
+        }
+
+        // 3. Contacts
+        if (shouldInclude('CONTACT')) {
+          for (const contact of this.fallbackContacts) {
+            const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
+            const matchesName = fullName.includes(term);
+            const matchesEmail = contact.email?.toLowerCase().includes(term) ?? false;
+            const matchesPhone = contact.phone?.toLowerCase().includes(term) ?? false;
+            if (matchesName || matchesEmail || matchesPhone) {
+              results.push({
+                id: contact.id,
+                entityType: 'CONTACT',
+                title: `${contact.firstName} ${contact.lastName}`,
+                subtitle: contact.email || contact.phone || contact.accountName || null,
+                status: null,
+                url: `/crm/contacts/${contact.id}`,
+                createdAt: contact.createdAt,
+              });
+            }
+          }
+        }
+
+        // 4. Leads
+        if (shouldInclude('LEAD')) {
+          for (const lead of this.fallbackLeads) {
+            const matchesName = lead.displayName.toLowerCase().includes(term);
+            const matchesEmail = lead.email?.toLowerCase().includes(term) ?? false;
+            const matchesPhone = lead.phone?.toLowerCase().includes(term) ?? false;
+            if (matchesName || matchesEmail || matchesPhone) {
+              results.push({
+                id: lead.id,
+                entityType: 'LEAD',
+                title: lead.displayName,
+                subtitle: lead.email || lead.phone || lead.source || null,
+                status: lead.status,
+                url: `/crm/leads/${lead.id}`,
+                createdAt: lead.createdAt,
+              });
+            }
+          }
+        }
+
+        // 5. Tickets
+        if (shouldInclude('TICKET')) {
+          for (const ticket of this.fallbackTickets) {
+            const matchesTitle = ticket.title.toLowerCase().includes(term);
+            const matchesRef = ticket.reference.toLowerCase().includes(term);
+            if (matchesTitle || matchesRef) {
+              results.push({
+                id: ticket.id,
+                entityType: 'TICKET',
+                title: ticket.title,
+                subtitle: ticket.reference,
+                status: ticket.status,
+                url: `/tickets/${ticket.id}`,
+                createdAt: ticket.createdAt,
+              });
+            }
+          }
+        }
+
+        const limit = query.limit ?? 20;
+        const sliced = results.slice(0, limit);
+        return {
+          query: rawQ,
+          totalHits: results.length,
+          items: sliced,
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Saved Views ---------------- */
+
+  async getSavedViews(entityType?: string): Promise<SavedViewDto[]> {
+    try {
+      const path = entityType
+        ? `/crm/saved-views?entityType=${encodeURIComponent(entityType)}`
+        : '/crm/saved-views';
+      return await this.request<SavedViewDto[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        if (entityType) {
+          return this.fallbackSavedViews
+            .filter((v) => v.entityType.toUpperCase() === entityType.toUpperCase())
+            .map((v) => ({ ...v }));
+        }
+        return this.fallbackSavedViews.map((v) => ({ ...v }));
+      }
+      throw err;
+    }
+  }
+
+  async createSavedView(dto: CreateSavedViewRequest): Promise<SavedViewDto> {
+    try {
+      return await this.request<SavedViewDto>('/crm/saved-views', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newView: SavedViewDto = {
+          id: `view-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          name: dto.name.trim(),
+          entityType: (dto.entityType ?? 'TASK') as SavedViewEntityType,
+          filters: dto.filters ?? {},
+          ...(dto.sortField !== undefined ? { sortField: dto.sortField } : {}),
+          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          isShared: Boolean(dto.isShared),
+          createdBy: this.token,
+          isDefault: Boolean(dto.isDefault),
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackSavedViews.unshift(newView);
+        return { ...newView };
+      }
+      throw err;
+    }
+  }
+
+  async deleteSavedView(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(`/crm/saved-views/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackSavedViews.findIndex((v) => v.id === id);
+        if (idx !== -1) {
+          this.fallbackSavedViews.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
+export type {
+  CreateSavedViewRequest,
+  SavedViewDto,
+  SavedViewEntityType,
+  SearchQueryDto,
+  SearchResultDto,
+  SearchResultItem,
+};
 export const DEFAULT_CUSTOMER_ID = '33333333-3333-3333-3333-333333333333';
 export const apiClient = new ApiClient();
 export const customerApiClient = new ApiClient(undefined, DEFAULT_CUSTOMER_ID);

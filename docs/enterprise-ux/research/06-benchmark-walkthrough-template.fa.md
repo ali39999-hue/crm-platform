@@ -1,0 +1,21 @@
+# قالب بررسی تک‌محصول
+
+- محصول/URL:
+- تاریخ و منطقه دسترسی:
+- نسخه/commit مشاهده‌شده:
+- License و محدودیت دسترسی:
+- persona/role و سناریوی تست:
+- routeهای بررسی‌شده:
+- viewport/theme/locale:
+- task success/failure و تعداد قدم‌ها:
+- navigation/global search/command palette:
+- list/table/detail/form patterns:
+- loading/empty/error/permission/conflict states:
+- keyboard/a11y/RTL/mobile:
+- audit/history/undo:
+- integration/import/export:
+- چه چیزی را Adopt می‌کنیم و چرا؟
+- چه چیزی را Adapt می‌کنیم و trade-off چیست؟
+- چه چیزی را Reject می‌کنیم و چرا؟
+- evidence (links/screens/notes) و محدودیت‌ها:
+- effort/risk و task ID:

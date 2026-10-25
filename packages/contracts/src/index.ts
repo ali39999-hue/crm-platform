@@ -573,5 +573,43 @@ export type VerifyFileScanRequest = {
   scanDetails?: string;
 };
 
+/* Saved Views Contracts */
+
+export type SavedViewEntityType = 'TASK' | 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'TICKET';
+
+export type SavedViewDto = {
+  id: string;
+  organizationId: string;
+  entityType: 'TASK' | 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'TICKET';
+  name: string;
+  filters: Record<string, any>;
+  sortField?: string | undefined;
+  sortOrder?: 'ASC' | 'DESC' | undefined;
+  isShared: boolean;
+  createdBy: string;
+  createdAt: string;
+  isDefault?: boolean | undefined;
+  updatedAt?: string | undefined;
+};
+
+export type CreateSavedViewRequest = {
+  entityType: 'TASK' | 'ACCOUNT' | 'CONTACT' | 'LEAD' | 'TICKET';
+  name: string;
+  filters: Record<string, any>;
+  sortField?: string | undefined;
+  sortOrder?: 'ASC' | 'DESC' | undefined;
+  isShared?: boolean | undefined;
+  isDefault?: boolean | undefined;
+};
+
+export type UpdateSavedViewRequest = {
+  name?: string | undefined;
+  filters?: Record<string, any> | undefined;
+  sortField?: string | undefined;
+  sortOrder?: 'ASC' | 'DESC' | undefined;
+  isShared?: boolean | undefined;
+  isDefault?: boolean | undefined;
+};
+
 
 

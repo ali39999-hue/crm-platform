@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { TaskStatus, TaskSummary } from '@crm/contracts';
+import type { SavedViewDto, TaskStatus, TaskSummary } from '@crm/contracts';
 import { canTransitionTask, type TransitionActorCapabilities } from '@crm/domain';
 import { TaskCard } from './TaskCard';
 import { EmptyState } from './EmptyState';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { getTaskStatusLabel } from './StatusBadge';
+import { SavedViewsSelector } from './SavedViewsSelector';
 
 export interface TaskListProps {
   tasks: TaskSummary[];
@@ -18,6 +19,8 @@ export interface TaskListProps {
   onTaskClick?: ((task: TaskSummary) => void) | undefined;
   capabilities?: TransitionActorCapabilities | undefined;
   className?: string | undefined;
+  activeSavedView?: SavedViewDto | undefined;
+  onSelectSavedView?: ((view: SavedViewDto) => void) | undefined;
 }
 
 const FILTER_OPTIONS: Array<{ key: string; label: string }> = [
@@ -39,16 +42,30 @@ export function TaskList({
   onTaskClick,
   capabilities = { canReopenDoneTask: true, canRestoreCanceledTask: true },
   className = '',
+  activeSavedView,
+  onSelectSavedView,
 }: TaskListProps) {
   const [internalFilter, setInternalFilter] = useState('ALL');
+  const [internalSavedView, setInternalSavedView] = useState<SavedViewDto | null>(activeSavedView || null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const activeView = activeSavedView !== undefined ? activeSavedView : internalSavedView;
   const currentFilter = controlledFilter !== undefined ? controlledFilter : internalFilter;
   const setFilter = (val: string) => {
     if (onStatusFilterChange) {
       onStatusFilterChange(val);
     } else {
       setInternalFilter(val);
+    }
+  };
+
+  const handleSelectView = (view: SavedViewDto) => {
+    setInternalSavedView(view);
+    if (view.filters?.status) {
+      setFilter(view.filters.status);
+    }
+    if (onSelectSavedView) {
+      onSelectSavedView(view);
     }
   };
 
@@ -74,7 +91,27 @@ export function TaskList({
   };
 
   const filteredTasks = tasks.filter((task) => {
-    if (currentFilter !== 'ALL' && task.status !== currentFilter) {
+    if (activeView?.filters) {
+      if (
+        activeView.filters.status &&
+        activeView.filters.status !== 'ALL' &&
+        task.status !== activeView.filters.status
+      ) {
+        return false;
+      }
+      if (
+        activeView.filters.priority &&
+        task.priority !== activeView.filters.priority
+      ) {
+        return false;
+      }
+      if (
+        activeView.filters.assigneeId &&
+        task.assigneeId !== activeView.filters.assigneeId
+      ) {
+        return false;
+      }
+    } else if (currentFilter !== 'ALL' && task.status !== currentFilter) {
       return false;
     }
     if (searchQuery.trim()) {
@@ -88,6 +125,19 @@ export function TaskList({
 
   return (
     <div className={`task-list-wrapper ${className}`.trim()}>
+      {/* Saved Views Selector */}
+      <div style={{ marginBottom: '14px' }}>
+        <SavedViewsSelector
+          entityType="TASK"
+          activeViewId={activeView?.id}
+          currentFilters={{
+            ...(currentFilter !== 'ALL' ? { status: currentFilter } : {}),
+            ...(activeView?.filters?.priority ? { priority: activeView.filters.priority } : {}),
+          }}
+          onSelectView={handleSelectView}
+        />
+      </div>
+
       {/* Filter and Search Bar */}
       <div
         style={{
