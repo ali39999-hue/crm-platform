@@ -48,6 +48,11 @@ import type {
   TicketPriority,
   TransitionTaskRequest,
   WorkspaceDto,
+  ActivityDto,
+  ActivityStatus,
+  ActivityType,
+  CalendarConflictDto,
+  CreateActivityRequest,
   CreateDocumentRequest,
   CreateDocumentSpaceRequest,
   DocumentDetailDto,
@@ -55,6 +60,7 @@ import type {
   DocumentSpaceDto,
   DocumentSummaryDto,
   DocumentVisibility,
+  UpdateActivityRequest,
   UpdateDocumentRequest,
 } from '@crm/contracts';
 
@@ -630,6 +636,69 @@ export class ApiClient {
           createdAt: '2026-10-15T09:00:00.000Z',
         },
       ],
+    },
+  ];
+
+  private fallbackScheduledActivities: ActivityDto[] = [
+    {
+      id: 'act-meeting-101',
+      organizationId: DEFAULT_ORG_ID,
+      type: 'MEETING',
+      title: 'جلسه بررسی پیشرفت استقرار CRM با مدیران پتروشیمی',
+      description: 'بررسی دسترسی‌های سازمانی، تنظیمات پورتال و رفع موانع فنی',
+      startsAt: new Date(Date.now() + 3600000 * 2).toISOString(),
+      endsAt: new Date(Date.now() + 3600000 * 3).toISOString(),
+      isAllDay: false,
+      status: 'SCHEDULED',
+      ownerId: DEFAULT_EMPLOYEE_ID,
+      ownerName: 'سارا احمدی',
+      participantIds: [DEFAULT_EMPLOYEE_ID],
+      associatedEntityType: 'ACCOUNT',
+      associatedEntityId: '50000000-0000-0000-0000-000000000001',
+      associatedEntityTitle: 'پتروشیمی سپهر',
+      visibility: 'CUSTOMER_SHARED',
+      reminderMinutesBefore: 30,
+      createdAt: '2026-10-24T10:00:00.000Z',
+      updatedAt: '2026-10-24T10:00:00.000Z',
+    },
+    {
+      id: 'act-call-102',
+      organizationId: DEFAULT_ORG_ID,
+      type: 'CALL',
+      title: 'تماس پیگیری فرصت تجاری ارتقای زیرساخت سرورها',
+      description: 'هماهنگی نهایی پیش‌فاکتور و تایید واحد تدارکات',
+      startsAt: new Date(Date.now() + 3600000 * 5).toISOString(),
+      endsAt: new Date(Date.now() + 3600000 * 5.5).toISOString(),
+      isAllDay: false,
+      status: 'SCHEDULED',
+      ownerId: DEFAULT_EMPLOYEE_ID,
+      ownerName: 'سارا احمدی',
+      participantIds: [DEFAULT_EMPLOYEE_ID],
+      associatedEntityType: 'DEAL',
+      associatedEntityId: '80000000-0000-0000-0000-000000000001',
+      associatedEntityTitle: 'قرارداد توسعه سالانه',
+      visibility: 'INTERNAL',
+      reminderMinutesBefore: 15,
+      createdAt: '2026-10-24T11:00:00.000Z',
+      updatedAt: '2026-10-24T11:00:00.000Z',
+    },
+    {
+      id: 'act-remind-103',
+      organizationId: DEFAULT_ORG_ID,
+      type: 'REMINDER',
+      title: 'یادآوری ارسال گزارش ممیزی ماهانه',
+      description: 'خروجی اکسل گزارش فعالیت کارکنان تهیه و ارسال گردد',
+      startsAt: new Date(Date.now() + 86400000).toISOString(),
+      endsAt: new Date(Date.now() + 86400000 + 1800000).toISOString(),
+      isAllDay: false,
+      status: 'SCHEDULED',
+      ownerId: DEFAULT_EMPLOYEE_ID,
+      ownerName: 'سارا احمدی',
+      participantIds: [DEFAULT_EMPLOYEE_ID],
+      visibility: 'INTERNAL',
+      reminderMinutesBefore: 60,
+      createdAt: '2026-10-24T12:00:00.000Z',
+      updatedAt: '2026-10-24T12:00:00.000Z',
     },
   ];
 
@@ -2110,9 +2179,230 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Scheduled Activities & Calendar ---------------- */
+
+  async getCalendarActivities(filters?: {
+    from?: string;
+    to?: string;
+    type?: ActivityType;
+    status?: ActivityStatus;
+    ownerId?: string;
+  }): Promise<ActivityDto[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.from) params.set('from', filters.from);
+      if (filters?.to) params.set('to', filters.to);
+      if (filters?.type) params.set('type', filters.type);
+      if (filters?.status) params.set('status', filters.status);
+      if (filters?.ownerId) params.set('ownerId', filters.ownerId);
+
+      const qs = params.toString();
+      return await this.request<ActivityDto[]>(
+        `/activities/calendar${qs ? `?${qs}` : ''}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const isCustomer = this.token === DEFAULT_CUSTOMER_ID;
+        return this.fallbackScheduledActivities
+          .filter((a) => {
+            if (isCustomer && a.visibility !== 'CUSTOMER_SHARED') return false;
+            if (filters?.type && a.type !== filters.type) return false;
+            if (filters?.status && a.status !== filters.status) return false;
+            if (filters?.ownerId && a.ownerId !== filters.ownerId) return false;
+            if (filters?.from && new Date(a.endsAt) < new Date(filters.from)) return false;
+            if (filters?.to && new Date(a.startsAt) > new Date(filters.to)) return false;
+            return true;
+          })
+          .map((a) => ({ ...a }));
+      }
+      throw err;
+    }
+  }
+
+  async checkCalendarConflicts(
+    startsAt: string,
+    endsAt: string,
+    participantIds?: string[],
+  ): Promise<CalendarConflictDto> {
+    try {
+      const params = new URLSearchParams({ startsAt, endsAt });
+      if (participantIds && participantIds.length > 0) {
+        params.set('participantIds', participantIds.join(','));
+      }
+      return await this.request<CalendarConflictDto>(
+        `/activities/conflicts?${params.toString()}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const targetStart = new Date(startsAt).getTime();
+        const targetEnd = new Date(endsAt).getTime();
+        const participants = participantIds ?? [this.token];
+        const participantSet = new Set(participants);
+
+        const conflicting = this.fallbackScheduledActivities.filter((act) => {
+          if (act.status === 'CANCELLED') return false;
+          const actStart = new Date(act.startsAt).getTime();
+          const actEnd = new Date(act.endsAt).getTime();
+          const hasOverlap = targetStart < actEnd && targetEnd > actStart;
+          if (!hasOverlap) return false;
+
+          return (
+            participantSet.has(act.ownerId) ||
+            act.participantIds.some((p) => participantSet.has(p))
+          );
+        });
+
+        return {
+          hasConflict: conflicting.length > 0,
+          conflictingActivities: conflicting.map((c) => ({ ...c })),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async createScheduledActivity(
+    dto: CreateActivityRequest,
+  ): Promise<{ activity: ActivityDto; conflictInfo: CalendarConflictDto }> {
+    try {
+      return await this.request<{
+        activity: ActivityDto;
+        conflictInfo: CalendarConflictDto;
+      }>('/activities', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const startsAtDate = new Date(dto.startsAt);
+        const endsAtDate = dto.endsAt
+          ? new Date(dto.endsAt)
+          : new Date(startsAtDate.getTime() + 3600000);
+
+        const startsAtIso = startsAtDate.toISOString();
+        const endsAtIso = endsAtDate.toISOString();
+
+        const conflictInfo = await this.checkCalendarConflicts(
+          startsAtIso,
+          endsAtIso,
+          dto.participantIds,
+        );
+
+        const newAct: ActivityDto = {
+          id: `act-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          type: dto.type,
+          title: dto.title.trim(),
+          ...(dto.description ? { description: dto.description } : {}),
+          startsAt: startsAtIso,
+          endsAt: endsAtIso,
+          isAllDay: Boolean(dto.isAllDay),
+          status: 'SCHEDULED',
+          ownerId: this.token,
+          ownerName: 'سارا احمدی',
+          participantIds: dto.participantIds ?? [this.token],
+          ...(dto.associatedEntityType ? { associatedEntityType: dto.associatedEntityType } : {}),
+          ...(dto.associatedEntityId ? { associatedEntityId: dto.associatedEntityId } : {}),
+          ...(dto.associatedEntityTitle ? { associatedEntityTitle: dto.associatedEntityTitle } : {}),
+          visibility: dto.visibility ?? 'INTERNAL',
+          ...(dto.reminderMinutesBefore !== undefined
+            ? { reminderMinutesBefore: dto.reminderMinutesBefore }
+            : {}),
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        this.fallbackScheduledActivities.unshift(newAct);
+
+        // Append to passive timeline
+        this.fallbackTimeline.unshift({
+          id: `act-tl-${Date.now()}`,
+          entityType: (newAct.associatedEntityType as any) || 'TASK',
+          entityId: newAct.associatedEntityId || newAct.id,
+          kind: `ACTIVITY_${newAct.type}_SCHEDULED`,
+          summary: `رویداد «${newAct.title}» برای تاریخ ${new Date(newAct.startsAt).toLocaleDateString('fa-IR')} زمان‌بندی شد`,
+          occurredAt: now,
+          actorName: 'سارا احمدی',
+        });
+
+        return { activity: { ...newAct }, conflictInfo };
+      }
+      throw err;
+    }
+  }
+
+  async updateScheduledActivity(
+    id: string,
+    dto: UpdateActivityRequest,
+  ): Promise<ActivityDto> {
+    try {
+      return await this.request<ActivityDto>(
+        `/activities/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackScheduledActivities.findIndex((a) => a.id === id);
+        if (idx === -1) {
+          throw new ApiClientError(`Activity ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackScheduledActivities[idx]!;
+        const updated: ActivityDto = {
+          ...existing,
+          ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.startsAt !== undefined ? { startsAt: new Date(dto.startsAt).toISOString() } : {}),
+          ...(dto.endsAt !== undefined ? { endsAt: new Date(dto.endsAt).toISOString() } : {}),
+          ...(dto.isAllDay !== undefined ? { isAllDay: dto.isAllDay } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.associatedEntityType !== undefined ? { associatedEntityType: dto.associatedEntityType } : {}),
+          ...(dto.associatedEntityId !== undefined ? { associatedEntityId: dto.associatedEntityId } : {}),
+          ...(dto.associatedEntityTitle !== undefined ? { associatedEntityTitle: dto.associatedEntityTitle } : {}),
+          ...(dto.participantIds !== undefined ? { participantIds: dto.participantIds } : {}),
+          ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
+          ...(dto.reminderMinutesBefore !== undefined ? { reminderMinutesBefore: dto.reminderMinutesBefore } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+
+        this.fallbackScheduledActivities[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async deleteScheduledActivity(id: string): Promise<boolean> {
+    try {
+      await this.request<{ success: boolean }>(
+        `/activities/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      return true;
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackScheduledActivities.findIndex((a) => a.id === id);
+        if (idx !== -1) {
+          this.fallbackScheduledActivities.splice(idx, 1);
+        }
+        return true;
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  ActivityDto,
+  ActivityStatus,
+  ActivityType,
+  CalendarConflictDto,
+  CreateActivityRequest,
+  UpdateActivityRequest,
   CreateDocumentRequest,
   CreateDocumentSpaceRequest,
   DocumentDetailDto,

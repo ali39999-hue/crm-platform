@@ -12,3 +12,4 @@ export * from './CommandPalette';
 export * from './SavedViewsSelector';
 export * from './DocumentsView';
 export * from './CreateDocumentModal';
+export * from './ActivityComposerModal';

@@ -697,5 +697,67 @@ export type RestoreDocumentRevisionRequest = {
   summaryChange?: string | undefined;
 };
 
+/* Enterprise Activities & Calendar Scheduling Contracts */
+
+export type ActivityType = 'MEETING' | 'CALL' | 'EMAIL' | 'NOTE' | 'REMINDER';
+export type ActivityStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+
+export type ActivityDto = {
+  id: string;
+  organizationId: string;
+  type: ActivityType;
+  title: string;
+  description?: string | undefined;
+  startsAt: string;
+  endsAt: string;
+  isAllDay: boolean;
+  status: ActivityStatus;
+  ownerId: string;
+  ownerName: string;
+  participantIds: string[];
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+  associatedEntityTitle?: string | undefined;
+  visibility: 'INTERNAL' | 'CUSTOMER_SHARED';
+  reminderMinutesBefore?: number | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateActivityRequest = {
+  type: ActivityType;
+  title: string;
+  description?: string | undefined;
+  startsAt: string;
+  endsAt?: string | undefined;
+  isAllDay?: boolean | undefined;
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+  associatedEntityTitle?: string | undefined;
+  participantIds?: string[] | undefined;
+  visibility?: 'INTERNAL' | 'CUSTOMER_SHARED' | undefined;
+  reminderMinutesBefore?: number | undefined;
+};
+
+export type UpdateActivityRequest = {
+  title?: string | undefined;
+  description?: string | undefined;
+  startsAt?: string | undefined;
+  endsAt?: string | undefined;
+  isAllDay?: boolean | undefined;
+  status?: ActivityStatus | undefined;
+  associatedEntityType?: string | undefined;
+  associatedEntityId?: string | undefined;
+  associatedEntityTitle?: string | undefined;
+  participantIds?: string[] | undefined;
+  visibility?: 'INTERNAL' | 'CUSTOMER_SHARED' | undefined;
+  reminderMinutesBefore?: number | undefined;
+};
+
+export type CalendarConflictDto = {
+  hasConflict: boolean;
+  conflictingActivities: ActivityDto[];
+};
+
 
 

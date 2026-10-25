@@ -46,7 +46,7 @@ describe('DocumentsService & Repository Unit/Integration Tests', () => {
   beforeEach(() => {
     repo = new InMemoryDocumentRepository();
     auditService = new AuditService();
-    activityService = new ActivityService(new InMemoryActivityRepository());
+    activityService = new ActivityService(new InMemoryActivityRepository(), auditService);
     service = new DocumentsService(repo, auditService, activityService);
   });
 
