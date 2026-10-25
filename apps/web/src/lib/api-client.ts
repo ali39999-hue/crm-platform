@@ -83,6 +83,14 @@ import type {
   CustomFieldEntityType,
   CustomFieldType,
   UpdateCustomFieldRequest,
+  CreateMilestoneRequest,
+  CreateProjectRequest,
+  MilestoneDto,
+  ProjectDetailDto,
+  ProjectHealth,
+  ProjectStatus,
+  ProjectSummaryDto,
+  UpdateProjectRequest,
 } from '@crm/contracts';
 
 import {
@@ -899,6 +907,85 @@ export class ApiClient {
       active: true,
       createdAt: '2026-10-01T00:00:00.000Z',
       updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackProjects: ProjectDetailDto[] = [
+    {
+      id: 'prj-001',
+      organizationId: DEFAULT_ORG_ID,
+      key: 'PRJ-CRM',
+      name: 'استقرار و بومی‌سازی پلتفرم جامع سازمانی',
+      description: 'راه‌اندازی ماژول‌های تسک، فرآیند فروش CRM، پورتال مشتریان و پایگاه دانش سازمانی',
+      status: 'ACTIVE',
+      health: 'ON_TRACK',
+      ownerId: DEFAULT_EMPLOYEE_ID,
+      ownerName: 'سارا احمدی',
+      startDate: '2026-10-01T00:00:00.000Z',
+      targetDate: '2026-12-30T00:00:00.000Z',
+      associatedAccountId: '50000000-0000-0000-0000-000000000001',
+      associatedAccountName: 'پتروشیمی سپهر',
+      progressPercent: 67,
+      tasksCount: 6,
+      completedTasksCount: 4,
+      milestonesCount: 3,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-15T00:00:00.000Z',
+      milestones: [
+        {
+          id: 'ms-001',
+          projectId: 'prj-001',
+          title: 'طراحی قراردادهای داده و معماری چندمستأجری',
+          dueDate: '2026-10-10T00:00:00.000Z',
+          isCompleted: true,
+          createdAt: '2026-10-01T00:00:00.000Z',
+        },
+        {
+          id: 'ms-002',
+          projectId: 'prj-001',
+          title: 'پیاده‌سازی بردهای درگ اند دراپ و خطوط فروش',
+          dueDate: '2026-10-25T00:00:00.000Z',
+          isCompleted: true,
+          createdAt: '2026-10-01T00:00:00.000Z',
+        },
+        {
+          id: 'ms-003',
+          projectId: 'prj-001',
+          title: 'استقرار پایگاه دانش و گزارش‌های تحلیلی BI',
+          dueDate: '2026-11-15T00:00:00.000Z',
+          isCompleted: false,
+          createdAt: '2026-10-01T00:00:00.000Z',
+        },
+      ],
+    },
+    {
+      id: 'prj-002',
+      organizationId: DEFAULT_ORG_ID,
+      key: 'PRJ-PORTAL',
+      name: 'توسعه پورتال سلف‌سرویس مشتریان و تیکتینگ',
+      description: 'فاز دوم پورتال مشتریان با پشتیبانی از اتصال مدارک، پیگیری تیکت‌ها و SLA',
+      status: 'ACTIVE',
+      health: 'ON_TRACK',
+      ownerId: DEFAULT_EMPLOYEE_ID,
+      ownerName: 'سارا احمدی',
+      startDate: '2026-10-15T00:00:00.000Z',
+      targetDate: '2026-11-20T00:00:00.000Z',
+      progressPercent: 40,
+      tasksCount: 5,
+      completedTasksCount: 2,
+      milestonesCount: 1,
+      createdAt: '2026-10-15T00:00:00.000Z',
+      updatedAt: '2026-10-20T00:00:00.000Z',
+      milestones: [
+        {
+          id: 'ms-004',
+          projectId: 'prj-002',
+          title: 'طراحی واسط کاربری تیکت‌ها و مکالمات',
+          dueDate: '2026-11-01T00:00:00.000Z',
+          isCompleted: false,
+          createdAt: '2026-10-15T00:00:00.000Z',
+        },
+      ],
     },
   ];
 
@@ -3198,9 +3285,200 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Enterprise Projects & Milestones ---------------- */
+
+  async getProjects(): Promise<ProjectSummaryDto[]> {
+    try {
+      return await this.request<ProjectSummaryDto[]>('/projects');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackProjects.map((p) => {
+          const { milestones, ...summary } = p;
+          return { ...summary };
+        });
+      }
+      throw err;
+    }
+  }
+
+  async getProjectDetail(id: string): Promise<ProjectDetailDto> {
+    try {
+      return await this.request<ProjectDetailDto>(`/projects/${encodeURIComponent(id)}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackProjects.find((p) => p.id === id);
+        if (!found) {
+          throw new ApiClientError(`Project ${id} not found`, 404, 'NOT_FOUND');
+        }
+        return { ...found, milestones: found.milestones.map((m) => ({ ...m })) };
+      }
+      throw err;
+    }
+  }
+
+  async createProject(dto: CreateProjectRequest): Promise<ProjectDetailDto> {
+    try {
+      return await this.request<ProjectDetailDto>('/projects', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newProj: ProjectDetailDto = {
+          id: `prj-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          key: dto.key.trim().toUpperCase(),
+          name: dto.name.trim(),
+          description: dto.description,
+          status: dto.status ?? 'ACTIVE',
+          health: dto.health ?? 'ON_TRACK',
+          ownerId: this.token,
+          ownerName: 'سارا احمدی',
+          startDate: dto.startDate,
+          targetDate: dto.targetDate,
+          progressPercent: 0,
+          tasksCount: 0,
+          completedTasksCount: 0,
+          milestonesCount: 0,
+          createdAt: now,
+          updatedAt: now,
+          milestones: [],
+        };
+        this.fallbackProjects.unshift(newProj);
+        return { ...newProj };
+      }
+      throw err;
+    }
+  }
+
+  async updateProject(id: string, dto: UpdateProjectRequest): Promise<ProjectDetailDto> {
+    try {
+      return await this.request<ProjectDetailDto>(`/projects/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackProjects.findIndex((p) => p.id === id);
+        if (idx === -1) {
+          throw new ApiClientError(`Project ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackProjects[idx]!;
+        const updated: ProjectDetailDto = {
+          ...existing,
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.health !== undefined ? { health: dto.health } : {}),
+          ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
+          ...(dto.targetDate !== undefined ? { targetDate: dto.targetDate } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackProjects[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async addProjectMilestone(
+    projectId: string,
+    dto: CreateMilestoneRequest,
+  ): Promise<MilestoneDto> {
+    try {
+      return await this.request<MilestoneDto>(
+        `/projects/${encodeURIComponent(projectId)}/milestones`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const proj = this.fallbackProjects.find((p) => p.id === projectId);
+        if (!proj) {
+          throw new ApiClientError(`Project ${projectId} not found`, 404, 'NOT_FOUND');
+        }
+        const newMs: MilestoneDto = {
+          id: `ms-${Date.now()}`,
+          projectId,
+          title: dto.title.trim(),
+          dueDate: dto.dueDate,
+          isCompleted: Boolean(dto.isCompleted),
+          createdAt: new Date().toISOString(),
+        };
+        proj.milestones.push(newMs);
+        proj.milestonesCount = proj.milestones.length;
+        const comp = proj.milestones.filter((m) => m.isCompleted).length;
+        proj.progressPercent = Math.round((comp / proj.milestonesCount) * 100);
+        return { ...newMs };
+      }
+      throw err;
+    }
+  }
+
+  async toggleProjectMilestone(
+    projectId: string,
+    milestoneId: string,
+    isCompleted: boolean,
+  ): Promise<MilestoneDto> {
+    try {
+      return await this.request<MilestoneDto>(
+        `/projects/${encodeURIComponent(projectId)}/milestones/${encodeURIComponent(milestoneId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ isCompleted }),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const proj = this.fallbackProjects.find((p) => p.id === projectId);
+        if (!proj) {
+          throw new ApiClientError(`Project ${projectId} not found`, 404, 'NOT_FOUND');
+        }
+        const ms = proj.milestones.find((m) => m.id === milestoneId);
+        if (!ms) {
+          throw new ApiClientError(`Milestone ${milestoneId} not found`, 404, 'NOT_FOUND');
+        }
+        ms.isCompleted = isCompleted;
+        const comp = proj.milestones.filter((m) => m.isCompleted).length;
+        proj.progressPercent = Math.round((comp / proj.milestones.length) * 100);
+        return { ...ms };
+      }
+      throw err;
+    }
+  }
+
+  async deleteProject(id: string): Promise<{ success: boolean }> {
+    try {
+      await this.request<{ success: boolean }>(`/projects/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      return { success: true };
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackProjects.findIndex((p) => p.id === id);
+        if (idx !== -1) {
+          this.fallbackProjects.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  CreateMilestoneRequest,
+  CreateProjectRequest,
+  MilestoneDto,
+  ProjectDetailDto,
+  ProjectHealth,
+  ProjectStatus,
+  ProjectSummaryDto,
+  UpdateProjectRequest,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,

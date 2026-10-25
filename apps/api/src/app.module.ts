@@ -24,6 +24,9 @@ import { OrganizationService } from './modules/organization/organization.service
 import { CustomFieldController } from './modules/custom-fields/custom-field.controller.js';
 import { CustomFieldService } from './modules/custom-fields/custom-field.service.js';
 import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-field.repository.js';
+import { ProjectController } from './modules/projects/project.controller.js';
+import { ProjectService } from './modules/projects/project.service.js';
+import { InMemoryProjectRepository } from './modules/projects/project.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -92,6 +95,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     DocumentsController,
     OrganizationController,
     CustomFieldController,
+    ProjectController,
   ],
   providers: [
     AuthService,
@@ -196,6 +200,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     DocumentsService,
     InMemoryCustomFieldRepository,
     CustomFieldService,
+    InMemoryProjectRepository,
+    ProjectService,
   ],
 })
 export class AppModule implements NestModule {

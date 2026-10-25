@@ -948,5 +948,72 @@ export type ValidateCustomFieldsResponse = {
   errors: Array<{ fieldKey: string; message: string }>;
 };
 
+/* Enterprise Projects & Milestones Contracts */
+
+export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
+export type ProjectHealth = 'ON_TRACK' | 'AT_RISK' | 'OFF_TRACK';
+
+export type MilestoneDto = {
+  id: string;
+  projectId: string;
+  title: string;
+  dueDate: string;
+  isCompleted: boolean;
+  createdAt: string;
+};
+
+export type ProjectSummaryDto = {
+  id: string;
+  organizationId: string;
+  key: string;
+  name: string;
+  description?: string | undefined;
+  status: ProjectStatus;
+  health: ProjectHealth;
+  ownerId: string;
+  ownerName: string;
+  startDate?: string | undefined;
+  targetDate?: string | undefined;
+  progressPercent: number;
+  tasksCount: number;
+  completedTasksCount: number;
+  milestonesCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectDetailDto = ProjectSummaryDto & {
+  milestones: MilestoneDto[];
+  associatedAccountId?: string | undefined;
+  associatedAccountName?: string | undefined;
+};
+
+export type CreateProjectRequest = {
+  key: string;
+  name: string;
+  description?: string | undefined;
+  status?: ProjectStatus | undefined;
+  health?: ProjectHealth | undefined;
+  startDate?: string | undefined;
+  targetDate?: string | undefined;
+  associatedAccountId?: string | undefined;
+};
+
+export type UpdateProjectRequest = {
+  name?: string | undefined;
+  description?: string | undefined;
+  status?: ProjectStatus | undefined;
+  health?: ProjectHealth | undefined;
+  startDate?: string | undefined;
+  targetDate?: string | undefined;
+  ownerId?: string | undefined;
+};
+
+export type CreateMilestoneRequest = {
+  title: string;
+  dueDate: string;
+  isCompleted?: boolean | undefined;
+};
+
 
 

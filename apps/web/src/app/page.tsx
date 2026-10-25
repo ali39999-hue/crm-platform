@@ -37,6 +37,7 @@ import {
   getTaskStatusLabel,
   LoadingSkeleton,
   PriorityBadge,
+  ProjectsView,
   TaskBoard,
   TaskList,
   TaskCalendar,
@@ -77,6 +78,7 @@ export default function WorkspaceApp() {
   const [activeTab, setActiveTab] = useState<
     | 'overview'
     | 'my-work'
+    | 'projects'
     | 'crm'
     | 'support'
     | 'docs'
@@ -436,6 +438,14 @@ export default function WorkspaceApp() {
           </button>
           <button
             type="button"
+            className={`nav-button ${activeTab === 'projects' ? 'active' : ''}`}
+            onClick={() => setActiveTab('projects')}
+            data-testid="nav-projects"
+          >
+            <span>📁</span> پروژه‌ها و اهداف
+          </button>
+          <button
+            type="button"
             className={`nav-button ${activeTab === 'crm' ? 'active' : ''}`}
             onClick={() => setActiveTab('crm')}
             data-testid="nav-crm"
@@ -713,6 +723,13 @@ export default function WorkspaceApp() {
                 onSelectSavedView={setActiveSavedView}
               />
             )}
+          </div>
+        )}
+
+        {/* Projects Tab */}
+        {activeTab === 'projects' && (
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <ProjectsView onNotify={(msg) => showToast(msg)} />
           </div>
         )}
 
