@@ -84,6 +84,8 @@ import { InMemoryBackupRepository } from './modules/operations/backup.repository
 import { BackupService } from './modules/operations/backup.service.js';
 import { InMemoryJobRepository } from './modules/jobs/job.repository.js';
 import { JobWorkerService } from './modules/jobs/job-worker.service.js';
+import { VoipController } from './modules/integrations/voip/voip.controller.js';
+import { VoipService } from './modules/integrations/voip/voip.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -113,8 +115,10 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     MentionController,
     ApiKeyController,
     AuditController,
+    VoipController,
   ],
   providers: [
+    VoipService,
     AuthService,
     TokenService,
     AuthGuard,

@@ -284,6 +284,68 @@ export type UpdateDealDto = UpdateDealRequest;
 
 /* Didar CRM-Inspired: Line Items, Invoicing, Loss Reasons, and Rotting */
 
+export type VoipCallStatus = 'RINGING' | 'ANSWERED' | 'MISSED' | 'ENDED';
+export type VoipCallDirection = 'INBOUND' | 'OUTBOUND';
+
+export type VoipCallEventDto = {
+  callId: string;
+  callerNumber: string;
+  calleeNumber: string;
+  direction: VoipCallDirection;
+  status: VoipCallStatus;
+  durationSeconds?: number | undefined;
+  recordingUrl?: string | undefined;
+  timestamp: string;
+};
+
+export type VoipCallerProfileDto = {
+  callId: string;
+  callerNumber: string;
+  matchedContact?: { id: string; name: string; email?: string | undefined } | null | undefined;
+  matchedAccount?: { id: string; name: string } | null | undefined;
+  recentDeals?: Array<{ id: string; name: string; amountMinor: number; stage: string }> | undefined;
+  recentTickets?: Array<{ id: string; subject: string; status: string }> | undefined;
+  isExistingCustomer: boolean;
+};
+
+export type ClickToCallRequest = {
+  phoneNumber: string;
+  extension: string;
+  contactId?: string | undefined;
+};
+
+export type CheckStatus = 'PENDING' | 'CLEARED' | 'BOUNCED';
+
+export type CheckItemDto = {
+  id: string;
+  checkNumber: string;
+  sayadiNumber?: string | undefined;
+  bankName: string;
+  branchName?: string | undefined;
+  amountMinor: number;
+  dueDate: string;
+  status: CheckStatus;
+  drawerName: string;
+  reminderSent: boolean;
+};
+
+export type InstallmentPlanDto = {
+  id: string;
+  dealId: string;
+  totalAmountMinor: number;
+  downPaymentMinor: number;
+  installmentsCount: number;
+  checks: CheckItemDto[];
+  createdAt: string;
+};
+
+export type CreateInstallmentPlanRequest = {
+  dealId: string;
+  downPaymentMinor: number;
+  installmentsCount: number;
+  checks: Array<Omit<CheckItemDto, 'id' | 'reminderSent'>>;
+};
+
 export type DealLossReasonType =
   | 'PRICE_TOO_HIGH'
   | 'COMPETITOR_WON'

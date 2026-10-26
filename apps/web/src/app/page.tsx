@@ -49,6 +49,7 @@ import {
   TicketStatusBadge,
   TimeTrackingView,
   WorkflowAutomationView,
+  VoipCallerIdPopup,
 } from '../components';
 
 type AuditItem = {
@@ -1272,6 +1273,21 @@ export default function WorkspaceApp() {
           showToast('بخش مشتریان باز شد؛ می‌توانید سرنخ یا حساب جدید ثبت نمایید');
         }}
         onSelectResult={handleSelectSearchResult}
+      />
+
+      {/* VoIP PBX Caller-ID Popup (Didar Pattern) */}
+      <VoipCallerIdPopup
+        onOpenCustomerTimeline={(accountId) => {
+          const acc = accounts.find((a) => a.id === accountId);
+          if (acc) {
+            handleOpenCustomerDrawer(acc);
+          }
+        }}
+        onOpenDeal={(dealId) => {
+          setActiveTab('crm');
+          setCrmSubTab('pipeline');
+        }}
+        onNotify={showToast}
       />
 
       {/* Toast Notification */}

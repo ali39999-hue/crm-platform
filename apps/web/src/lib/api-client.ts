@@ -84,6 +84,9 @@ import type {
   ProformaInvoiceDto,
   SalesLossAnalyticsDto,
   SalesTargetDto,
+  ClickToCallRequest,
+  VoipCallEventDto,
+  VoipCallerProfileDto,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,
@@ -3623,6 +3626,80 @@ export class ApiClient {
           achievementPercent: 75,
           year: 2026,
           month: 10,
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar VoIP Telephony & Caller-ID Popup ---------------- */
+
+  async getActiveVoipCall(extension?: string): Promise<VoipCallerProfileDto | null> {
+    try {
+      const path = extension
+        ? `/integrations/voip/active-call?extension=${encodeURIComponent(extension)}`
+        : '/integrations/voip/active-call';
+      return await this.request<VoipCallerProfileDto | null>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async sendVoipCallEvent(dto: VoipCallEventDto): Promise<VoipCallerProfileDto> {
+    try {
+      return await this.request<VoipCallerProfileDto>('/integrations/voip/call-event', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          callId: dto.callId,
+          callerNumber: dto.callerNumber,
+          matchedContact: {
+            id: 'cnt-1',
+            name: 'محمد رضایی',
+            email: 'm.rezaei@foolad-arya.ir',
+          },
+          matchedAccount: {
+            id: '50000000-0000-0000-0000-000000000002',
+            name: 'فولاد گستر آریا',
+          },
+          recentDeals: [
+            {
+              id: 'deal-1',
+              name: 'قرارداد توسعه نرم‌افزار سالانه',
+              amountMinor: 350000000,
+              stage: 'PROPOSAL',
+            },
+          ],
+          isExistingCustomer: true,
+        };
+      }
+      throw err;
+    }
+  }
+
+  async clickToCall(
+    dto: ClickToCallRequest,
+  ): Promise<{ success: boolean; message: string; callId: string }> {
+    try {
+      return await this.request<{ success: boolean; message: string; callId: string }>(
+        '/integrations/voip/click-to-call',
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          success: true,
+          message: `تماس با شماره ${dto.phoneNumber} از طریق داخلی ${dto.extension} برقرار شد`,
+          callId: `call-sim-${Date.now()}`,
         };
       }
       throw err;
