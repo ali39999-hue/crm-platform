@@ -24,6 +24,7 @@ import { apiClient } from '../lib/api-client';
 import {
   AdminSettingsView,
   AnalyticsDashboardView,
+  AuditTrailView,
   CommandPalette,
   CreateTaskModal,
   type CreateTaskFormData,
@@ -37,6 +38,7 @@ import {
   getTaskStatusLabel,
   LoadingSkeleton,
   MentionsInboxView,
+  OverviewDashboardView,
   PriorityBadge,
   ProjectsView,
   SupportMacrosView,
@@ -664,55 +666,12 @@ export default function WorkspaceApp() {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div>
-            {isLoading ? (
-              <LoadingSkeleton variant="card" count={4} />
-            ) : (
-              <div className="summary-grid">
-                <article className="summary-card">
-                  <p>وظایف فعال من</p>
-                  <strong>{tasks.filter((t) => t.status !== 'DONE').length}</strong>
-                  <small>نیازمند اقدام و پیگیری</small>
-                </article>
-                <article className="summary-card">
-                  <p>در حال انجام</p>
-                  <strong style={{ color: 'var(--accent)' }}>
-                    {tasks.filter((t) => t.status === 'IN_PROGRESS').length}
-                  </strong>
-                  <small>کارهای جاری تیم</small>
-                </article>
-                <article className="summary-card">
-                  <p>تکمیل‌شده</p>
-                  <strong style={{ color: 'var(--success)' }}>
-                    {tasks.filter((t) => t.status === 'DONE').length}
-                  </strong>
-                  <small>موفق در چرخه کاری</small>
-                </article>
-                <article className="summary-card">
-                  <p>مشتریان سازمانی</p>
-                  <strong>{accounts.length}</strong>
-                  <small>{deals.length} فرصت فروش فعال</small>
-                </article>
-              </div>
-            )}
-
-            <div
-              style={{
-                background: 'var(--paper)',
-                border: '1px solid var(--line)',
-                borderRadius: '12px',
-                padding: '24px',
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px' }}>معماری و امنیت سیستم</h3>
-              <p className="muted" style={{ lineHeight: '1.8' }}>
-                پلتفرم از معماری <strong>Modular Monolith</strong> با جداسازی دقیق دامنه، لایه
-                کاربرد و زیرساخت استفاده می‌کند. قوانین مجوزدهی و تفکیک سازمانی (Multi-tenant Scope)
-                به طور کامل در سطح API و سرویس‌ها اعمال شده و از دستکاری غیرمجاز داده‌ها و
-                آسیب‌پذیری‌های IDOR ممانعت به عمل می‌آورد.
-              </p>
-            </div>
-          </div>
+          <OverviewDashboardView
+            tasks={tasks}
+            accounts={accounts}
+            deals={deals}
+            isLoading={isLoading}
+          />
         )}
 
         {/* My Work Tab */}
@@ -1259,44 +1218,7 @@ export default function WorkspaceApp() {
 
         {/* Audit Tab */}
         {activeTab === 'audit' && (
-          <div
-            style={{
-              background: 'var(--paper)',
-              border: '1px solid var(--line)',
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
-            <h3 style={{ margin: '0 0 8px' }}>تاریخچه ممیزی امنیتی (Audit Trail)</h3>
-            <p className="muted" style={{ marginBottom: '20px' }}>
-              ثبت غیرقابل تغییر (Immutable) تمامی تغییرات حساس و گذارهای حالت همراه با Actor، Action
-              و شناسه رهگیری درخواست.
-            </p>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>اقدام</th>
-                  <th>کاربر مجری</th>
-                  <th>موجودیت</th>
-                  <th>توضیحات</th>
-                  <th>زمان</th>
-                </tr>
-              </thead>
-              <tbody>
-                {audits.map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <span className="task-key">{a.action}</span>
-                    </td>
-                    <td>{a.actor}</td>
-                    <td>{a.entity}</td>
-                    <td>{a.details}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: '12px' }}>{a.time}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AuditTrailView audits={audits} isLoading={isLoading} />
         )}
 
         {/* Organization Settings Tab */}

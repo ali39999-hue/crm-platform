@@ -25,3 +25,5 @@ export * from './SupportMacrosView';
 export * from './MentionsInboxView';
 export * from './IntegrationsView';
 export * from './TeamsManagerView';
+export * from './OverviewDashboardView';
+export * from './AuditTrailView';
