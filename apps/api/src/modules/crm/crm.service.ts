@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
@@ -15,7 +16,7 @@ import {
   AccountEntity,
   ContactEntity,
   DealEntity,
-  InMemoryCrmRepository,
+  ICrmRepository,
   LeadEntity,
 } from './crm.repository.js';
 import type { CreateAccountDto } from './dto/create-account.dto.js';
@@ -41,7 +42,7 @@ import type {
 @Injectable()
 export class CrmService {
   constructor(
-    private readonly crmRepo: InMemoryCrmRepository,
+    @Inject('CRM_REPOSITORY') private readonly crmRepo: ICrmRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
     @Optional() private readonly pipelineStageService?: PipelineStageService,

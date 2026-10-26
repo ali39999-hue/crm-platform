@@ -10,7 +10,7 @@ import type {
 } from '@crm/contracts';
 import { isSlaBreached } from '@crm/domain';
 import type { ITaskRepository } from '../tasks/task.repository.js';
-import { InMemoryCrmRepository } from '../crm/crm.repository.js';
+import type { ICrmRepository } from '../crm/crm.repository.js';
 import { InMemorySupportRepository } from '../support/support.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 
@@ -18,7 +18,7 @@ import { AuditService } from '../audit/audit.service.js';
 export class ReportingService {
   constructor(
     @Inject('TASK_REPOSITORY') private readonly taskRepo: ITaskRepository,
-    private readonly crmRepo: InMemoryCrmRepository,
+    @Inject('CRM_REPOSITORY') private readonly crmRepo: ICrmRepository,
     private readonly supportRepo: InMemorySupportRepository,
     private readonly auditService: AuditService,
   ) {}

@@ -59,8 +59,38 @@ export type DealEntity = {
   updatedAt: string;
 };
 
+export interface ICrmRepository {
+  /* Accounts */
+  findAccounts(organizationId: string): Promise<AccountEntity[]>;
+  findAccountById(organizationId: string, id: string): Promise<AccountEntity | null>;
+  createAccount(data: Omit<AccountEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<AccountEntity>;
+  updateAccount(account: AccountEntity): Promise<AccountEntity>;
+  deleteAccount(organizationId: string, id: string): Promise<boolean>;
+
+  /* Contacts */
+  findContacts(organizationId: string, accountId?: string): Promise<ContactEntity[]>;
+  findContactById(organizationId: string, id: string): Promise<ContactEntity | null>;
+  createContact(data: Omit<ContactEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContactEntity>;
+  updateContact(contact: ContactEntity): Promise<ContactEntity>;
+  deleteContact(organizationId: string, id: string): Promise<boolean>;
+
+  /* Leads */
+  findLeads(organizationId: string): Promise<LeadEntity[]>;
+  findLeadById(organizationId: string, id: string): Promise<LeadEntity | null>;
+  createLead(data: Omit<LeadEntity, 'id' | 'createdAt' | 'updatedAt' | 'convertedContactId' | 'convertedDealId'>): Promise<LeadEntity>;
+  updateLead(lead: LeadEntity): Promise<LeadEntity>;
+  deleteLead(organizationId: string, id: string): Promise<boolean>;
+
+  /* Deals */
+  findDeals(organizationId: string, accountId?: string): Promise<DealEntity[]>;
+  findDealById(organizationId: string, id: string): Promise<DealEntity | null>;
+  createDeal(data: Omit<DealEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<DealEntity>;
+  updateDeal(deal: DealEntity): Promise<DealEntity>;
+  deleteDeal(organizationId: string, id: string): Promise<boolean>;
+}
+
 @Injectable()
-export class InMemoryCrmRepository {
+export class InMemoryCrmRepository implements ICrmRepository {
   private accounts: Map<string, AccountEntity> = new Map();
   private contacts: Map<string, ContactEntity> = new Map();
   private leads: Map<string, LeadEntity> = new Map();

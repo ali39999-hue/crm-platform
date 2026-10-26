@@ -52,6 +52,7 @@ import { InMemoryTaskRepository } from './modules/tasks/task.repository.js';
 import { PrismaTaskRepository } from './modules/tasks/prisma-task.repository.js';
 import { TasksService } from './modules/tasks/tasks.service.js';
 import { InMemoryCrmRepository } from './modules/crm/crm.repository.js';
+import { PrismaCrmRepository } from './modules/crm/prisma-crm.repository.js';
 import { PipelineStageRepository } from './modules/crm/pipeline/pipeline-stage.repository.js';
 import { PipelineStageService } from './modules/crm/pipeline/pipeline-stage.service.js';
 import { SavedViewRepository } from './modules/crm/saved-views/saved-view.repository.js';
@@ -127,7 +128,12 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     InMemoryTaskRepository,
     PrismaTaskRepository,
     TasksService,
+    {
+      provide: 'CRM_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaCrmRepository : InMemoryCrmRepository,
+    },
     InMemoryCrmRepository,
+    PrismaCrmRepository,
     PipelineStageRepository,
     PipelineStageService,
     SavedViewRepository,
@@ -184,7 +190,9 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     InMemoryTaskRepository,
     PrismaTaskRepository,
     TasksService,
+    'CRM_REPOSITORY',
     InMemoryCrmRepository,
+    PrismaCrmRepository,
     PipelineStageRepository,
     PipelineStageService,
     SavedViewRepository,
