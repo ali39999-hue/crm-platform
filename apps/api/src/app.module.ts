@@ -88,6 +88,10 @@ import { VoipController } from './modules/integrations/voip/voip.controller.js';
 import { VoipService } from './modules/integrations/voip/voip.service.js';
 import { InstallmentsController } from './modules/crm/installments/installments.controller.js';
 import { InstallmentsService } from './modules/crm/installments/installments.service.js';
+import { CardsPipelineController } from './modules/crm/cards/cards-pipeline.controller.js';
+import { CardsPipelineService } from './modules/crm/cards/cards-pipeline.service.js';
+import { WebFormController } from './modules/crm/forms/web-form.controller.js';
+import { WebFormService } from './modules/crm/forms/web-form.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -119,10 +123,14 @@ import { InstallmentsService } from './modules/crm/installments/installments.ser
     AuditController,
     VoipController,
     InstallmentsController,
+    CardsPipelineController,
+    WebFormController,
   ],
   providers: [
     VoipService,
     InstallmentsService,
+    CardsPipelineService,
+    WebFormService,
     AuthService,
     TokenService,
     AuthGuard,

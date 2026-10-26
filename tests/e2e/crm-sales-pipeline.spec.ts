@@ -145,4 +145,32 @@ test.describe('CRM Deals Pipeline Kanban & Duplicate Resolution P1 Journey (R-03
     const voipTrigger = page.locator('[data-testid="simulate-voip-call-btn"]');
     await expect(voipTrigger).toBeVisible();
   });
+
+  test('should navigate to After-Sales Cards Pipeline and Web Forms Builder', async ({ page }) => {
+    await page.locator('[data-testid="nav-crm"]').click();
+
+    // 1. Switch to Cards Pipeline tab
+    const cardsTab = page.locator('[data-testid="crm-tab-cards"]');
+    await expect(cardsTab).toBeVisible();
+    await cardsTab.click();
+
+    const cardsView = page.locator('[data-testid="cards-pipeline-view"]');
+    await expect(cardsView).toBeVisible();
+    await expect(cardsView).toContainText('کاریز کارت‌ها و فرآیندهای پس از فروش');
+
+    // Verify after-sales stage columns exist
+    await expect(page.locator('[data-testid="card-stage-column-DOCUMENTS_RECEIVED"]')).toBeVisible();
+    await expect(page.locator('[data-testid="card-stage-column-TECHNICAL_SETUP"]')).toBeVisible();
+    await expect(page.locator('[data-testid="card-stage-column-USER_TRAINING"]')).toBeVisible();
+
+    // 2. Switch to Web Forms Builder tab
+    const formsTab = page.locator('[data-testid="crm-tab-forms"]');
+    await expect(formsTab).toBeVisible();
+    await formsTab.click();
+
+    const formsView = page.locator('[data-testid="web-form-builder-view"]');
+    await expect(formsView).toBeVisible();
+    await expect(formsView).toContainText('فرم‌ساز آنلاین و جذب مستقیم سرنخ');
+    await expect(page.locator('[data-testid="create-web-form-btn"]')).toBeVisible();
+  });
 });

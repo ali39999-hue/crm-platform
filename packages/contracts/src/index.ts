@@ -346,6 +346,116 @@ export type CreateInstallmentPlanRequest = {
   checks: Array<Omit<CheckItemDto, 'id' | 'reminderSent'>>;
 };
 
+/* Didar CRM-Inspired: After-Sales Cards Pipeline & Project Handoff */
+
+export type ProjectCardStage =
+  | 'DOCUMENTS_RECEIVED'
+  | 'TECHNICAL_SETUP'
+  | 'USER_TRAINING'
+  | 'FINAL_HANDOFF'
+  | 'SUPPORT_ACTIVE';
+
+export type ProjectCardDto = {
+  id: string;
+  organizationId: string;
+  dealId?: string | null | undefined;
+  accountId?: string | null | undefined;
+  accountName?: string | undefined;
+  title: string;
+  stage: ProjectCardStage;
+  assignedUserIds: string[];
+  dueDate?: string | null | undefined;
+  notes?: string | null | undefined;
+  tags?: string[] | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateProjectCardRequest = {
+  dealId?: string | undefined;
+  accountId?: string | undefined;
+  title: string;
+  stage?: ProjectCardStage | undefined;
+  assignedUserIds?: string[] | undefined;
+  dueDate?: string | undefined;
+  notes?: string | undefined;
+  tags?: string[] | undefined;
+};
+
+export type UpdateProjectCardRequest = {
+  title?: string | undefined;
+  stage?: ProjectCardStage | undefined;
+  assignedUserIds?: string[] | undefined;
+  dueDate?: string | null | undefined;
+  notes?: string | null | undefined;
+  tags?: string[] | undefined;
+};
+
+export type HandoffDealToProjectRequest = {
+  dealId: string;
+  projectTitle?: string | undefined;
+  assignedUserIds?: string[] | undefined;
+  dueDate?: string | undefined;
+};
+
+/* Didar CRM-Inspired: Online Web Form Builder & Lead Capture */
+
+export type WebFormFieldType = 'TEXT' | 'PHONE' | 'EMAIL' | 'SELECT' | 'TEXTAREA';
+
+export type WebFormFieldDto = {
+  id: string;
+  label: string;
+  name: string;
+  type: WebFormFieldType;
+  required: boolean;
+  placeholder?: string | undefined;
+  options?: string[] | undefined;
+};
+
+export type WebFormDto = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  title: string;
+  description?: string | undefined;
+  successMessage: string;
+  submitButtonText: string;
+  fields: WebFormFieldDto[];
+  targetPipelineStage?: string | undefined;
+  assignedUserId?: string | undefined;
+  leadSource: string;
+  submissionsCount: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWebFormRequest = {
+  name: string;
+  title: string;
+  description?: string | undefined;
+  successMessage?: string | undefined;
+  submitButtonText?: string | undefined;
+  fields: WebFormFieldDto[];
+  targetPipelineStage?: string | undefined;
+  assignedUserId?: string | undefined;
+  leadSource?: string | undefined;
+};
+
+export type SubmitWebFormRequest = {
+  formId: string;
+  formData: Record<string, any>;
+  referrerUrl?: string | undefined;
+  idempotencyKey?: string | undefined;
+};
+
+export type SubmitWebFormResponse = {
+  success: boolean;
+  message: string;
+  leadId: string;
+};
+
 export type DealLossReasonType =
   | 'PRICE_TOO_HIGH'
   | 'COMPETITOR_WON'

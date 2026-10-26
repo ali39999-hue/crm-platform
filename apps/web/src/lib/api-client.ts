@@ -91,6 +91,15 @@ import type {
   CheckStatus,
   CreateInstallmentPlanRequest,
   InstallmentPlanDto,
+  CreateProjectCardRequest,
+  HandoffDealToProjectRequest,
+  ProjectCardDto,
+  ProjectCardStage,
+  UpdateProjectCardRequest,
+  CreateWebFormRequest,
+  SubmitWebFormRequest,
+  SubmitWebFormResponse,
+  WebFormDto,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,
@@ -3850,6 +3859,243 @@ export class ApiClient {
             { channel: 'REFERRAL', leadsCount: 28, conversionRate: 75 },
             { channel: 'EXHIBITION', leadsCount: 15, conversionRate: 33 },
           ],
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar After-Sales Cards Pipeline ---------------- */
+
+  async getProjectCards(stage?: ProjectCardStage): Promise<ProjectCardDto[]> {
+    try {
+      const path = stage
+        ? `/crm/cards?stage=${encodeURIComponent(stage)}`
+        : '/crm/cards';
+      return await this.request<ProjectCardDto[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [
+          {
+            id: 'card-1',
+            organizationId: DEFAULT_ORG_ID,
+            dealId: 'deal-1',
+            accountName: 'فولاد گستر آریا',
+            title: 'استقرار و پیکربندی سامانه سازمانی فولاد گستر',
+            stage: 'DOCUMENTS_RECEIVED',
+            assignedUserIds: [DEFAULT_EMPLOYEE_ID],
+            dueDate: new Date(Date.now() + 86400000 * 14).toISOString(),
+            tags: ['استقرار', 'VIP'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'card-2',
+            organizationId: DEFAULT_ORG_ID,
+            dealId: 'deal-2',
+            accountName: 'پتروشیمی سپهر',
+            title: 'آموزش پرسنل فروش و اتصال سانترال VoIP پتروشیمی',
+            stage: 'USER_TRAINING',
+            assignedUserIds: [DEFAULT_EMPLOYEE_ID],
+            dueDate: new Date(Date.now() + 86400000 * 7).toISOString(),
+            tags: ['آموزش', 'فنی'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+      }
+      throw err;
+    }
+  }
+
+  async createProjectCard(dto: CreateProjectCardRequest): Promise<ProjectCardDto> {
+    try {
+      return await this.request<ProjectCardDto>('/crm/cards', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `card-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          dealId: dto.dealId || null,
+          title: dto.title.trim(),
+          stage: dto.stage || 'DOCUMENTS_RECEIVED',
+          assignedUserIds: dto.assignedUserIds || [DEFAULT_EMPLOYEE_ID],
+          dueDate: dto.dueDate || null,
+          notes: dto.notes || null,
+          tags: dto.tags || [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async updateProjectCard(
+    cardId: string,
+    dto: UpdateProjectCardRequest,
+  ): Promise<ProjectCardDto> {
+    try {
+      return await this.request<ProjectCardDto>(`/crm/cards/${encodeURIComponent(cardId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: cardId,
+          organizationId: DEFAULT_ORG_ID,
+          title: dto.title || 'پروژه جاری',
+          stage: dto.stage || 'DOCUMENTS_RECEIVED',
+          assignedUserIds: dto.assignedUserIds || [DEFAULT_EMPLOYEE_ID],
+          dueDate: dto.dueDate || null,
+          notes: dto.notes || null,
+          tags: dto.tags || [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async handoffWonDealToProject(
+    dealId: string,
+    dto: HandoffDealToProjectRequest,
+  ): Promise<ProjectCardDto> {
+    try {
+      return await this.request<ProjectCardDto>(
+        `/crm/deals/${encodeURIComponent(dealId)}/handoff-to-project`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `card-handoff-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          dealId,
+          title: dto.projectTitle || 'پروژه پس از فروش',
+          stage: 'DOCUMENTS_RECEIVED',
+          assignedUserIds: dto.assignedUserIds || [DEFAULT_EMPLOYEE_ID],
+          dueDate: dto.dueDate || new Date(Date.now() + 86400000 * 30).toISOString(),
+          tags: ['خدمات پس از فروش'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar Online Web Form Builder ---------------- */
+
+  async getWebForms(): Promise<WebFormDto[]> {
+    try {
+      return await this.request<WebFormDto[]>('/crm/forms');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [
+          {
+            id: 'form-1',
+            organizationId: DEFAULT_ORG_ID,
+            name: 'فرم درخواست مشاوره و دمو',
+            slug: 'request-demo',
+            title: 'درخواست دمو و مشاوره رایگان پلتفرم CRM',
+            description: 'اطلاعات خود را وارد نمایید تا کارشناسان ما با شما تماس بگیرند.',
+            successMessage: 'درخواست شما ثبت شد. به زودی تماس خواهیم گرفت.',
+            submitButtonText: 'ارسال درخواست مشاوره',
+            leadSource: 'WEBSITE',
+            submissionsCount: 14,
+            active: true,
+            fields: [
+              {
+                id: 'f-1',
+                name: 'displayName',
+                label: 'نام و نام خانوادگی',
+                type: 'TEXT',
+                required: true,
+              },
+              {
+                id: 'f-2',
+                name: 'phone',
+                label: 'شماره تلفن همراه',
+                type: 'PHONE',
+                required: true,
+              },
+              {
+                id: 'f-3',
+                name: 'email',
+                label: 'پست الکترونیکی',
+                type: 'EMAIL',
+                required: false,
+              },
+            ],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+      }
+      throw err;
+    }
+  }
+
+  async createWebForm(dto: CreateWebFormRequest): Promise<WebFormDto> {
+    try {
+      return await this.request<WebFormDto>('/crm/forms', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `form-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          name: dto.name.trim(),
+          slug: `${dto.name.toLowerCase().replace(/[^\w؀-ۿ]+/g, '-')}`,
+          title: dto.title.trim(),
+          description: dto.description,
+          successMessage: dto.successMessage || 'پیام با موفقیت ارسال شد.',
+          submitButtonText: dto.submitButtonText || 'ارسال اطلاعات',
+          fields: dto.fields,
+          leadSource: dto.leadSource || 'WEBSITE',
+          submissionsCount: 0,
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getPublicWebFormBySlug(slug: string): Promise<WebFormDto> {
+    return this.request<WebFormDto>(`/crm/public/forms/${encodeURIComponent(slug)}`);
+  }
+
+  async submitPublicWebForm(
+    formId: string,
+    dto: SubmitWebFormRequest,
+  ): Promise<SubmitWebFormResponse> {
+    try {
+      return await this.request<SubmitWebFormResponse>(
+        `/crm/public/forms/${encodeURIComponent(formId)}/submit`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          success: true,
+          message: 'درخواست شما با موفقیت ثبت گردید.',
+          leadId: `lead-web-${Date.now()}`,
         };
       }
       throw err;

@@ -30,3 +30,5 @@ export * from './AuditTrailView';
 export * from './VoipCallerIdPopup';
 export * from './InstallmentPlanModal';
 export * from './ConversionSpeedModal';
+export * from './CardsPipelineView';
+export * from './WebFormBuilderView';

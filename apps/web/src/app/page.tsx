@@ -50,6 +50,8 @@ import {
   TimeTrackingView,
   WorkflowAutomationView,
   VoipCallerIdPopup,
+  CardsPipelineView,
+  WebFormBuilderView,
 } from '../components';
 
 type AuditItem = {
@@ -96,7 +98,9 @@ export default function WorkspaceApp() {
     | 'settings'
   >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
-  const [crmSubTab, setCrmSubTab] = useState<'accounts' | 'pipeline' | 'duplicates'>('accounts');
+  const [crmSubTab, setCrmSubTab] = useState<
+    'accounts' | 'pipeline' | 'duplicates' | 'cards' | 'forms'
+  >('accounts');
   const [supportSubTab, setSupportSubTab] = useState<'tickets' | 'macros'>('tickets');
   const [notifSubTab, setNotifSubTab] = useState<'notifications' | 'mentions'>('notifications');
 
@@ -814,6 +818,40 @@ export default function WorkspaceApp() {
                 >
                   🔍 رکوردهای تکراری
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setCrmSubTab('cards')}
+                  data-testid="crm-tab-cards"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: crmSubTab === 'cards' ? 'var(--paper)' : 'transparent',
+                    fontWeight: crmSubTab === 'cards' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🗂️ کاریز کارت‌ها
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCrmSubTab('forms')}
+                  data-testid="crm-tab-forms"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: crmSubTab === 'forms' ? 'var(--paper)' : 'transparent',
+                    fontWeight: crmSubTab === 'forms' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📝 فرم‌ساز آنلاین
+                </button>
               </div>
             </div>
 
@@ -914,6 +952,16 @@ export default function WorkspaceApp() {
             {/* Sub-tab 3: Duplicate Records Review */}
             {crmSubTab === 'duplicates' && (
               <DuplicateReviewView onNotify={(msg) => showToast(msg)} />
+            )}
+
+            {/* Sub-tab 4: After-Sales Cards Pipeline */}
+            {crmSubTab === 'cards' && (
+              <CardsPipelineView onNotify={(msg) => showToast(msg)} />
+            )}
+
+            {/* Sub-tab 5: Online Web Form Builder */}
+            {crmSubTab === 'forms' && (
+              <WebFormBuilderView onNotify={(msg) => showToast(msg)} />
             )}
           </div>
         )}
