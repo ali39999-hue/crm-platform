@@ -239,6 +239,14 @@ export type DealDto = {
   probability?: number | null;
   targetCloseAt?: string | null;
   ownerId?: string | null;
+  products?: DealProductItemDto[] | undefined;
+  lossReason?: string | null | undefined;
+  lossDescription?: string | null | undefined;
+  lostAt?: string | null | undefined;
+  nextActionTitle?: string | null | undefined;
+  nextActionDueAt?: string | null | undefined;
+  isRotting?: boolean | undefined;
+  daysInCurrentStage?: number | undefined;
   createdAt: string;
   updatedAt: string;
 };
@@ -252,6 +260,9 @@ export type CreateDealRequest = {
   probability?: number;
   targetCloseAt?: string;
   ownerId?: string;
+  nextActionTitle?: string;
+  nextActionDueAt?: string;
+  products?: DealProductItemDto[];
 };
 
 export type UpdateDealRequest = {
@@ -263,8 +274,100 @@ export type UpdateDealRequest = {
   probability?: number;
   targetCloseAt?: string;
   ownerId?: string;
+  lossReason?: string | null;
+  lossDescription?: string | null;
+  nextActionTitle?: string | null;
+  nextActionDueAt?: string | null;
+  products?: DealProductItemDto[];
 };
 export type UpdateDealDto = UpdateDealRequest;
+
+/* Didar CRM-Inspired: Line Items, Invoicing, Loss Reasons, and Rotting */
+
+export type DealLossReasonType =
+  | 'PRICE_TOO_HIGH'
+  | 'COMPETITOR_WON'
+  | 'FEATURE_GAP'
+  | 'BUDGET_CANCELED'
+  | 'CLIENT_UNRESPONSIVE'
+  | 'OTHER';
+
+export type MarkDealLostRequest = {
+  lossReason: DealLossReasonType;
+  lossDescription?: string | undefined;
+};
+
+export type ProductCatalogItemDto = {
+  id: string;
+  organizationId: string;
+  sku: string;
+  name: string;
+  unit: string;
+  unitPriceMinor: number;
+  currency: string;
+  taxRatePercent: number; // e.g. 10% VAT in Iran
+  active: boolean;
+};
+
+export type DealProductItemDto = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPriceMinor: number;
+  discountPercent?: number | undefined;
+  taxRatePercent?: number | undefined;
+  totalPriceMinor: number;
+};
+
+export type ProformaInvoiceDto = {
+  id: string;
+  organizationId: string;
+  dealId: string;
+  invoiceNumber: string;
+  accountName: string;
+  subtotalMinor: number;
+  discountTotalMinor: number;
+  taxTotalMinor: number;
+  finalTotalMinor: number;
+  currency: string;
+  issueDate: string;
+  dueDate: string;
+  items: DealProductItemDto[];
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
+  createdAt: string;
+};
+
+export type CreateInvoiceRequest = {
+  dealId: string;
+  dueDate?: string | undefined;
+  items: DealProductItemDto[];
+  currency?: string | undefined;
+};
+
+export type SalesTargetDto = {
+  id: string;
+  organizationId: string;
+  userId: string;
+  userName: string;
+  period: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+  targetAmountMinor: number;
+  achievedAmountMinor: number;
+  achievementPercent: number;
+  year: number;
+  month?: number | undefined;
+};
+
+export type SalesLossAnalyticsDto = {
+  totalLostDealsCount: number;
+  totalLostAmountMinor: number;
+  breakdownByReason: Array<{
+    reason: DealLossReasonType;
+    label: string;
+    count: number;
+    amountMinor: number;
+    percentage: number;
+  }>;
+};
 
 export type PipelineStageDto = {
   id: string;

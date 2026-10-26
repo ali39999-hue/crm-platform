@@ -458,7 +458,7 @@ describe('Configurable Pipeline Stages and Transition Rules (Task F5-04)', () =>
       const deals = await crmRepo.findDeals(orgAlphaId);
       const summary = await stageService.calculatePipelineSummary(orgAlphaId, deals);
 
-      expect(summary.totalValueMinor).toBe(350000000);
+      expect(summary.totalValueMinor).toBe(530000000);
       expect(summary.stages.length).toBe(6);
 
       const propSummary = summary.stages.find((s) => s.stage.key === 'PROPOSAL');

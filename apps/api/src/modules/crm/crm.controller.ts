@@ -21,8 +21,19 @@ import { CreateLeadDto } from './dto/create-lead.dto.js';
 import { ConvertLeadDto } from './dto/convert-lead.dto.js';
 import { CreateDealDto } from './dto/create-deal.dto.js';
 import { UpdateDealDto } from './dto/update-deal.dto.js';
+import { MarkDealLostDto } from './dto/mark-deal-lost.dto.js';
+import { ScheduleNextActionDto } from './dto/schedule-next-action.dto.js';
+import { CreateProductDto } from './dto/create-product.dto.js';
+import { CreateInvoiceDto } from './dto/create-invoice.dto.js';
 import type { Request } from 'express';
-import type { DuplicateCandidateDto, MergeRecordsRequest } from '@crm/contracts';
+import type {
+  DuplicateCandidateDto,
+  MergeRecordsRequest,
+  ProductCatalogItemDto,
+  ProformaInvoiceDto,
+  SalesLossAnalyticsDto,
+  SalesTargetDto,
+} from '@crm/contracts';
 
 @Controller('crm')
 @UseGuards(AuthGuard, PermissionsGuard)
@@ -174,6 +185,110 @@ export class CrmController {
       dto,
       requestId,
     );
+  }
+
+  @Post('deals/:id/lost')
+  @RequirePermission('edit_crm')
+  async markDealLost(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: MarkDealLostDto,
+    @Req() req: Request,
+  ) {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.markDealLost(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      dto,
+      requestId,
+    );
+  }
+
+  @Post('deals/:id/next-action')
+  @RequirePermission('edit_crm')
+  async scheduleNextAction(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: ScheduleNextActionDto,
+    @Req() req: Request,
+  ) {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.scheduleNextAction(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      dto,
+      requestId,
+    );
+  }
+
+  /* Products & Services Catalog */
+  @Get('products')
+  @RequirePermission('view_crm')
+  async getProducts(@CurrentUser() user: UserContext): Promise<ProductCatalogItemDto[]> {
+    return this.crmService.getProducts(user.activeOrganization.id);
+  }
+
+  @Post('products')
+  @RequirePermission('edit_crm')
+  async createProduct(
+    @CurrentUser() user: UserContext,
+    @Body() dto: CreateProductDto,
+    @Req() req: Request,
+  ): Promise<ProductCatalogItemDto> {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.createProduct(
+      user.activeOrganization.id,
+      user.id,
+      dto,
+      requestId,
+    );
+  }
+
+  /* Proforma Invoicing & Line Items */
+  @Get('deals/:id/invoices')
+  @RequirePermission('view_crm')
+  async getInvoices(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ): Promise<ProformaInvoiceDto[]> {
+    return this.crmService.getInvoices(user.activeOrganization.id, id);
+  }
+
+  @Post('deals/:id/invoices')
+  @RequirePermission('edit_crm')
+  async createInvoice(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: CreateInvoiceDto,
+    @Req() req: Request,
+  ): Promise<ProformaInvoiceDto> {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    dto.dealId = id;
+    return this.crmService.createInvoice(
+      user.activeOrganization.id,
+      user.id,
+      dto,
+      requestId,
+    );
+  }
+
+  /* Sales Failure Analytics & Target Quota */
+  @Get('analytics/loss-reasons')
+  @RequirePermission('view_crm')
+  async getSalesLossAnalytics(@CurrentUser() user: UserContext): Promise<SalesLossAnalyticsDto> {
+    return this.crmService.getSalesLossAnalytics(user.activeOrganization.id);
+  }
+
+  @Get('analytics/sales-target')
+  @RequirePermission('view_crm')
+  async getSalesTarget(@CurrentUser() user: UserContext): Promise<SalesTargetDto> {
+    return this.crmService.getSalesTarget(user.activeOrganization.id, user.id);
   }
 
   /* Duplicate Resolution & Merging */

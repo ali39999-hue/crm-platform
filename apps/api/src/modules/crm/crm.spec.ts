@@ -234,4 +234,118 @@ describe('CRM Module, Deduplication, and Idempotent Conversion', () => {
       expect(audit).toBeDefined();
     });
   });
+
+  describe('7. Didar CRM Paradigms: Rotting Deals, Next Actions, Loss Reasons, Products & Invoices', () => {
+    it('detects stagnant/rotting deals based on stage duration threshold', async () => {
+      const deals = await crmService.getDeals(orgAlphaId);
+      // Seeded deal 2 is in NEED_ANALYSIS for 20 days -> rotting
+      const rottingDeal = deals.find((d) => d.id === '80000000-0000-0000-0000-000000000002');
+      expect(rottingDeal).toBeDefined();
+      expect(rottingDeal?.isRotting).toBe(true);
+      expect(rottingDeal?.daysInCurrentStage).toBeGreaterThanOrEqual(14);
+
+      // Seeded deal 1 is newly updated -> not rotting
+      const activeDeal = deals.find((d) => d.id === '80000000-0000-0000-0000-000000000001');
+      expect(activeDeal).toBeDefined();
+      expect(activeDeal?.isRotting).toBe(false);
+    });
+
+    it('marks deal as LOST with mandatory structured loss reason and audit log', async () => {
+      const lost = await crmService.markDealLost(
+        orgAlphaId,
+        employeeAlphaId,
+        '80000000-0000-0000-0000-000000000001',
+        {
+          lossReason: 'PRICE_TOO_HIGH',
+          lossDescription: 'مشتری بودجه کافی برای سال جاری نداشت و به تعویق انداخت',
+        },
+      );
+
+      expect(lost.stage).toBe('LOST');
+      expect(lost.probability).toBe(0);
+      expect(lost.lossReason).toBe('PRICE_TOO_HIGH');
+      expect(lost.lossDescription).toContain('مشتری بودجه کافی');
+      expect(lost.lostAt).toBeDefined();
+
+      const audit = auditService.getEvents(orgAlphaId).find((a) => a.action === 'CRM_DEAL_LOST');
+      expect(audit).toBeDefined();
+      expect(audit?.metadata?.lossReason).toBe('PRICE_TOO_HIGH');
+    });
+
+    it('schedules next action on a deal to maintain sales discipline', async () => {
+      const due = new Date(Date.now() + 86400000 * 3).toISOString();
+      const updated = await crmService.scheduleNextAction(
+        orgAlphaId,
+        employeeAlphaId,
+        '80000000-0000-0000-0000-000000000001',
+        {
+          title: 'تماس تلفنی جهت بررسی نهایی پیش‌فاکتور',
+          dueAt: due,
+        },
+      );
+
+      expect(updated.nextActionTitle).toBe('تماس تلفنی جهت بررسی نهایی پیش‌فاکتور');
+      expect(updated.nextActionDueAt).toBe(due);
+
+      const audit = auditService.getEvents(orgAlphaId).find((a) => a.action === 'CRM_DEAL_NEXT_ACTION_SCHEDULED');
+      expect(audit).toBeDefined();
+    });
+
+    it('manages products catalog and calculates proforma invoice with 10% VAT', async () => {
+      // 1. Get products catalog
+      const products = await crmService.getProducts(orgAlphaId);
+      expect(products.length).toBeGreaterThanOrEqual(3);
+
+      // 2. Create proforma invoice for a deal
+      const invoice = await crmService.createInvoice(
+        orgAlphaId,
+        employeeAlphaId,
+        {
+          dealId: '80000000-0000-0000-0000-000000000001',
+          items: [
+            {
+              productId: products[0]!.id,
+              productName: products[0]!.name,
+              quantity: 2,
+              unitPriceMinor: 100000000, // 200,000,000
+              discountPercent: 10, // 20,000,000 discount -> 180,000,000 taxable
+              taxRatePercent: 10, // 18,000,000 VAT -> 198,000,000 total
+              totalPriceMinor: 198000000,
+            },
+          ],
+        },
+      );
+
+      expect(invoice.id).toBeDefined();
+      expect(invoice.subtotalMinor).toBe(200000000);
+      expect(invoice.discountTotalMinor).toBe(20000000);
+      expect(invoice.taxTotalMinor).toBe(18000000);
+      expect(invoice.finalTotalMinor).toBe(198000000);
+      expect(invoice.status).toBe('ISSUED');
+
+      // Verify deal amount was synchronized
+      const deal = await crmService.getDealById(orgAlphaId, '80000000-0000-0000-0000-000000000001');
+      expect(deal.amountMinor).toBe(198000000);
+    });
+
+    it('provides sales loss analytics breakdown and quota tracking', async () => {
+      // Mark one deal lost
+      await crmService.markDealLost(
+        orgAlphaId,
+        employeeAlphaId,
+        '80000000-0000-0000-0000-000000000001',
+        { lossReason: 'COMPETITOR_WON' },
+      );
+
+      const analytics = await crmService.getSalesLossAnalytics(orgAlphaId);
+      expect(analytics.totalLostDealsCount).toBeGreaterThan(0);
+      const competitorReason = analytics.breakdownByReason.find((r) => r.reason === 'COMPETITOR_WON');
+      expect(competitorReason).toBeDefined();
+      expect(competitorReason?.count).toBeGreaterThan(0);
+
+      const target = await crmService.getSalesTarget(orgAlphaId, employeeAlphaId);
+      expect(target.targetAmountMinor).toBe(500000000);
+      expect(target.achievementPercent).toBeDefined();
+    });
+  });
 });

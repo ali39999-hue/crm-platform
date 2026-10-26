@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateAchievementPercent,
+  calculateInvoiceTotals,
   canConvertLead,
   formatMoney,
+  getLossReasonLabel,
+  isDealRotting,
   isDuplicateCandidate,
   normalizeEmail,
   normalizePhone,
@@ -53,5 +57,44 @@ describe('CRM domain business rules', () => {
   it('formats monetary amounts with currency', () => {
     const formatted = formatMoney(500000000, 'IRR');
     expect(formatted).toContain('IRR');
+  });
+
+  describe('Didar CRM-inspired Domain Rules', () => {
+    it('detects rotting/stagnant deals based on days in stage', () => {
+      // Stage ACTIVE past threshold (14 days)
+      expect(isDealRotting(15, 'PROPOSAL', 14)).toBe(true);
+      expect(isDealRotting(10, 'PROPOSAL', 14)).toBe(false);
+
+      // WON or LOST deals never rot
+      expect(isDealRotting(30, 'WON', 14)).toBe(false);
+      expect(isDealRotting(30, 'LOST', 14)).toBe(false);
+    });
+
+    it('calculates invoice totals with discounts and 10% VAT tax', () => {
+      const items = [
+        {
+          quantity: 2,
+          unitPriceMinor: 1000000, // 2,000,000
+          discountPercent: 10, // 200,000 discount -> 1,800,000 taxable -> 180,000 VAT -> 1,980,000
+          taxRatePercent: 10,
+        },
+      ];
+
+      const totals = calculateInvoiceTotals(items);
+      expect(totals.subtotalMinor).toBe(2000000);
+      expect(totals.discountTotalMinor).toBe(200000);
+      expect(totals.taxTotalMinor).toBe(180000);
+      expect(totals.finalTotalMinor).toBe(1980000);
+    });
+
+    it('translates deal loss reasons into Persian labels', () => {
+      expect(getLossReasonLabel('PRICE_TOO_HIGH')).toContain('قیمت بالاتر');
+      expect(getLossReasonLabel('COMPETITOR_WON')).toContain('رقیب');
+    });
+
+    it('calculates sales target achievement percentage', () => {
+      expect(calculateAchievementPercent(75000000, 100000000)).toBe(75);
+      expect(calculateAchievementPercent(0, 100000000)).toBe(0);
+    });
   });
 });

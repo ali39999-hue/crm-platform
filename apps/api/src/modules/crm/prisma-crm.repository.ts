@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type {
   AccountEntity,
@@ -8,9 +9,14 @@ import type {
   LeadEntity,
 } from './crm.repository.js';
 import type { LeadStatus } from '@crm/domain';
+import type { ProductCatalogItemDto, ProformaInvoiceDto } from '@crm/contracts';
 
 @Injectable()
 export class PrismaCrmRepository implements ICrmRepository {
+  private products: Map<string, ProductCatalogItemDto> = new Map();
+  private invoices: Map<string, ProformaInvoiceDto> = new Map();
+  private dealExtensions: Map<string, Partial<DealEntity>> = new Map();
+
   constructor(private readonly prisma: PrismaService) {}
 
   /* Accounts */
@@ -249,6 +255,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   /* Deals */
 
   private mapDeal(d: any): DealEntity {
+    const ext = this.dealExtensions.get(d.id) || {};
     return {
       id: d.id,
       organizationId: d.organizationId,
@@ -260,6 +267,13 @@ export class PrismaCrmRepository implements ICrmRepository {
       currency: d.currency ?? null,
       probability: d.probability ?? null,
       targetCloseAt: d.targetCloseAt ? (d.targetCloseAt instanceof Date ? d.targetCloseAt.toISOString() : d.targetCloseAt) : null,
+      lossReason: ext.lossReason ?? null,
+      lossDescription: ext.lossDescription ?? null,
+      lostAt: ext.lostAt ?? null,
+      nextActionTitle: ext.nextActionTitle ?? null,
+      nextActionDueAt: ext.nextActionDueAt ?? null,
+      stageUpdatedAt: ext.stageUpdatedAt ?? null,
+      products: ext.products ?? null,
       createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : d.createdAt,
       updatedAt: d.updatedAt instanceof Date ? d.updatedAt.toISOString() : d.updatedAt,
     };
@@ -300,6 +314,17 @@ export class PrismaCrmRepository implements ICrmRepository {
         targetCloseAt: data.targetCloseAt ? new Date(data.targetCloseAt) : null,
       },
     });
+    if (data.lossReason || data.nextActionTitle || data.products || data.stageUpdatedAt) {
+      this.dealExtensions.set(created.id, {
+        lossReason: data.lossReason,
+        lossDescription: data.lossDescription,
+        lostAt: data.lostAt,
+        nextActionTitle: data.nextActionTitle,
+        nextActionDueAt: data.nextActionDueAt,
+        stageUpdatedAt: data.stageUpdatedAt,
+        products: data.products,
+      });
+    }
     return this.mapDeal(created);
   }
 
@@ -317,6 +342,15 @@ export class PrismaCrmRepository implements ICrmRepository {
         ownerId: deal.ownerId,
       },
     });
+    this.dealExtensions.set(deal.id, {
+      lossReason: deal.lossReason,
+      lossDescription: deal.lossDescription,
+      lostAt: deal.lostAt,
+      nextActionTitle: deal.nextActionTitle,
+      nextActionDueAt: deal.nextActionDueAt,
+      stageUpdatedAt: deal.stageUpdatedAt,
+      products: deal.products,
+    });
     return this.mapDeal(updated);
   }
 
@@ -326,6 +360,48 @@ export class PrismaCrmRepository implements ICrmRepository {
     await (this.prisma as any).deal.delete({
       where: { id },
     });
+    this.dealExtensions.delete(id);
     return true;
+  }
+
+  /* Products */
+  async findProducts(organizationId: string): Promise<ProductCatalogItemDto[]> {
+    return Array.from(this.products.values()).filter((p) => p.organizationId === organizationId);
+  }
+
+  async createProduct(
+    organizationId: string,
+    data: Omit<ProductCatalogItemDto, 'id' | 'organizationId'>,
+  ): Promise<ProductCatalogItemDto> {
+    const id = randomUUID();
+    const entity: ProductCatalogItemDto = {
+      ...data,
+      id,
+      organizationId,
+    };
+    this.products.set(id, entity);
+    return entity;
+  }
+
+  /* Invoices */
+  async findInvoices(organizationId: string, dealId?: string): Promise<ProformaInvoiceDto[]> {
+    return Array.from(this.invoices.values()).filter(
+      (inv) => inv.organizationId === organizationId && (!dealId || inv.dealId === dealId),
+    );
+  }
+
+  async createInvoice(
+    organizationId: string,
+    data: Omit<ProformaInvoiceDto, 'id' | 'organizationId' | 'createdAt'>,
+  ): Promise<ProformaInvoiceDto> {
+    const id = randomUUID();
+    const entity: ProformaInvoiceDto = {
+      ...data,
+      id,
+      organizationId,
+      createdAt: new Date().toISOString(),
+    };
+    this.invoices.set(id, entity);
+    return entity;
   }
 }

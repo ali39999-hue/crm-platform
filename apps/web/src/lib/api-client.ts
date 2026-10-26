@@ -78,6 +78,12 @@ import type {
   MergeRecordsRequest,
   PipelineStageDto,
   UpdateDealDto,
+  CreateInvoiceRequest,
+  MarkDealLostRequest,
+  ProductCatalogItemDto,
+  ProformaInvoiceDto,
+  SalesLossAnalyticsDto,
+  SalesTargetDto,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,
@@ -3428,6 +3434,196 @@ export class ApiClient {
           this.fallbackDuplicates.splice(idx, 1);
         }
         return { success: true, mergedId: dto.targetRecordId };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar CRM Inspired Enhancements ---------------- */
+
+  async markDealLost(dealId: string, dto: MarkDealLostRequest): Promise<DealDto> {
+    try {
+      return await this.request<DealDto>(`/crm/deals/${encodeURIComponent(dealId)}/lost`, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const deal = this.fallbackDeals.find((d) => d.id === dealId);
+        if (deal) {
+          deal.stage = 'LOST';
+          deal.lossReason = dto.lossReason;
+          deal.lossDescription = dto.lossDescription;
+          deal.lostAt = new Date().toISOString();
+          deal.isRotting = false;
+          return { ...deal };
+        }
+      }
+      throw err;
+    }
+  }
+
+  async scheduleDealNextAction(
+    dealId: string,
+    dto: { title: string; dueAt: string },
+  ): Promise<DealDto> {
+    try {
+      return await this.request<DealDto>(`/crm/deals/${encodeURIComponent(dealId)}/next-action`, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const deal = this.fallbackDeals.find((d) => d.id === dealId);
+        if (deal) {
+          deal.nextActionTitle = dto.title;
+          deal.nextActionDueAt = dto.dueAt;
+          return { ...deal };
+        }
+      }
+      throw err;
+    }
+  }
+
+  async getProducts(): Promise<ProductCatalogItemDto[]> {
+    try {
+      return await this.request<ProductCatalogItemDto[]>('/crm/products');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [
+          {
+            id: 'prod-1',
+            organizationId: DEFAULT_ORG_ID,
+            sku: 'CRM-ENT-YEARLY',
+            name: 'نرم‌افزار مدیریت ارتباط با مشتری سازمانی (لایسنس سالانه)',
+            unit: 'کاربر/سال',
+            unitPriceMinor: 120000000,
+            currency: 'IRR',
+            taxRatePercent: 10,
+            active: true,
+          },
+          {
+            id: 'prod-2',
+            organizationId: DEFAULT_ORG_ID,
+            sku: 'CRM-DEPLOY-ONBOARDING',
+            name: 'بسته جامع استقرار، شخصی‌سازی کاریزها و آموزش تیم فروش',
+            unit: 'پروژه',
+            unitPriceMinor: 50000000,
+            currency: 'IRR',
+            taxRatePercent: 10,
+            active: true,
+          },
+          {
+            id: 'prod-3',
+            organizationId: DEFAULT_ORG_ID,
+            sku: 'SUPPORT-VIP-ANNUAL',
+            name: 'پشتیبانی اختصاصی و راهبری فنی VIP',
+            unit: 'سالانه',
+            unitPriceMinor: 30000000,
+            currency: 'IRR',
+            taxRatePercent: 10,
+            active: true,
+          },
+        ];
+      }
+      throw err;
+    }
+  }
+
+  async createDealInvoice(
+    dealId: string,
+    dto: CreateInvoiceRequest,
+  ): Promise<ProformaInvoiceDto> {
+    try {
+      return await this.request<ProformaInvoiceDto>(
+        `/crm/deals/${encodeURIComponent(dealId)}/invoices`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const subtotal = dto.items.reduce((s, it) => s + it.quantity * it.unitPriceMinor, 0);
+        const discount = dto.items.reduce(
+          (s, it) =>
+            s +
+            (it.discountPercent
+              ? Math.round((it.quantity * it.unitPriceMinor * it.discountPercent) / 100)
+              : 0),
+          0,
+        );
+        const tax = Math.round(((subtotal - discount) * 10) / 100);
+        const finalTotal = subtotal - discount + tax;
+        return {
+          id: `inv-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          dealId,
+          invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+          accountName: 'مشتری مستقیم',
+          subtotalMinor: subtotal,
+          discountTotalMinor: discount,
+          taxTotalMinor: tax,
+          finalTotalMinor: finalTotal,
+          currency: 'IRR',
+          issueDate: new Date().toISOString(),
+          dueDate: new Date(Date.now() + 86400000 * 14).toISOString(),
+          items: dto.items,
+          status: 'ISSUED',
+          createdAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getSalesLossAnalytics(): Promise<SalesLossAnalyticsDto> {
+    try {
+      return await this.request<SalesLossAnalyticsDto>('/crm/analytics/loss-reasons');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          totalLostDealsCount: 3,
+          totalLostAmountMinor: 450000000,
+          breakdownByReason: [
+            {
+              reason: 'PRICE_TOO_HIGH',
+              label: 'قیمت بالاتر از بودجه مشتری',
+              count: 2,
+              amountMinor: 300000000,
+              percentage: 67,
+            },
+            {
+              reason: 'COMPETITOR_WON',
+              label: 'خرید از رقیب تجاری',
+              count: 1,
+              amountMinor: 150000000,
+              percentage: 33,
+            },
+          ],
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getSalesTarget(): Promise<SalesTargetDto> {
+    try {
+      return await this.request<SalesTargetDto>('/crm/analytics/sales-target');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: 'target-current',
+          organizationId: DEFAULT_ORG_ID,
+          userId: DEFAULT_EMPLOYEE_ID,
+          userName: 'کارشناس فروش',
+          period: 'MONTHLY',
+          targetAmountMinor: 500000000,
+          achievedAmountMinor: 375000000,
+          achievementPercent: 75,
+          year: 2026,
+          month: 10,
+        };
       }
       throw err;
     }

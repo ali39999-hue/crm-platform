@@ -91,4 +91,38 @@ test.describe('CRM Deals Pipeline Kanban & Duplicate Resolution P1 Journey (R-03
     await expect(toast).toBeVisible();
     await expect(toast).toContainText('با موفقیت در رکورد اصلی ادغام شد');
   });
+
+  test('should display Didar CRM patterns: rotting deals filter, loss analytics, and invoice modal', async ({
+    page,
+  }) => {
+    await page.locator('[data-testid="nav-crm"]').click();
+    await page.locator('[data-testid="crm-tab-pipeline"]').click();
+
+    // 1. Verify Rotting Filter toggle button exists and can be toggled
+    const rottingToggle = page.locator('[data-testid="toggle-rotting-filter"]');
+    await expect(rottingToggle).toBeVisible();
+    await expect(rottingToggle).toContainText('فرصت‌های راکد');
+    await rottingToggle.click();
+    await expect(rottingToggle).toHaveClass(/bg-amber/);
+    await rottingToggle.click(); // Toggle back
+
+    // 2. Open and verify Loss Reasons Analytics Modal
+    const lossAnalyticsBtn = page.locator('[data-testid="open-loss-analytics-btn"]');
+    await expect(lossAnalyticsBtn).toBeVisible();
+    await lossAnalyticsBtn.click();
+
+    await expect(page.locator('text=گزارش و تحلیل دلایل شکست معاملات')).toBeVisible();
+    await expect(page.locator('text=تفکیک علل شکست')).toBeVisible();
+    await page.locator('button:has-text("بستن")').click();
+
+    // 3. Verify Invoice button on deal card opens Proforma Invoice Generator
+    const firstCard = page.locator('[data-testid^="deal-card-"]').first();
+    const invoiceBtn = firstCard.locator('button[title*="پیش‌فاکتور"]');
+    if (await invoiceBtn.isVisible()) {
+      await invoiceBtn.click();
+      await expect(page.locator('text=صدور پیش‌فاکتور رسمی')).toBeVisible();
+      await expect(page.locator('text=مالیات بر ارزش افزوده (۱۰٪)')).toBeVisible();
+      await page.locator('button:has-text("انصراف")').click();
+    }
+  });
 });

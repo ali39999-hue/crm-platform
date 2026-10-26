@@ -6,10 +6,15 @@ import {
   Optional,
 } from '@nestjs/common';
 import {
+  calculateAchievementPercent,
+  calculateInvoiceTotals,
   canConvertLead,
+  getLossReasonLabel,
+  isDealRotting,
   isDuplicateCandidate,
   normalizeEmail,
   normalizePhone,
+  DEAL_LOSS_REASONS,
   type MembershipRole,
 } from '@crm/domain';
 import {
@@ -25,6 +30,10 @@ import type { CreateLeadDto } from './dto/create-lead.dto.js';
 import type { ConvertLeadDto } from './dto/convert-lead.dto.js';
 import type { CreateDealDto } from './dto/create-deal.dto.js';
 import type { UpdateDealDto } from './dto/update-deal.dto.js';
+import type { MarkDealLostDto } from './dto/mark-deal-lost.dto.js';
+import type { ScheduleNextActionDto } from './dto/schedule-next-action.dto.js';
+import type { CreateProductDto } from './dto/create-product.dto.js';
+import type { CreateInvoiceDto } from './dto/create-invoice.dto.js';
 import { PipelineStageService } from './pipeline/pipeline-stage.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
@@ -34,9 +43,14 @@ import type {
   ConvertLeadResponse,
   CustomerTimelineItem,
   DealDto,
+  DealLossReasonType,
   DuplicateCandidateDto,
   LeadDto,
   MergeRecordsRequest,
+  ProductCatalogItemDto,
+  ProformaInvoiceDto,
+  SalesLossAnalyticsDto,
+  SalesTargetDto,
 } from '@crm/contracts';
 
 @Injectable()
@@ -748,7 +762,257 @@ export class CrmService {
     };
   }
 
+  async markDealLost(
+    organizationId: string,
+    actorId: string,
+    dealId: string,
+    dto: MarkDealLostDto,
+    requestId?: string,
+  ): Promise<DealDto> {
+    const deal = await this.crmRepo.findDealById(organizationId, dealId);
+    if (!deal) {
+      throw new NotFoundException(`Deal ${dealId} not found in this organization`);
+    }
+
+    deal.stage = 'LOST';
+    deal.probability = 0;
+    deal.lossReason = dto.lossReason;
+    deal.lossDescription = dto.lossDescription ?? null;
+    deal.lostAt = new Date().toISOString();
+    deal.stageUpdatedAt = new Date().toISOString();
+
+    const updated = await this.crmRepo.updateDeal(deal);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_DEAL_LOST',
+      entityType: 'Deal',
+      entityId: deal.id,
+      requestId,
+      metadata: {
+        lossReason: dto.lossReason,
+        lossReasonLabel: getLossReasonLabel(dto.lossReason),
+        lossDescription: dto.lossDescription,
+        dealAmountMinor: deal.amountMinor,
+      },
+    });
+
+    this.outboxService.emit({
+      organizationId,
+      eventType: 'CrmDealLost',
+      aggregateType: 'Deal',
+      aggregateId: deal.id,
+      payload: {
+        dealName: deal.name,
+        lossReason: dto.lossReason,
+      },
+    });
+
+    return this.mapDeal(updated);
+  }
+
+  async scheduleNextAction(
+    organizationId: string,
+    actorId: string,
+    dealId: string,
+    dto: ScheduleNextActionDto,
+    requestId?: string,
+  ): Promise<DealDto> {
+    const deal = await this.crmRepo.findDealById(organizationId, dealId);
+    if (!deal) {
+      throw new NotFoundException(`Deal ${dealId} not found in this organization`);
+    }
+
+    deal.nextActionTitle = dto.title.trim();
+    deal.nextActionDueAt = dto.dueAt;
+
+    const updated = await this.crmRepo.updateDeal(deal);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_DEAL_NEXT_ACTION_SCHEDULED',
+      entityType: 'Deal',
+      entityId: deal.id,
+      requestId,
+      metadata: {
+        nextActionTitle: dto.title,
+        nextActionDueAt: dto.dueAt,
+      },
+    });
+
+    return this.mapDeal(updated);
+  }
+
+  async getProducts(organizationId: string): Promise<ProductCatalogItemDto[]> {
+    return this.crmRepo.findProducts(organizationId);
+  }
+
+  async createProduct(
+    organizationId: string,
+    actorId: string,
+    dto: CreateProductDto,
+    requestId?: string,
+  ): Promise<ProductCatalogItemDto> {
+    const product = await this.crmRepo.createProduct(organizationId, {
+      sku: dto.sku.trim(),
+      name: dto.name.trim(),
+      unit: dto.unit.trim(),
+      unitPriceMinor: dto.unitPriceMinor,
+      currency: dto.currency || 'IRR',
+      taxRatePercent: dto.taxRatePercent !== undefined ? dto.taxRatePercent : 10,
+      active: dto.active !== undefined ? dto.active : true,
+    });
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_PRODUCT_CREATED',
+      entityType: 'Product',
+      entityId: product.id,
+      requestId,
+      metadata: { sku: product.sku, name: product.name, unitPriceMinor: product.unitPriceMinor },
+    });
+
+    return product;
+  }
+
+  async getInvoices(organizationId: string, dealId?: string): Promise<ProformaInvoiceDto[]> {
+    return this.crmRepo.findInvoices(organizationId, dealId);
+  }
+
+  async createInvoice(
+    organizationId: string,
+    actorId: string,
+    dto: CreateInvoiceDto,
+    requestId?: string,
+  ): Promise<ProformaInvoiceDto> {
+    const deal = await this.crmRepo.findDealById(organizationId, dto.dealId);
+    if (!deal) {
+      throw new NotFoundException(`Deal ${dto.dealId} not found in this organization`);
+    }
+
+    let accountName = 'مشتری مستقیم';
+    if (deal.accountId) {
+      const account = await this.crmRepo.findAccountById(organizationId, deal.accountId);
+      if (account) {
+        accountName = account.name;
+      }
+    }
+
+    const totals = calculateInvoiceTotals(dto.items);
+    const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+    const dueDate = dto.dueDate || new Date(Date.now() + 86400000 * 14).toISOString();
+
+    const invoice = await this.crmRepo.createInvoice(organizationId, {
+      dealId: deal.id,
+      invoiceNumber,
+      accountName,
+      subtotalMinor: totals.subtotalMinor,
+      discountTotalMinor: totals.discountTotalMinor,
+      taxTotalMinor: totals.taxTotalMinor,
+      finalTotalMinor: totals.finalTotalMinor,
+      currency: dto.currency || deal.currency || 'IRR',
+      issueDate: new Date().toISOString(),
+      dueDate,
+      items: dto.items,
+      status: 'ISSUED',
+    });
+
+    // Also update deal amount and products
+    deal.amountMinor = totals.finalTotalMinor;
+    deal.products = dto.items;
+    await this.crmRepo.updateDeal(deal);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_INVOICE_CREATED',
+      entityType: 'Invoice',
+      entityId: invoice.id,
+      requestId,
+      metadata: {
+        invoiceNumber: invoice.invoiceNumber,
+        dealId: deal.id,
+        finalTotalMinor: invoice.finalTotalMinor,
+      },
+    });
+
+    return invoice;
+  }
+
+  async getSalesLossAnalytics(organizationId: string): Promise<SalesLossAnalyticsDto> {
+    const deals = await this.crmRepo.findDeals(organizationId);
+    const lostDeals = deals.filter((d) => d.stage === 'LOST');
+
+    const totalLostDealsCount = lostDeals.length;
+    const totalLostAmountMinor = lostDeals.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
+
+    const breakdownMap = new Map<DealLossReasonType, { count: number; amountMinor: number }>();
+    for (const reason of DEAL_LOSS_REASONS) {
+      breakdownMap.set(reason as DealLossReasonType, { count: 0, amountMinor: 0 });
+    }
+
+    for (const deal of lostDeals) {
+      const reason = (deal.lossReason as DealLossReasonType) || 'OTHER';
+      const current = breakdownMap.get(reason) || { count: 0, amountMinor: 0 };
+      current.count += 1;
+      current.amountMinor += deal.amountMinor ?? 0;
+      breakdownMap.set(reason, current);
+    }
+
+    const breakdownByReason = Array.from(breakdownMap.entries()).map(([reason, data]) => ({
+      reason,
+      label: getLossReasonLabel(reason),
+      count: data.count,
+      amountMinor: data.amountMinor,
+      percentage: totalLostDealsCount > 0 ? Math.round((data.count / totalLostDealsCount) * 100) : 0,
+    }));
+
+    return {
+      totalLostDealsCount,
+      totalLostAmountMinor,
+      breakdownByReason,
+    };
+  }
+
+  async getSalesTarget(organizationId: string, userId: string): Promise<SalesTargetDto> {
+    const deals = await this.crmRepo.findDeals(organizationId);
+    const wonDeals = deals.filter(
+      (d) => d.stage === 'WON' && (!userId || d.ownerId === userId),
+    );
+    const achievedAmountMinor = wonDeals.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
+    const targetAmountMinor = 500000000;
+
+    const achievementPercent = calculateAchievementPercent(achievedAmountMinor, targetAmountMinor);
+
+    return {
+      id: `target-${organizationId}-${userId}`,
+      organizationId,
+      userId,
+      userName: 'کارشناس فروش',
+      period: 'MONTHLY',
+      targetAmountMinor,
+      achievedAmountMinor,
+      achievementPercent,
+      year: new Date().getFullYear(),
+      month: new Date().getMonth() + 1,
+    };
+  }
+
   private mapDeal(d: DealEntity): DealDto {
+    const stageDate = d.stageUpdatedAt
+      ? new Date(d.stageUpdatedAt)
+      : d.updatedAt
+        ? new Date(d.updatedAt)
+        : new Date(d.createdAt);
+    const daysInStage = Math.max(
+      0,
+      Math.floor((Date.now() - stageDate.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+    const rotting = isDealRotting(daysInStage, d.stage, 14);
+
     return {
       id: d.id,
       accountId: d.accountId,
@@ -759,6 +1023,14 @@ export class CrmService {
       probability: d.probability,
       targetCloseAt: d.targetCloseAt,
       ownerId: d.ownerId,
+      lossReason: (d.lossReason as DealLossReasonType) || undefined,
+      lossDescription: d.lossDescription ?? undefined,
+      lostAt: d.lostAt ?? undefined,
+      nextActionTitle: d.nextActionTitle ?? undefined,
+      nextActionDueAt: d.nextActionDueAt ?? undefined,
+      daysInCurrentStage: daysInStage,
+      isRotting: rotting,
+      products: d.products ?? undefined,
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
     };

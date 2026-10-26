@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { LeadStatus } from '@crm/domain';
+import type {
+  DealProductItemDto,
+  ProductCatalogItemDto,
+  ProformaInvoiceDto,
+} from '@crm/contracts';
 
 export type AccountEntity = {
   id: string;
@@ -55,6 +60,13 @@ export type DealEntity = {
   currency: string | null;
   probability: number | null;
   targetCloseAt: string | null;
+  lossReason?: string | null | undefined;
+  lossDescription?: string | null | undefined;
+  lostAt?: string | null | undefined;
+  nextActionTitle?: string | null | undefined;
+  nextActionDueAt?: string | null | undefined;
+  stageUpdatedAt?: string | null | undefined;
+  products?: DealProductItemDto[] | null | undefined;
   createdAt: string;
   updatedAt: string;
 };
@@ -87,6 +99,20 @@ export interface ICrmRepository {
   createDeal(data: Omit<DealEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<DealEntity>;
   updateDeal(deal: DealEntity): Promise<DealEntity>;
   deleteDeal(organizationId: string, id: string): Promise<boolean>;
+
+  /* Products */
+  findProducts(organizationId: string): Promise<ProductCatalogItemDto[]>;
+  createProduct(
+    organizationId: string,
+    data: Omit<ProductCatalogItemDto, 'id' | 'organizationId'>,
+  ): Promise<ProductCatalogItemDto>;
+
+  /* Invoices */
+  findInvoices(organizationId: string, dealId?: string): Promise<ProformaInvoiceDto[]>;
+  createInvoice(
+    organizationId: string,
+    data: Omit<ProformaInvoiceDto, 'id' | 'organizationId' | 'createdAt'>,
+  ): Promise<ProformaInvoiceDto>;
 }
 
 @Injectable()
@@ -95,6 +121,8 @@ export class InMemoryCrmRepository implements ICrmRepository {
   private contacts: Map<string, ContactEntity> = new Map();
   private leads: Map<string, LeadEntity> = new Map();
   private deals: Map<string, DealEntity> = new Map();
+  private products: Map<string, ProductCatalogItemDto> = new Map();
+  private invoices: Map<string, ProformaInvoiceDto> = new Map();
 
   constructor() {
     this.seedDefaultCrmData();
@@ -167,7 +195,7 @@ export class InMemoryCrmRepository implements ICrmRepository {
       updatedAt: new Date().toISOString(),
     });
 
-    // Seed Deals
+    // Seed Deals (including Didar next action and rotting deal patterns)
     const dealId = '80000000-0000-0000-0000-000000000001';
     this.deals.set(dealId, {
       id: dealId,
@@ -180,8 +208,69 @@ export class InMemoryCrmRepository implements ICrmRepository {
       currency: 'IRR',
       probability: 70,
       targetCloseAt: new Date(Date.now() + 86400000 * 30).toISOString(),
+      nextActionTitle: 'جلسه دمو و ارائه پروپوزال فنی به مدیریت ارشد',
+      nextActionDueAt: new Date(Date.now() + 86400000 * 2).toISOString(),
+      stageUpdatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    });
+
+    const dealRottingId = '80000000-0000-0000-0000-000000000002';
+    const twentyDaysAgo = new Date(Date.now() - 86400000 * 20).toISOString();
+    this.deals.set(dealRottingId, {
+      id: dealRottingId,
+      organizationId: orgAlpha,
+      accountId: accAlphaId,
+      ownerId: employeeAlpha,
+      name: 'تجهیز شبکه و کابل‌کشی انبار مرکزی فولاد',
+      stage: 'NEED_ANALYSIS',
+      amountMinor: 180000000,
+      currency: 'IRR',
+      probability: 40,
+      targetCloseAt: new Date(Date.now() + 86400000 * 10).toISOString(),
+      stageUpdatedAt: twentyDaysAgo,
+      createdAt: twentyDaysAgo,
+      updatedAt: twentyDaysAgo,
+    });
+
+    // Seed Products Catalog
+    const prod1Id = '90000000-0000-0000-0000-000000000001';
+    this.products.set(prod1Id, {
+      id: prod1Id,
+      organizationId: orgAlpha,
+      sku: 'CRM-ENT-YEARLY',
+      name: 'نرم‌افزار مدیریت ارتباط با مشتری سازمانی (لایسنس سالانه)',
+      unit: 'کاربر/سال',
+      unitPriceMinor: 120000000,
+      currency: 'IRR',
+      taxRatePercent: 10,
+      active: true,
+    });
+
+    const prod2Id = '90000000-0000-0000-0000-000000000002';
+    this.products.set(prod2Id, {
+      id: prod2Id,
+      organizationId: orgAlpha,
+      sku: 'CRM-DEPLOY-ONBOARDING',
+      name: 'بسته جامع استقرار، شخصی‌سازی کاریزها و آموزش تیم فروش',
+      unit: 'پروژه',
+      unitPriceMinor: 50000000,
+      currency: 'IRR',
+      taxRatePercent: 10,
+      active: true,
+    });
+
+    const prod3Id = '90000000-0000-0000-0000-000000000003';
+    this.products.set(prod3Id, {
+      id: prod3Id,
+      organizationId: orgAlpha,
+      sku: 'SUPPORT-VIP-ANNUAL',
+      name: 'پشتیبانی اختصاصی و راهبری فنی VIP',
+      unit: 'سالانه',
+      unitPriceMinor: 30000000,
+      currency: 'IRR',
+      taxRatePercent: 10,
+      active: true,
     });
   }
 
@@ -333,5 +422,46 @@ export class InMemoryCrmRepository implements ICrmRepository {
     if (!deal || deal.organizationId !== organizationId) return false;
     this.deals.delete(id);
     return true;
+  }
+
+  /* Products */
+  async findProducts(organizationId: string): Promise<ProductCatalogItemDto[]> {
+    return Array.from(this.products.values()).filter((p) => p.organizationId === organizationId);
+  }
+
+  async createProduct(
+    organizationId: string,
+    data: Omit<ProductCatalogItemDto, 'id' | 'organizationId'>,
+  ): Promise<ProductCatalogItemDto> {
+    const id = randomUUID();
+    const entity: ProductCatalogItemDto = {
+      ...data,
+      id,
+      organizationId,
+    };
+    this.products.set(id, entity);
+    return entity;
+  }
+
+  /* Invoices */
+  async findInvoices(organizationId: string, dealId?: string): Promise<ProformaInvoiceDto[]> {
+    return Array.from(this.invoices.values()).filter(
+      (inv) => inv.organizationId === organizationId && (!dealId || inv.dealId === dealId),
+    );
+  }
+
+  async createInvoice(
+    organizationId: string,
+    data: Omit<ProformaInvoiceDto, 'id' | 'organizationId' | 'createdAt'>,
+  ): Promise<ProformaInvoiceDto> {
+    const id = randomUUID();
+    const entity: ProformaInvoiceDto = {
+      ...data,
+      id,
+      organizationId,
+      createdAt: new Date().toISOString(),
+    };
+    this.invoices.set(id, entity);
+    return entity;
   }
 }
