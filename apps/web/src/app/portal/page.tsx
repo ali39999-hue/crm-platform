@@ -218,6 +218,14 @@ export default function CustomerPortalPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <a
+            href="/portal/help"
+            className="secondary-button"
+            style={{ fontSize: '12px' }}
+            data-testid="portal-nav-help"
+          >
+            ❓ مرکز راهنما
+          </a>
           <a href="/" className="secondary-button" style={{ fontSize: '12px' }}>
             ← بازگشت به پنل داخلی
           </a>
