@@ -41,8 +41,26 @@ export type SupportMacroEntity = {
   updatedAt: string;
 };
 
+export interface ISupportRepository {
+  findTickets(organizationId: string, accountId?: string): Promise<TicketEntity[]>;
+  findTicketById(organizationId: string, id: string): Promise<TicketEntity | null>;
+  createTicket(data: Omit<TicketEntity, 'id' | 'reference' | 'createdAt' | 'updatedAt'>): Promise<TicketEntity>;
+  updateTicket(ticket: TicketEntity): Promise<TicketEntity>;
+  isTicketOwnedByUser(organizationId: string, ticketId: string, userId: string): Promise<boolean>;
+  findMessages(organizationId: string, ticketId: string, canViewInternal: boolean): Promise<TicketMessageEntity[]>;
+  addMessage(data: Omit<TicketMessageEntity, 'id' | 'createdAt'>): Promise<TicketMessageEntity>;
+  getMessageCount(ticketId: string): number;
+
+  /* Support Macros */
+  findMacros(organizationId: string, category?: string): Promise<SupportMacroEntity[]>;
+  findMacroById(organizationId: string, id: string): Promise<SupportMacroEntity | null>;
+  createMacro(data: Omit<SupportMacroEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<SupportMacroEntity>;
+  updateMacro(macro: SupportMacroEntity): Promise<SupportMacroEntity>;
+  deleteMacro(organizationId: string, id: string): Promise<boolean>;
+}
+
 @Injectable()
-export class InMemorySupportRepository {
+export class InMemorySupportRepository implements ISupportRepository {
   private tickets: Map<string, TicketEntity> = new Map();
   private messages: Map<string, TicketMessageEntity[]> = new Map(); // ticketId -> messages
   private macros: Map<string, SupportMacroEntity> = new Map();

@@ -11,7 +11,7 @@ import type {
 import { isSlaBreached } from '@crm/domain';
 import type { ITaskRepository } from '../tasks/task.repository.js';
 import type { ICrmRepository } from '../crm/crm.repository.js';
-import { InMemorySupportRepository } from '../support/support.repository.js';
+import type { ISupportRepository } from '../support/support.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class ReportingService {
   constructor(
     @Inject('TASK_REPOSITORY') private readonly taskRepo: ITaskRepository,
     @Inject('CRM_REPOSITORY') private readonly crmRepo: ICrmRepository,
-    private readonly supportRepo: InMemorySupportRepository,
+    @Inject('SUPPORT_REPOSITORY') private readonly supportRepo: ISupportRepository,
     private readonly auditService: AuditService,
   ) {}
 

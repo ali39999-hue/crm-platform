@@ -59,6 +59,7 @@ import { SavedViewRepository } from './modules/crm/saved-views/saved-view.reposi
 import { SavedViewService } from './modules/crm/saved-views/saved-view.service.js';
 import { CrmService } from './modules/crm/crm.service.js';
 import { InMemorySupportRepository } from './modules/support/support.repository.js';
+import { PrismaSupportRepository } from './modules/support/prisma-support.repository.js';
 import { SupportService } from './modules/support/support.service.js';
 import { InMemoryNotificationRepository } from './modules/notifications/notification.repository.js';
 import { InMemoryNotificationDlqRepository } from './modules/notifications/notification-dlq.repository.js';
@@ -140,7 +141,12 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     SavedViewService,
     CrmService,
     ImportExportService,
+    {
+      provide: 'SUPPORT_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaSupportRepository : InMemorySupportRepository,
+    },
     InMemorySupportRepository,
+    PrismaSupportRepository,
     SupportService,
     {
       provide: 'NOTIFICATION_REPOSITORY',
@@ -199,7 +205,9 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     SavedViewService,
     CrmService,
     ImportExportService,
+    'SUPPORT_REPOSITORY',
     InMemorySupportRepository,
+    PrismaSupportRepository,
     SupportService,
     EmailAdapter,
     PushAdapter,

@@ -1,11 +1,12 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { calculateSlaDeadline, isActionAllowed, type MembershipRole } from '@crm/domain';
 import {
-  InMemorySupportRepository,
+  type ISupportRepository,
   type TicketEntity,
   type TicketMessageEntity,
 } from './support.repository.js';
@@ -26,7 +27,7 @@ import type { UserContext } from '../../common/auth/auth.types.js';
 @Injectable()
 export class SupportService {
   constructor(
-    private readonly supportRepo: InMemorySupportRepository,
+    @Inject('SUPPORT_REPOSITORY') private readonly supportRepo: ISupportRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
   ) {}
