@@ -119,4 +119,53 @@ describe('OrganizationService & Member Management (R-072, R-073, R-076)', () => 
       expect(data.matrix.CustomerPortalUser).toBeDefined();
     });
   });
+
+  describe('Team & Department Management (R-075)', () => {
+    it('lists seeded teams for organization and returns member details', async () => {
+      const teams = await orgService.getTeams(orgAlpha);
+      expect(teams.length).toBeGreaterThanOrEqual(2);
+      expect(teams.some((t) => t.name === 'تیم مهندسی و توسعه محصول')).toBe(true);
+
+      const team1 = teams.find((t) => t.slug === 'engineering-product')!;
+      expect(team1.leadMemberName).toBe('سارا احمدی');
+      expect(team1.membersCount).toBe(2);
+    });
+
+    it('creates a new team, calculates slug, and logs audit event', async () => {
+      const created = await orgService.createTeam(orgAlpha, adminActorId, {
+        name: 'تیم حسابداری و مالی',
+        description: 'امور قراردادها، صورت‌حساب‌ها و فاکتورهای رسمی مشتریان',
+        leadMemberId: 'mem-001',
+        memberIds: ['mem-001'],
+      });
+
+      expect(created.id).toBeDefined();
+      expect(created.name).toBe('تیم حسابداری و مالی');
+      expect(created.membersCount).toBe(1);
+
+      const audit = auditService.getEvents(orgAlpha).find((a) => a.action === 'TEAM_CREATED');
+      expect(audit).toBeDefined();
+    });
+
+    it('adds and removes team members', async () => {
+      const added = await orgService.addTeamMember(orgAlpha, adminActorId, 'team-001', 'mem-003');
+      expect(added.memberIds).toContain('mem-003');
+      expect(added.membersCount).toBe(3);
+
+      const removed = await orgService.removeTeamMember(orgAlpha, adminActorId, 'team-001', 'mem-003');
+      expect(removed.memberIds).not.toContain('mem-003');
+      expect(removed.membersCount).toBe(2);
+    });
+
+    it('deletes team and records audit event', async () => {
+      const res = await orgService.deleteTeam(orgAlpha, adminActorId, 'team-002');
+      expect(res.success).toBe(true);
+
+      const teams = await orgService.getTeams(orgAlpha);
+      expect(teams.some((t) => t.id === 'team-002')).toBe(false);
+
+      const audit = auditService.getEvents(orgAlpha).find((a) => a.action === 'TEAM_DELETED');
+      expect(audit).toBeDefined();
+    });
+  });
 });

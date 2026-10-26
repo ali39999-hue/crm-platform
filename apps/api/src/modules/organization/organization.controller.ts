@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -16,12 +17,18 @@ import { OrganizationService } from './organization.service.js';
 import type {
   OrganizationMemberDto,
   OrganizationSettingsDto,
+  TeamDto,
 } from '@crm/contracts';
 import { UpdateOrganizationSettingsDto } from './dto/update-organization-settings.dto.js';
 import {
   InviteMemberDto,
   UpdateMemberRoleDto,
 } from './dto/invite-member.dto.js';
+import {
+  AddTeamMemberDto,
+  CreateTeamDto,
+  UpdateTeamDto,
+} from './dto/team.dto.js';
 
 @Controller('organization')
 @UseGuards(AuthGuard, PermissionsGuard)
@@ -102,5 +109,84 @@ export class OrganizationController {
   @RequirePermission('organization_settings')
   getRolesMatrix() {
     return this.orgService.getRoleMatrix();
+  }
+
+  /* Teams & Departments */
+
+  @Get('teams')
+  @RequirePermission('organization_settings')
+  async getTeams(@CurrentUser() user: UserContext): Promise<TeamDto[]> {
+    return this.orgService.getTeams(user.activeOrganization.id);
+  }
+
+  @Post('teams')
+  @RequirePermission('organization_settings')
+  async createTeam(
+    @CurrentUser() user: UserContext,
+    @Body() dto: CreateTeamDto,
+  ): Promise<TeamDto> {
+    return this.orgService.createTeam(
+      user.activeOrganization.id,
+      user.id,
+      dto,
+    );
+  }
+
+  @Patch('teams/:id')
+  @RequirePermission('organization_settings')
+  async updateTeam(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateTeamDto,
+  ): Promise<TeamDto> {
+    return this.orgService.updateTeam(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      dto,
+    );
+  }
+
+  @Post('teams/:id/members')
+  @RequirePermission('organization_settings')
+  async addTeamMember(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() dto: AddTeamMemberDto,
+  ): Promise<TeamDto> {
+    return this.orgService.addTeamMember(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      dto.memberId,
+    );
+  }
+
+  @Delete('teams/:id/members/:memberId')
+  @RequirePermission('organization_settings')
+  async removeTeamMember(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+  ): Promise<TeamDto> {
+    return this.orgService.removeTeamMember(
+      user.activeOrganization.id,
+      user.id,
+      id,
+      memberId,
+    );
+  }
+
+  @Delete('teams/:id')
+  @RequirePermission('organization_settings')
+  async deleteTeam(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    return this.orgService.deleteTeam(
+      user.activeOrganization.id,
+      user.id,
+      id,
+    );
   }
 }

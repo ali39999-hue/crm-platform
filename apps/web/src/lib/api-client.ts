@@ -108,6 +108,10 @@ import type {
   IntegrationProviderDto,
   IntegrationProviderKey,
   ConnectIntegrationRequest,
+  AddTeamMemberRequest,
+  CreateTeamRequest,
+  TeamDto,
+  UpdateTeamRequest,
 } from '@crm/contracts';
 
 import {
@@ -1191,6 +1195,35 @@ export class ApiClient {
       icon: '⚡',
       status: 'DISCONNECTED',
       updatedAt: '2026-10-26T06:00:00.000Z',
+    },
+  ];
+
+  private fallbackTeams: TeamDto[] = [
+    {
+      id: 'team-001',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'تیم مهندسی و توسعه محصول',
+      slug: 'engineering-product',
+      description: 'توسعه فرانت‌اند، بک‌اند، معماری سیستم و ممیزی‌های امنیتی',
+      leadMemberId: 'mem-002',
+      leadMemberName: 'سارا احمدی',
+      memberIds: ['mem-001', 'mem-002'],
+      membersCount: 2,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'team-002',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'تیم پشتیبانی و خدمات مشتریان',
+      slug: 'support-service',
+      description: 'رسیدگی به تیکت‌ها، پاسخگویی به مشتریان و پایش SLA',
+      leadMemberId: 'mem-003',
+      leadMemberName: 'پویا مرادی',
+      memberIds: ['mem-002', 'mem-003'],
+      membersCount: 2,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
     },
   ];
 
@@ -4130,9 +4163,157 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Teams & Department Management ---------------- */
+
+  async getTeams(): Promise<TeamDto[]> {
+    try {
+      return await this.request<TeamDto[]>('/organization/teams');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackTeams.map((t) => ({ ...t }));
+      }
+      throw err;
+    }
+  }
+
+  async createTeam(dto: CreateTeamRequest): Promise<TeamDto> {
+    try {
+      return await this.request<TeamDto>('/organization/teams', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const lead = dto.leadMemberId
+          ? this.fallbackMembers.find((m) => m.id === dto.leadMemberId)
+          : undefined;
+
+        const newTeam: TeamDto = {
+          id: `team-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          name: dto.name.trim(),
+          slug: dto.name.trim().toLowerCase().replace(/[\s-]+/g, '-'),
+          description: dto.description,
+          leadMemberId: dto.leadMemberId,
+          leadMemberName: lead?.displayName,
+          memberIds: dto.memberIds ?? [],
+          membersCount: (dto.memberIds ?? []).length,
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackTeams.push(newTeam);
+        return { ...newTeam };
+      }
+      throw err;
+    }
+  }
+
+  async updateTeam(id: string, dto: UpdateTeamRequest): Promise<TeamDto> {
+    try {
+      return await this.request<TeamDto>(`/organization/teams/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackTeams.findIndex((t) => t.id === id);
+        if (idx === -1) {
+          throw new ApiClientError(`Team ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackTeams[idx]!;
+        const lead = dto.leadMemberId
+          ? this.fallbackMembers.find((m) => m.id === dto.leadMemberId)
+          : undefined;
+
+        const updated: TeamDto = {
+          ...existing,
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.leadMemberId !== undefined ? { leadMemberId: dto.leadMemberId } : {}),
+          ...(lead !== undefined ? { leadMemberName: lead.displayName } : {}),
+          ...(dto.memberIds !== undefined
+            ? { memberIds: dto.memberIds, membersCount: dto.memberIds.length }
+            : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackTeams[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async addTeamMember(teamId: string, memberId: string): Promise<TeamDto> {
+    try {
+      return await this.request<TeamDto>(
+        `/organization/teams/${encodeURIComponent(teamId)}/members`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ memberId }),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const team = this.fallbackTeams.find((t) => t.id === teamId);
+        if (!team) {
+          throw new ApiClientError(`Team ${teamId} not found`, 404, 'NOT_FOUND');
+        }
+        if (!team.memberIds.includes(memberId)) {
+          team.memberIds.push(memberId);
+          team.membersCount = team.memberIds.length;
+        }
+        return { ...team };
+      }
+      throw err;
+    }
+  }
+
+  async removeTeamMember(teamId: string, memberId: string): Promise<TeamDto> {
+    try {
+      return await this.request<TeamDto>(
+        `/organization/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberId)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const team = this.fallbackTeams.find((t) => t.id === teamId);
+        if (!team) {
+          throw new ApiClientError(`Team ${teamId} not found`, 404, 'NOT_FOUND');
+        }
+        team.memberIds = team.memberIds.filter((id) => id !== memberId);
+        team.membersCount = team.memberIds.length;
+        return { ...team };
+      }
+      throw err;
+    }
+  }
+
+  async deleteTeam(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(
+        `/organization/teams/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackTeams.findIndex((t) => t.id === id);
+        if (idx !== -1) {
+          this.fallbackTeams.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  AddTeamMemberRequest,
+  CreateTeamRequest,
+  TeamDto,
+  UpdateTeamRequest,
   ApiKeyDto,
   CreateApiKeyRequest,
   IntegrationProviderDto,

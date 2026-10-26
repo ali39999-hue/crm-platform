@@ -24,3 +24,4 @@ export * from './TimeTrackingView';
 export * from './SupportMacrosView';
 export * from './MentionsInboxView';
 export * from './IntegrationsView';
+export * from './TeamsManagerView';

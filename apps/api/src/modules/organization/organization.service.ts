@@ -14,9 +14,12 @@ import {
 import { AuditService } from '../audit/audit.service.js';
 import { TokenService } from '../../common/auth/token.service.js';
 import type {
+  CreateTeamRequest,
   OrganizationMemberDto,
   OrganizationSettingsDto,
+  TeamDto,
   UpdateOrganizationSettingsRequest,
+  UpdateTeamRequest,
 } from '@crm/contracts';
 import type { InviteMemberDto } from './dto/invite-member.dto.js';
 
@@ -46,6 +49,18 @@ export type MemberRecord = {
   role: MembershipRole;
   active: boolean;
   joinedAt: string;
+};
+
+export type TeamRecord = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  leadMemberId?: string | undefined;
+  memberIds: string[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 @Injectable()
@@ -130,6 +145,37 @@ export class OrganizationService {
       joinedAt: '2026-10-01T00:00:00.000Z',
     },
   ];
+
+  private teams: Map<string, TeamRecord> = new Map([
+    [
+      'team-001',
+      {
+        id: 'team-001',
+        organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        name: 'تیم مهندسی و توسعه محصول',
+        slug: 'engineering-product',
+        description: 'توسعه فرانت‌اند، بک‌اند، معماری سیستم و ممیزی‌های امنیتی',
+        leadMemberId: 'mem-002',
+        memberIds: ['mem-001', 'mem-002'],
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+    ],
+    [
+      'team-002',
+      {
+        id: 'team-002',
+        organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        name: 'تیم پشتیبانی و خدمات مشتریان',
+        slug: 'support-service',
+        description: 'رسیدگی به تیکت‌ها، پاسخگویی به مشتریان و پایش SLA',
+        leadMemberId: 'mem-003',
+        memberIds: ['mem-002', 'mem-003'],
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+    ],
+  ]);
 
   constructor(
     private readonly auditService: AuditService,
@@ -317,5 +363,192 @@ export class OrganizationService {
       roles: MEMBERSHIP_ROLES,
       matrix: PERMISSION_MATRIX,
     };
+  }
+
+  /* Team & Department Management */
+
+  async getTeams(organizationId: string): Promise<TeamDto[]> {
+    const list = Array.from(this.teams.values()).filter(
+      (t) => t.organizationId === organizationId,
+    );
+    return list.map((t) => this.mapTeamDto(t));
+  }
+
+  async getTeamById(organizationId: string, id: string): Promise<TeamDto> {
+    const team = this.teams.get(id);
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundException(`Team ${id} not found`);
+    }
+    return this.mapTeamDto(team);
+  }
+
+  async createTeam(
+    organizationId: string,
+    actorId: string,
+    dto: CreateTeamRequest,
+  ): Promise<TeamDto> {
+    const slug = dto.name
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '-');
+
+    const id = `team-${Date.now()}`;
+    const now = new Date().toISOString();
+
+    const team: TeamRecord = {
+      id,
+      organizationId,
+      name: dto.name.trim(),
+      slug,
+      memberIds: dto.memberIds ?? [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (dto.description !== undefined) team.description = dto.description;
+    if (dto.leadMemberId !== undefined) team.leadMemberId = dto.leadMemberId;
+
+    this.teams.set(id, team);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TEAM_CREATED',
+      entityType: 'Team',
+      entityId: team.id,
+      metadata: { name: team.name, slug: team.slug },
+    });
+
+    return this.mapTeamDto(team);
+  }
+
+  async updateTeam(
+    organizationId: string,
+    actorId: string,
+    teamId: string,
+    dto: UpdateTeamRequest,
+  ): Promise<TeamDto> {
+    const team = this.teams.get(teamId);
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundException(`Team ${teamId} not found`);
+    }
+
+    if (dto.name !== undefined) {
+      team.name = dto.name.trim();
+      team.slug = dto.name.trim().toLowerCase().replace(/[\s-]+/g, '-');
+    }
+    if (dto.description !== undefined) team.description = dto.description;
+    if (dto.leadMemberId !== undefined) team.leadMemberId = dto.leadMemberId;
+    if (dto.memberIds !== undefined) team.memberIds = dto.memberIds;
+    team.updatedAt = new Date().toISOString();
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TEAM_UPDATED',
+      entityType: 'Team',
+      entityId: team.id,
+      metadata: { name: team.name },
+    });
+
+    return this.mapTeamDto(team);
+  }
+
+  async addTeamMember(
+    organizationId: string,
+    actorId: string,
+    teamId: string,
+    memberId: string,
+  ): Promise<TeamDto> {
+    const team = this.teams.get(teamId);
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundException(`Team ${teamId} not found`);
+    }
+
+    if (!team.memberIds.includes(memberId)) {
+      team.memberIds.push(memberId);
+      team.updatedAt = new Date().toISOString();
+    }
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TEAM_MEMBER_ADDED',
+      entityType: 'Team',
+      entityId: team.id,
+      metadata: { memberId },
+    });
+
+    return this.mapTeamDto(team);
+  }
+
+  async removeTeamMember(
+    organizationId: string,
+    actorId: string,
+    teamId: string,
+    memberId: string,
+  ): Promise<TeamDto> {
+    const team = this.teams.get(teamId);
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundException(`Team ${teamId} not found`);
+    }
+
+    team.memberIds = team.memberIds.filter((id) => id !== memberId);
+    team.updatedAt = new Date().toISOString();
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TEAM_MEMBER_REMOVED',
+      entityType: 'Team',
+      entityId: team.id,
+      metadata: { memberId },
+    });
+
+    return this.mapTeamDto(team);
+  }
+
+  async deleteTeam(
+    organizationId: string,
+    actorId: string,
+    teamId: string,
+  ): Promise<{ success: boolean }> {
+    const team = this.teams.get(teamId);
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundException(`Team ${teamId} not found`);
+    }
+
+    this.teams.delete(teamId);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TEAM_DELETED',
+      entityType: 'Team',
+      entityId: teamId,
+      metadata: { name: team.name },
+    });
+
+    return { success: true };
+  }
+
+  private mapTeamDto(t: TeamRecord): TeamDto {
+    const lead = t.leadMemberId
+      ? this.members.find((m) => m.id === t.leadMemberId)
+      : undefined;
+
+    const dto: TeamDto = {
+      id: t.id,
+      organizationId: t.organizationId,
+      name: t.name,
+      slug: t.slug,
+      memberIds: t.memberIds,
+      membersCount: t.memberIds.length,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+    };
+    if (t.description !== undefined) dto.description = t.description;
+    if (t.leadMemberId !== undefined) dto.leadMemberId = t.leadMemberId;
+    if (lead !== undefined) dto.leadMemberName = lead.displayName;
+    return dto;
   }
 }

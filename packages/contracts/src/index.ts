@@ -1175,5 +1175,39 @@ export type ConnectIntegrationRequest = {
   credentials: Record<string, string>;
 };
 
+/* Enterprise Team & Department Management Contracts */
+
+export type TeamDto = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  leadMemberId?: string | undefined;
+  leadMemberName?: string | undefined;
+  memberIds: string[];
+  membersCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateTeamRequest = {
+  name: string;
+  description?: string | undefined;
+  leadMemberId?: string | undefined;
+  memberIds?: string[] | undefined;
+};
+
+export type UpdateTeamRequest = {
+  name?: string | undefined;
+  description?: string | undefined;
+  leadMemberId?: string | undefined;
+  memberIds?: string[] | undefined;
+};
+
+export type AddTeamMemberRequest = {
+  memberId: string;
+};
+
 
 

@@ -9,13 +9,14 @@ import type {
 import { apiClient } from '../lib/api-client';
 import { CustomFieldSchemaBuilder } from './CustomFieldSchemaBuilder';
 import { IntegrationsView } from './IntegrationsView';
+import { TeamsManagerView } from './TeamsManagerView';
 
 interface AdminSettingsViewProps {
   onNotify?: ((msg: string, type?: 'success' | 'error') => void) | undefined;
 }
 
 export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
-  const [activeTab, setActiveTab] = useState<'workspace' | 'members' | 'security' | 'roles' | 'fields' | 'integrations'>(
+  const [activeTab, setActiveTab] = useState<'workspace' | 'members' | 'teams' | 'security' | 'roles' | 'fields' | 'integrations'>(
     'workspace',
   );
 
@@ -213,6 +214,20 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
         >
           <span>👥</span>
           <span>اعضای تیم ({members.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('teams')}
+          data-testid="tab-teams"
+          className={`pb-2.5 px-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'teams'
+              ? 'border-indigo-500 text-indigo-400 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>🏢</span>
+          <span>دپارتمان‌ها و تیم‌ها</span>
         </button>
 
         <button
@@ -471,6 +486,11 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
                   </table>
                 </div>
               </div>
+            )}
+
+            {/* Tab 3: Teams & Departments */}
+            {activeTab === 'teams' && (
+              <TeamsManagerView onNotify={onNotify} />
             )}
 
             {/* Tab 3: Security & Sessions */}
