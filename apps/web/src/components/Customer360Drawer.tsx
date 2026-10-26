@@ -137,6 +137,7 @@ export function Customer360Drawer({
   const [dealForm, setDealForm] = useState({
     name: '',
     amountMinor: '',
+    currency: 'IRR',
     stage: 'PROPOSAL',
     probability: 60,
     targetCloseAt: '',
@@ -321,7 +322,7 @@ export function Customer360Drawer({
         accountId: account.id,
         name: dealForm.name.trim(),
         stage: dealForm.stage,
-        currency: 'IRR',
+        currency: dealForm.currency || 'IRR',
         probability: Number(dealForm.probability),
         ...(!isNaN(parsedAmount as number) && parsedAmount !== undefined ? { amountMinor: parsedAmount } : {}),
         ...(dealForm.targetCloseAt.trim() ? { targetCloseAt: dealForm.targetCloseAt.trim() } : {}),
@@ -347,6 +348,7 @@ export function Customer360Drawer({
       setDealForm({
         name: '',
         amountMinor: '',
+        currency: 'IRR',
         stage: 'PROPOSAL',
         probability: 60,
         targetCloseAt: '',
@@ -1460,15 +1462,30 @@ export function Customer360Drawer({
                 />
               </div>
               <div className="form-group">
-                <label>مبلغ معامله (ریال)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  placeholder="مثال: 500000000"
-                  value={dealForm.amountMinor}
-                  onChange={(e) => setDealForm({ ...dealForm, amountMinor: e.target.value })}
-                  disabled={isSubmittingAction}
-                />
+                <label>مبلغ معامله</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '8px' }}>
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="مثال: 500000000"
+                    value={dealForm.amountMinor}
+                    onChange={(e) => setDealForm({ ...dealForm, amountMinor: e.target.value })}
+                    disabled={isSubmittingAction}
+                  />
+                  <select
+                    className="form-control"
+                    value={dealForm.currency}
+                    onChange={(e) => setDealForm({ ...dealForm, currency: e.target.value })}
+                    disabled={isSubmittingAction}
+                    aria-label="واحد پول معامله"
+                  >
+                    <option value="IRR">ریال (IRR)</option>
+                    <option value="TOMAN">تومان</option>
+                    <option value="USD">دلار آمریکا ($)</option>
+                    <option value="EUR">یورو (€)</option>
+                    <option value="AED">درهم (AED)</option>
+                  </select>
+                </div>
               </div>
               <div className="form-group">
                 <label>مرحله معامله در خط‌لوله (Stage)</label>

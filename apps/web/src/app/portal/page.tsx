@@ -27,6 +27,11 @@ export default function CustomerPortalPage() {
   const [newDesc, setNewDesc] = useState('');
   const [newPriority, setNewPriority] = useState<TicketPriority>('NORMAL');
 
+  // CSAT Rating state (Didar Customer Feedback Benchmark)
+  const [csatRating, setCsatRating] = useState<number>(5);
+  const [csatFeedback, setCsatFeedback] = useState<string>('');
+  const [csatSubmittedTickets, setCsatSubmittedTickets] = useState<Record<string, number>>({});
+
   // UI feedback states
   const [isLoading, setIsLoading] = useState(true);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
@@ -154,6 +159,15 @@ export default function CustomerPortalPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmitCsat = (ticketId: string) => {
+    setCsatSubmittedTickets((prev) => ({
+      ...prev,
+      [ticketId]: csatRating,
+    }));
+    showToast(`امتیاز ${csatRating} ستاره با موفقیت ثبت شد. از بازخورد شما متشکریم!`);
+    setCsatFeedback('');
   };
 
   return (
@@ -514,6 +528,101 @@ export default function CustomerPortalPage() {
                   })
                 )}
               </div>
+
+              {/* Didar CSAT Rating & Feedback Survey (TK-05) */}
+              {(selectedTicket.status === 'RESOLVED' || selectedTicket.status === 'CLOSED') && (
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '16px',
+                  }}
+                  data-testid="csat-survey-card"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>⭐</span>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#166534' }}>
+                      نظرسنجی و ارزیابی کیفیت پاسخگویی (Didar CSAT Rating)
+                    </h4>
+                  </div>
+                  <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#15803d' }}>
+                    این درخواست به عنوان حل‌شده علامت‌گذاری شده است. لطفاً کیفیت پاسخ و عملکرد کارشناس را ارزیابی فرمایید:
+                  </p>
+
+                  {csatSubmittedTickets[selectedTicket.id] ? (
+                    <div
+                      style={{
+                        padding: '10px 14px',
+                        background: '#dcfce7',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#166534',
+                        fontWeight: 700,
+                      }}
+                    >
+                      ✓ با تشکر از شما! امتیاز {csatSubmittedTickets[selectedTicket.id]} از ۵ ستاره با موفقیت ثبت شد.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>امتیاز شما:</span>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setCsatRating(star)}
+                            data-testid={`csat-star-${star}`}
+                            style={{
+                              background: star <= csatRating ? '#fef08a' : '#f1f5f9',
+                              border: '1px solid',
+                              borderColor: star <= csatRating ? '#eab308' : '#cbd5e1',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                            }}
+                          >
+                            ⭐ {star}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          value={csatFeedback}
+                          onChange={(e) => setCsatFeedback(e.target.value)}
+                          placeholder="توضیح یا پیشنهاد تکمیلی شما (اختیاری)..."
+                          style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSubmitCsat(selectedTicket.id)}
+                          data-testid="submit-csat-btn"
+                          className="primary-button"
+                          style={{
+                            fontSize: '11px',
+                            padding: '6px 14px',
+                            background: '#16a34a',
+                            borderColor: '#16a34a',
+                          }}
+                        >
+                          ثبت امتیاز
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Reply Form */}
               <form

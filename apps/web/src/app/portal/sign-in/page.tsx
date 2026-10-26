@@ -16,7 +16,11 @@ export default function CustomerPortalSignInPage() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('ورود آدرس ایمیل الزامی است');
+      setError(
+        authMode === 'otp'
+          ? 'ورود شماره تلفن همراه یا آدرس ایمیل الزامی است'
+          : 'ورود آدرس ایمیل الزامی است',
+      );
       return;
     }
 
@@ -25,8 +29,9 @@ export default function CustomerPortalSignInPage() {
       setError(null);
 
       if (authMode === 'otp' && !otpSent) {
-        // Send OTP simulation
+        // Send OTP simulation via SMS
         setOtpSent(true);
+        setOtpCode('12345'); // Pre-fill test OTP for easy testing
         setLoading(false);
         return;
       }
@@ -124,13 +129,15 @@ export default function CustomerPortalSignInPage() {
         <form onSubmit={handleSignIn} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              آدرس ایمیل شرکتی / سازمانی *
+              {authMode === 'otp'
+                ? 'شماره تلفن همراه ایران یا ایمیل *'
+                : 'آدرس ایمیل شرکتی / سازمانی *'}
             </label>
             <input
-              type="email"
+              type={authMode === 'otp' ? 'text' : 'email'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="customer@company.com"
+              placeholder={authMode === 'otp' ? '09121234567 یا ایمیل' : 'customer@company.com'}
               data-testid="customer-email-input"
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
               required

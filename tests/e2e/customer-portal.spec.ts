@@ -109,4 +109,28 @@ test.describe('Customer Portal & Access Boundary P0 Journey', () => {
     const messagesList = page.locator('[data-testid="ticket-messages-list"]');
     await expect(messagesList).toContainText(ticketDesc);
   });
+
+  test('should render Didar CSAT 5-star rating survey on resolved tickets', async ({ page }) => {
+    // Select TKT-1038 which has RESOLVED status
+    const resolvedTicket = page.locator('[data-testid="customer-ticket-item"]', {
+      hasText: 'TKT-1038',
+    });
+    await resolvedTicket.click();
+
+    // Verify CSAT survey card is displayed
+    const csatCard = page.locator('[data-testid="csat-survey-card"]');
+    await expect(csatCard).toBeVisible();
+    await expect(csatCard).toContainText('ارزیابی کیفیت پاسخگویی');
+
+    // Click 5-star rating and submit
+    const star5 = page.locator('[data-testid="csat-star-5"]');
+    await expect(star5).toBeVisible();
+    await star5.click();
+
+    const submitCsatBtn = page.locator('[data-testid="submit-csat-btn"]');
+    await submitCsatBtn.click();
+
+    // Verify thank you message
+    await expect(csatCard).toContainText('با تشکر از شما! امتیاز ۵ از ۵ ستاره');
+  });
 });
