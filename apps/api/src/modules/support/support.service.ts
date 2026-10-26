@@ -13,7 +13,14 @@ import type { CreateTicketDto } from './dto/create-ticket.dto.js';
 import type { AddTicketMessageDto } from './dto/add-ticket-message.dto.js';
 import { AuditService } from '../audit/audit.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
-import type { TicketDto, TicketMessageDto } from '@crm/contracts';
+import type {
+  AssignTicketRequest,
+  CreateSupportMacroRequest,
+  SupportMacroDto,
+  TicketDto,
+  TicketMessageDto,
+  UpdateSupportMacroRequest,
+} from '@crm/contracts';
 import type { UserContext } from '../../common/auth/auth.types.js';
 
 @Injectable()
@@ -161,6 +168,134 @@ export class SupportService {
     });
 
     return this.mapMessage(message);
+  }
+
+  async updateTicketStatusOrAssign(
+    organizationId: string,
+    actorId: string,
+    ticketId: string,
+    dto: AssignTicketRequest,
+  ): Promise<TicketDto> {
+    const ticket = await this.supportRepo.findTicketById(organizationId, ticketId);
+    if (!ticket) {
+      throw new NotFoundException(`Ticket ${ticketId} not found in this organization`);
+    }
+
+    if (dto.assigneeId !== undefined) {
+      ticket.assigneeId = dto.assigneeId || null;
+    }
+    if (dto.status !== undefined) {
+      ticket.status = dto.status;
+    }
+
+    const updated = await this.supportRepo.updateTicket(ticket);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'TICKET_UPDATED',
+      entityType: 'Ticket',
+      entityId: ticket.id,
+      metadata: { status: ticket.status, assigneeId: ticket.assigneeId },
+    });
+
+    return this.mapTicket(updated);
+  }
+
+  /* Support Macros (Canned Responses) */
+
+  async getMacros(organizationId: string, category?: string): Promise<SupportMacroDto[]> {
+    const list = await this.supportRepo.findMacros(organizationId, category);
+    return list.map((m) => ({ ...m }));
+  }
+
+  async getMacroById(organizationId: string, id: string): Promise<SupportMacroDto> {
+    const m = await this.supportRepo.findMacroById(organizationId, id);
+    if (!m) {
+      throw new NotFoundException(`Support macro ${id} not found`);
+    }
+    return { ...m };
+  }
+
+  async createMacro(
+    organizationId: string,
+    actorId: string,
+    dto: CreateSupportMacroRequest,
+  ): Promise<SupportMacroDto> {
+    const macro = await this.supportRepo.createMacro({
+      organizationId,
+      title: dto.title.trim(),
+      shortcut: dto.shortcut.trim().toLowerCase(),
+      category: dto.category.trim(),
+      content: dto.content.trim(),
+      tags: dto.tags ?? [],
+    });
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'SUPPORT_MACRO_CREATED',
+      entityType: 'SupportMacro',
+      entityId: macro.id,
+      metadata: { title: macro.title, shortcut: macro.shortcut },
+    });
+
+    return { ...macro };
+  }
+
+  async updateMacro(
+    organizationId: string,
+    actorId: string,
+    id: string,
+    dto: UpdateSupportMacroRequest,
+  ): Promise<SupportMacroDto> {
+    const existing = await this.supportRepo.findMacroById(organizationId, id);
+    if (!existing) {
+      throw new NotFoundException(`Support macro ${id} not found`);
+    }
+
+    if (dto.title !== undefined) existing.title = dto.title.trim();
+    if (dto.shortcut !== undefined) existing.shortcut = dto.shortcut.trim().toLowerCase();
+    if (dto.category !== undefined) existing.category = dto.category.trim();
+    if (dto.content !== undefined) existing.content = dto.content.trim();
+    if (dto.tags !== undefined) existing.tags = dto.tags;
+
+    const updated = await this.supportRepo.updateMacro(existing);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'SUPPORT_MACRO_UPDATED',
+      entityType: 'SupportMacro',
+      entityId: updated.id,
+      metadata: { title: updated.title },
+    });
+
+    return { ...updated };
+  }
+
+  async deleteMacro(
+    organizationId: string,
+    actorId: string,
+    id: string,
+  ): Promise<{ success: boolean }> {
+    const existing = await this.supportRepo.findMacroById(organizationId, id);
+    if (!existing) {
+      throw new NotFoundException(`Support macro ${id} not found`);
+    }
+
+    await this.supportRepo.deleteMacro(organizationId, id);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'SUPPORT_MACRO_DELETED',
+      entityType: 'SupportMacro',
+      entityId: id,
+      metadata: { title: existing.title },
+    });
+
+    return { success: true };
   }
 
   private mapTicket(t: TicketEntity): TicketDto {

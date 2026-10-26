@@ -29,10 +29,23 @@ export type TicketMessageEntity = {
   createdAt: string;
 };
 
+export type SupportMacroEntity = {
+  id: string;
+  organizationId: string;
+  title: string;
+  shortcut: string;
+  category: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 @Injectable()
 export class InMemorySupportRepository {
   private tickets: Map<string, TicketEntity> = new Map();
   private messages: Map<string, TicketMessageEntity[]> = new Map(); // ticketId -> messages
+  private macros: Map<string, SupportMacroEntity> = new Map();
   private orgCounter: Map<string, number> = new Map();
 
   constructor() {
@@ -105,6 +118,47 @@ export class InMemorySupportRepository {
       updatedAt: new Date().toISOString(),
     });
     this.orgCounter.set(orgBeta, 2001);
+
+    // Seed default support macros
+    const seededMacros: SupportMacroEntity[] = [
+      {
+        id: 'macro-001',
+        organizationId: orgAlpha,
+        title: 'پاسخ اولیه و اعلام بررسی فنی',
+        shortcut: 'ack',
+        category: 'عمومی',
+        content: 'با سلام و احترام،\nدرخواست شما دریافت شد و کارشناسان فنی ما در حال بررسی موضوع هستند. نتیجه بررسی به زودی از همین طریق اعلام می‌گردد.',
+        tags: ['پاسخ_اولیه', 'پشتیبانی'],
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+      {
+        id: 'macro-002',
+        organizationId: orgAlpha,
+        title: 'راهنمای دریافت کلیدهای وب‌هوک و API',
+        shortcut: 'api-guide',
+        category: 'فنی',
+        content: 'مشترک گرامی،\nبرای دریافت یا بازنشانی کلیدهای دسترسی API، می‌توانید به مسیر تنظیمات > کلیدهای دسترسی در پنل سازمانی مراجعه فرمایید.',
+        tags: ['فنی', 'API'],
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+      {
+        id: 'macro-003',
+        organizationId: orgAlpha,
+        title: 'تایید حل مشکل و درخواست نظرسنجی',
+        shortcut: 'resolved',
+        category: 'بستن تیکت',
+        content: 'با احترام،\nمشکل مطرح‌شده مرتفع گردید. در صورت وجود هرگونه ابهام یا نیاز به راهنمایی بیشتر، با کمال میل در خدمت شما هستیم.',
+        tags: ['حل_مشکل', 'تکمیل'],
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+    ];
+
+    for (const m of seededMacros) {
+      this.macros.set(m.id, m);
+    }
   }
 
   async findTickets(organizationId: string, accountId?: string): Promise<TicketEntity[]> {
@@ -175,5 +229,59 @@ export class InMemorySupportRepository {
 
   getMessageCount(ticketId: string): number {
     return (this.messages.get(ticketId) ?? []).length;
+  }
+
+  async updateTicket(ticket: TicketEntity): Promise<TicketEntity> {
+    const updated: TicketEntity = {
+      ...ticket,
+      updatedAt: new Date().toISOString(),
+    };
+    this.tickets.set(ticket.id, updated);
+    return updated;
+  }
+
+  /* Support Macros */
+
+  async findMacros(organizationId: string, category?: string): Promise<SupportMacroEntity[]> {
+    return Array.from(this.macros.values()).filter(
+      (m) => m.organizationId === organizationId && (!category || m.category === category),
+    );
+  }
+
+  async findMacroById(organizationId: string, id: string): Promise<SupportMacroEntity | null> {
+    const m = this.macros.get(id);
+    if (!m || m.organizationId !== organizationId) return null;
+    return m;
+  }
+
+  async createMacro(
+    data: Omit<SupportMacroEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<SupportMacroEntity> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const entity: SupportMacroEntity = {
+      ...data,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.macros.set(id, entity);
+    return entity;
+  }
+
+  async updateMacro(macro: SupportMacroEntity): Promise<SupportMacroEntity> {
+    const updated: SupportMacroEntity = {
+      ...macro,
+      updatedAt: new Date().toISOString(),
+    };
+    this.macros.set(macro.id, updated);
+    return updated;
+  }
+
+  async deleteMacro(organizationId: string, id: string): Promise<boolean> {
+    const m = await this.findMacroById(organizationId, id);
+    if (!m) return false;
+    this.macros.delete(id);
+    return true;
   }
 }

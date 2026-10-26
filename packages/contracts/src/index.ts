@@ -1064,5 +1064,40 @@ export type WorkLogSummaryDto = {
   }>;
 };
 
+/* Enterprise Support Macros & Canned Responses Contracts */
+
+export type SupportMacroDto = {
+  id: string;
+  organizationId: string;
+  title: string;
+  shortcut: string;
+  category: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateSupportMacroRequest = {
+  title: string;
+  shortcut: string;
+  category: string;
+  content: string;
+  tags?: string[] | undefined;
+};
+
+export type UpdateSupportMacroRequest = {
+  title?: string | undefined;
+  shortcut?: string | undefined;
+  category?: string | undefined;
+  content?: string | undefined;
+  tags?: string[] | undefined;
+};
+
+export type AssignTicketRequest = {
+  assigneeId?: string | undefined;
+  status?: TicketStatus | undefined;
+};
+
 
 

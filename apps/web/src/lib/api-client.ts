@@ -96,6 +96,10 @@ import type {
   WorkLogDto,
   WorkLogEntityType,
   WorkLogSummaryDto,
+  AssignTicketRequest,
+  CreateSupportMacroRequest,
+  SupportMacroDto,
+  UpdateSupportMacroRequest,
 } from '@crm/contracts';
 
 import {
@@ -1039,6 +1043,42 @@ export class ApiClient {
       loggedDate: '2026-10-26',
       createdAt: '2026-10-26T09:00:00.000Z',
       updatedAt: '2026-10-26T09:00:00.000Z',
+    },
+  ];
+
+  private fallbackMacros: SupportMacroDto[] = [
+    {
+      id: 'macro-001',
+      organizationId: DEFAULT_ORG_ID,
+      title: 'پاسخ اولیه و اعلام بررسی فنی',
+      shortcut: 'ack',
+      category: 'عمومی',
+      content: 'با سلام و احترام،\nدرخواست شما دریافت شد و کارشناسان فنی ما در حال بررسی موضوع هستند. نتیجه بررسی به زودی از همین طریق اعلام می‌گردد.',
+      tags: ['پاسخ_اولیه', 'پشتیبانی'],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'macro-002',
+      organizationId: DEFAULT_ORG_ID,
+      title: 'راهنمای دریافت کلیدهای وب‌هوک و API',
+      shortcut: 'api-guide',
+      category: 'فنی',
+      content: 'مشترک گرامی،\nبرای دریافت یا بازنشانی کلیدهای دسترسی API، می‌توانید به مسیر تنظیمات > کلیدهای دسترسی در پنل سازمانی مراجعه فرمایید.',
+      tags: ['فنی', 'API'],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+    {
+      id: 'macro-003',
+      organizationId: DEFAULT_ORG_ID,
+      title: 'تایید حل مشکل و درخواست نظرسنجی',
+      shortcut: 'resolved',
+      category: 'بستن تیکت',
+      content: 'با احترام،\nمشکل مطرح‌شده مرتفع گردید. در صورت وجود هرگونه ابهام یا نیاز به راهنمایی بیشتر، با کمال میل در خدمت شما هستیم.',
+      tags: ['حل_مشکل', 'تکمیل'],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
     },
   ];
 
@@ -3659,9 +3699,137 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Support Macros & Ticket Assignment ---------------- */
+
+  async updateTicketStatusOrAssign(
+    ticketId: string,
+    dto: AssignTicketRequest,
+  ): Promise<TicketDto> {
+    try {
+      return await this.request<TicketDto>(`/tickets/${encodeURIComponent(ticketId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackTickets.findIndex((t) => t.id === ticketId);
+        if (idx === -1) {
+          throw new ApiClientError(`Ticket ${ticketId} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackTickets[idx]!;
+        const updated: TicketDto = {
+          ...existing,
+          ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackTickets[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async getSupportMacros(category?: string): Promise<SupportMacroDto[]> {
+    try {
+      const path = category
+        ? `/tickets/macros/all?category=${encodeURIComponent(category)}`
+        : '/tickets/macros/all';
+      return await this.request<SupportMacroDto[]>(path);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackMacros
+          .filter((m) => !category || m.category === category)
+          .map((m) => ({ ...m }));
+      }
+      throw err;
+    }
+  }
+
+  async createSupportMacro(dto: CreateSupportMacroRequest): Promise<SupportMacroDto> {
+    try {
+      return await this.request<SupportMacroDto>('/tickets/macros', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newMacro: SupportMacroDto = {
+          id: `macro-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          title: dto.title.trim(),
+          shortcut: dto.shortcut.trim().toLowerCase(),
+          category: dto.category.trim(),
+          content: dto.content.trim(),
+          tags: dto.tags ?? [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackMacros.unshift(newMacro);
+        return { ...newMacro };
+      }
+      throw err;
+    }
+  }
+
+  async updateSupportMacro(
+    id: string,
+    dto: UpdateSupportMacroRequest,
+  ): Promise<SupportMacroDto> {
+    try {
+      return await this.request<SupportMacroDto>(`/tickets/macros/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackMacros.findIndex((m) => m.id === id);
+        if (idx === -1) {
+          throw new ApiClientError(`Macro ${id} not found`, 404, 'NOT_FOUND');
+        }
+        const existing = this.fallbackMacros[idx]!;
+        const updated: SupportMacroDto = {
+          ...existing,
+          ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+          ...(dto.shortcut !== undefined ? { shortcut: dto.shortcut.trim().toLowerCase() } : {}),
+          ...(dto.category !== undefined ? { category: dto.category.trim() } : {}),
+          ...(dto.content !== undefined ? { content: dto.content.trim() } : {}),
+          ...(dto.tags !== undefined ? { tags: dto.tags } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        this.fallbackMacros[idx] = updated;
+        return { ...updated };
+      }
+      throw err;
+    }
+  }
+
+  async deleteSupportMacro(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(
+        `/tickets/macros/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackMacros.findIndex((m) => m.id === id);
+        if (idx !== -1) {
+          this.fallbackMacros.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  AssignTicketRequest,
+  CreateSupportMacroRequest,
+  SupportMacroDto,
+  UpdateSupportMacroRequest,
   CreateWorkLogRequest,
   UpdateWorkLogRequest,
   WorkLogDto,

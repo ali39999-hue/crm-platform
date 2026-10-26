@@ -38,6 +38,7 @@ import {
   LoadingSkeleton,
   PriorityBadge,
   ProjectsView,
+  SupportMacrosView,
   TaskBoard,
   TaskList,
   TaskCalendar,
@@ -92,6 +93,7 @@ export default function WorkspaceApp() {
   >('my-work');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
   const [crmSubTab, setCrmSubTab] = useState<'accounts' | 'pipeline' | 'duplicates'>('accounts');
+  const [supportSubTab, setSupportSubTab] = useState<'tickets' | 'macros'>('tickets');
 
   // Domain & Entity States
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
@@ -952,52 +954,120 @@ export default function WorkspaceApp() {
               padding: '24px',
             }}
           >
-            <h3 style={{ margin: '0 0 8px' }}>صندوق تیکت‌ها و پشتیبانی (Support)</h3>
-            <p className="muted" style={{ marginBottom: '20px' }}>
-              تفکیک قطعی میان یادداشت‌های محرمانه داخلی کارشناسان (Internal Notes) و پیام‌های قابل
-              مشاهده برای مشتری.
-            </p>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0 }}>صندوق تیکت‌ها و پشتیبانی (Support & Helpdesk)</h3>
+                <p className="muted" style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                  رسیدگی به تیکت‌های مشتریان، تعهدات SLA، یادداشت‌های محرمانه و الگوهای پاسخ سریع
+                </p>
+              </div>
 
-            {isLoading ? (
-              <LoadingSkeleton variant="table" count={3} />
-            ) : tickets.length === 0 ? (
-              <EmptyState
-                title="هیچ تیکت فعالی وجود ندارد"
-                description="تمام درخواست‌های پشتیبانی پاسخ داده و حل شده‌اند."
-              />
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>شماره</th>
-                    <th>عنوان تیکت</th>
-                    <th>مشتری درخواست‌دهنده</th>
-                    <th>اولویت</th>
-                    <th>زمان هدف SLA</th>
-                    <th>وضعیت</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tickets.map((tkt) => (
-                    <tr key={tkt.id}>
-                      <td>
-                        <span className="task-key">{tkt.reference}</span>
-                      </td>
-                      <td>
-                        <strong>{tkt.title}</strong>
-                      </td>
-                      <td>{tkt.accountName ?? 'پتروشیمی سپهر'}</td>
-                      <td>
-                        <PriorityBadge priority={tkt.priority} />
-                      </td>
-                      <td>{tkt.targetResolutionAt ?? '۲۴ ساعت کاری'}</td>
-                      <td>
-                        <TicketStatusBadge status={tkt.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {/* Support Sub-tabs Switcher */}
+              <div
+                style={{
+                  display: 'flex',
+                  background: 'var(--soft)',
+                  padding: '3px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--line)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSupportSubTab('tickets')}
+                  data-testid="support-tab-tickets"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: supportSubTab === 'tickets' ? 'var(--paper)' : 'transparent',
+                    fontWeight: supportSubTab === 'tickets' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🎫 صندوق تیکت‌ها ({tickets.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSupportSubTab('macros')}
+                  data-testid="support-tab-macros"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: supportSubTab === 'macros' ? 'var(--paper)' : 'transparent',
+                    fontWeight: supportSubTab === 'macros' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  💬 قالب‌های پاسخ آماده (Macros)
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-tab 1: Tickets Table */}
+            {supportSubTab === 'tickets' && (
+              <>
+                {isLoading ? (
+                  <LoadingSkeleton variant="table" count={3} />
+                ) : tickets.length === 0 ? (
+                  <EmptyState
+                    title="هیچ تیکت فعالی وجود ندارد"
+                    description="تمام درخواست‌های پشتیبانی پاسخ داده و حل شده‌اند."
+                  />
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>شماره</th>
+                        <th>عنوان تیکت</th>
+                        <th>مشتری درخواست‌دهنده</th>
+                        <th>اولویت</th>
+                        <th>زمان هدف SLA</th>
+                        <th>وضعیت</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tickets.map((tkt) => (
+                        <tr key={tkt.id}>
+                          <td>
+                            <span className="task-key">{tkt.reference}</span>
+                          </td>
+                          <td>
+                            <strong>{tkt.title}</strong>
+                          </td>
+                          <td>{tkt.accountName ?? 'پتروشیمی سپهر'}</td>
+                          <td>
+                            <PriorityBadge priority={tkt.priority} />
+                          </td>
+                          <td>{tkt.targetResolutionAt ?? '۲۴ ساعت کاری'}</td>
+                          <td>
+                            <TicketStatusBadge status={tkt.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
+            )}
+
+            {/* Sub-tab 2: Support Macros Catalog */}
+            {supportSubTab === 'macros' && (
+              <SupportMacrosView onNotify={(msg) => showToast(msg)} />
             )}
           </div>
         )}

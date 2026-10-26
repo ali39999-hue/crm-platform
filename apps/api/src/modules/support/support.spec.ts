@@ -116,4 +116,52 @@ describe('Support & Ticketing Module with Strict Note Privacy', () => {
       expect(audit).toBeDefined();
     });
   });
+
+  describe('3. Ticket Assignment, Resolution & Support Macros (R-058 & R-060)', () => {
+    it('updates ticket assignee and status to RESOLVED and records audit event', async () => {
+      const updated = await supportService.updateTicketStatusOrAssign(
+        orgAlphaId,
+        supportAgentId,
+        ticketAlphaId,
+        {
+          assigneeId: supportAgentId,
+          status: 'RESOLVED',
+        },
+      );
+
+      expect(updated.status).toBe('RESOLVED');
+      expect(updated.assigneeId).toBe(supportAgentId);
+
+      const audit = auditService.getEvents(orgAlphaId).find((a) => a.action === 'TICKET_UPDATED');
+      expect(audit).toBeDefined();
+    });
+
+    it('manages canned response support macros (CRUD)', async () => {
+      // 1. List seeded macros
+      const macros = await supportService.getMacros(orgAlphaId);
+      expect(macros.length).toBeGreaterThanOrEqual(3);
+      expect(macros.some((m) => m.shortcut === 'ack')).toBe(true);
+
+      // 2. Create new macro
+      const created = await supportService.createMacro(orgAlphaId, supportAgentId, {
+        title: 'پاسخ بازنشانی رمز عبور',
+        shortcut: 'pwd-reset',
+        category: 'احراز هویت',
+        content: 'لینک بازنشانی گذرواژه برای ایمیل شما ارسال گردید.',
+        tags: ['امنیت', 'ورود'],
+      });
+      expect(created.id).toBeDefined();
+      expect(created.shortcut).toBe('pwd-reset');
+
+      // 3. Update macro
+      const updated = await supportService.updateMacro(orgAlphaId, supportAgentId, created.id, {
+        title: 'پاسخ بازنشانی رمز عبور (به‌روزرسانی‌شده)',
+      });
+      expect(updated.title).toBe('پاسخ بازنشانی رمز عبور (به‌روزرسانی‌شده)');
+
+      // 4. Delete macro
+      const deleted = await supportService.deleteMacro(orgAlphaId, supportAgentId, created.id);
+      expect(deleted.success).toBe(true);
+    });
+  });
 });

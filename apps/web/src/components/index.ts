@@ -21,3 +21,4 @@ export * from './DuplicateReviewView';
 export * from './CustomFieldSchemaBuilder';
 export * from './ProjectsView';
 export * from './TimeTrackingView';
+export * from './SupportMacrosView';
