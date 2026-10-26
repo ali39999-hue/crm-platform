@@ -1,0 +1,46 @@
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('ProductionReadiness');
+
+export function assertProductionReadiness(env: Record<string, string | undefined> = process.env): void {
+  const isProd = env.NODE_ENV === 'production';
+  if (!isProd) {
+    return;
+  }
+
+  const errors: string[] = [];
+
+  // 1. Persistence Gate (RA-005): Must not use in-memory database in production
+  if (env.USE_DATABASE !== 'true') {
+    errors.push(
+      'USE_DATABASE=true is required in production. Running with InMemory repositories in production is strictly forbidden.',
+    );
+  }
+
+  // 2. Authentication Secrets Gate (RA-001 / RA-002): Must have dedicated secure secret
+  const defaultSecret = 'crm-platform-secure-jwt-hmac-sha256-secret-key-32-chars-minimum';
+  if (!env.JWT_SECRET || env.JWT_SECRET === defaultSecret) {
+    errors.push(
+      'JWT_SECRET must be configured with a unique, cryptographically strong secret in production.',
+    );
+  }
+
+  // 3. Insecure Development Bypass Gate (RA-001): Insecure auth bypass cannot be active in prod
+  if (env.ALLOW_INSECURE_DEV_AUTH === 'true') {
+    errors.push(
+      'ALLOW_INSECURE_DEV_AUTH must not be enabled in production environments.',
+    );
+  }
+
+  if (errors.length > 0) {
+    logger.error('CRITICAL: Production readiness validation failed:');
+    for (const err of errors) {
+      logger.error(` - ${err}`);
+    }
+    throw new Error(
+      `[FATAL] Production startup failed due to security/persistence gates:\n${errors.join('\n')}`,
+    );
+  }
+
+  logger.log('✓ Production readiness verification passed: Security and persistence gates validated.');
+}

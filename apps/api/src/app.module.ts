@@ -1,4 +1,5 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, OnModuleInit } from '@nestjs/common';
+import { assertProductionReadiness } from './common/security/production-readiness.js';
 import { HealthController } from './health/health.controller.js';
 import { AuthController } from './modules/auth/auth.controller.js';
 import { TasksController } from './modules/tasks/tasks.controller.js';
@@ -240,7 +241,11 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     ApiKeyService,
   ],
 })
-export class AppModule implements NestModule {
+export class AppModule implements NestModule, OnModuleInit {
+  onModuleInit() {
+    assertProductionReadiness();
+  }
+
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
   }
