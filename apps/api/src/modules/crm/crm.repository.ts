@@ -29,6 +29,8 @@ export type ContactEntity = {
   lastName: string;
   email: string | null;
   phone: string | null;
+  birthDate?: string | null | undefined;
+  lastInteractionAt?: string | null | undefined;
   createdAt: string;
   updatedAt: string;
 };
@@ -164,6 +166,8 @@ export class InMemoryCrmRepository implements ICrmRepository {
 
     // Seed Contacts
     const contactId = '60000000-0000-0000-0000-000000000001';
+    const nowIso = new Date().toISOString();
+    const todayMonthDay = nowIso.slice(5, 10); // MM-DD
     this.contacts.set(contactId, {
       id: contactId,
       organizationId: orgAlpha,
@@ -173,8 +177,27 @@ export class InMemoryCrmRepository implements ICrmRepository {
       lastName: 'رضایی',
       email: 'm.rezaei@foolad-arya.com',
       phone: '09121234567',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      birthDate: `1990-${todayMonthDay}`,
+      lastInteractionAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    });
+
+    const contactDormantId = '60000000-0000-0000-0000-000000000002';
+    const seventyDaysAgo = new Date(Date.now() - 86400000 * 70).toISOString();
+    this.contacts.set(contactDormantId, {
+      id: contactDormantId,
+      organizationId: orgAlpha,
+      accountId: accAlphaId,
+      ownerId: employeeAlpha,
+      firstName: 'سهراب',
+      lastName: 'کاظمی',
+      email: 's.kazemi@foolad-arya.com',
+      phone: '09129998877',
+      birthDate: '1985-04-12',
+      lastInteractionAt: seventyDaysAgo,
+      createdAt: seventyDaysAgo,
+      updatedAt: seventyDaysAgo,
     });
 
     // Seed Leads

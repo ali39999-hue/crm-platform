@@ -177,6 +177,9 @@ export type ContactDto = {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  birthDate?: string | null | undefined;
+  lastInteractionAt?: string | null | undefined;
+  isDormant?: boolean | undefined;
   ownerId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -188,6 +191,7 @@ export type CreateContactRequest = {
   lastName: string;
   email?: string;
   phone?: string;
+  birthDate?: string;
   ownerId?: string;
 };
 

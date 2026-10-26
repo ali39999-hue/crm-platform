@@ -10,7 +10,10 @@ import {
   calculateConversionSpeed,
   calculateInvoiceTotals,
   canConvertLead,
+  generateBirthdaySmsMessage,
   getLossReasonLabel,
+  isBirthdayToday,
+  isCustomerDormant,
   isDealRotting,
   isDuplicateCandidate,
   normalizeEmail,
@@ -733,6 +736,8 @@ export class CrmService {
   }
 
   private mapContact(c: ContactEntity): ContactDto {
+    const isDormant = isCustomerDormant(c.lastInteractionAt, 60);
+
     return {
       id: c.id,
       accountId: c.accountId,
@@ -740,10 +745,82 @@ export class CrmService {
       lastName: c.lastName,
       email: c.email,
       phone: c.phone,
+      birthDate: c.birthDate ?? undefined,
+      lastInteractionAt: c.lastInteractionAt ?? undefined,
+      isDormant,
       ownerId: c.ownerId,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
     };
+  }
+
+  async getTodayBirthdays(organizationId: string): Promise<ContactDto[]> {
+    const contacts = await this.crmRepo.findContacts(organizationId);
+    const today = new Date();
+    const birthdayContacts = contacts.filter((c) => isBirthdayToday(c.birthDate, today));
+    return birthdayContacts.map((c) => this.mapContact(c));
+  }
+
+  async sendBirthdaySms(
+    organizationId: string,
+    actorId: string,
+    contactId: string,
+    requestId?: string,
+  ): Promise<{ success: boolean; message: string; smsText: string }> {
+    const contact = await this.crmRepo.findContactById(organizationId, contactId);
+    if (!contact) {
+      throw new NotFoundException(`Contact ${contactId} not found in this organization`);
+    }
+
+    let companyName = 'سامانه فروش سازمانی';
+    if (contact.accountId) {
+      const acc = await this.crmRepo.findAccountById(organizationId, contact.accountId);
+      if (acc) companyName = acc.name;
+    }
+
+    const fullName = `${contact.firstName} ${contact.lastName}`.trim();
+    const smsText = generateBirthdaySmsMessage(fullName, companyName);
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'CRM_BIRTHDAY_SMS_SENT',
+      entityType: 'Contact',
+      entityId: contactId,
+      requestId,
+      metadata: {
+        contactName: fullName,
+        phone: contact.phone,
+        smsText,
+      },
+    });
+
+    this.outboxService.emit({
+      organizationId,
+      eventType: 'CrmBirthdaySmsSent',
+      aggregateType: 'Contact',
+      aggregateId: contactId,
+      payload: {
+        contactName: fullName,
+        phone: contact.phone,
+        smsText,
+      },
+    });
+
+    return {
+      success: true,
+      message: `پیامک تبریک تولد به ${fullName} ارسال شد`,
+      smsText,
+    };
+  }
+
+  async getDormantCustomers(
+    organizationId: string,
+    thresholdDays = 60,
+  ): Promise<ContactDto[]> {
+    const contacts = await this.crmRepo.findContacts(organizationId);
+    const dormant = contacts.filter((c) => isCustomerDormant(c.lastInteractionAt, thresholdDays));
+    return dormant.map((c) => this.mapContact(c));
   }
 
   private mapLead(l: LeadEntity): LeadDto {

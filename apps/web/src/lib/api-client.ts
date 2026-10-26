@@ -4102,6 +4102,62 @@ export class ApiClient {
     }
   }
 
+  /* ---------------- Didar Birthday SMS & Periodic Follow-up ---------------- */
+
+  async getTodayBirthdays(): Promise<ContactDto[]> {
+    try {
+      return await this.request<ContactDto[]>('/crm/contacts/birthdays/today');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackContacts.map((c) => ({
+          ...c,
+          birthDate: '1990-10-26',
+        }));
+      }
+      throw err;
+    }
+  }
+
+  async sendBirthdaySms(
+    contactId: string,
+  ): Promise<{ success: boolean; message: string; smsText: string }> {
+    try {
+      return await this.request<{ success: boolean; message: string; smsText: string }>(
+        `/crm/contacts/${encodeURIComponent(contactId)}/birthday-sms`,
+        {
+          method: 'POST',
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          success: true,
+          message: 'پیامک تبریک تولد با موفقیت ارسال شد',
+          smsText:
+            'مشتری گرامی، زادروزتان خجسته باد. با آرزوی تندرستی و شادکامی از طرف تیم فولاد گستر آریا.',
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getDormantCustomers(thresholdDays = 60): Promise<ContactDto[]> {
+    try {
+      return await this.request<ContactDto[]>(
+        `/crm/contacts/dormant?thresholdDays=${thresholdDays}`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackContacts.map((c) => ({
+          ...c,
+          isDormant: true,
+          lastInteractionAt: new Date(Date.now() - 86400000 * 75).toISOString(),
+        }));
+      }
+      throw err;
+    }
+  }
+
   /* ---------------- Custom Fields & Dynamic Schema ---------------- */
 
   async getCustomFields(

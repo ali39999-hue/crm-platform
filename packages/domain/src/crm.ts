@@ -262,3 +262,34 @@ export function calculateConversionSpeed(
   };
 }
 
+/**
+ * Checks if a contact's birthday is today (comparing month and day)
+ */
+export function isBirthdayToday(birthDateIso?: string | null, today = new Date()): boolean {
+  if (!birthDateIso) return false;
+  const bDate = new Date(birthDateIso);
+  if (isNaN(bDate.getTime())) return false;
+  return bDate.getUTCMonth() === today.getUTCMonth() && bDate.getUTCDate() === today.getUTCDate();
+}
+
+/**
+ * Checks if a customer is dormant (no interactions past threshold days, default 60 days)
+ */
+export function isCustomerDormant(
+  lastInteractionIso?: string | null,
+  thresholdDays = 60,
+): boolean {
+  if (!lastInteractionIso) return true;
+  const lastTime = new Date(lastInteractionIso).getTime();
+  if (isNaN(lastTime)) return true;
+  const diff = Date.now() - lastTime;
+  return diff >= thresholdDays * 86400000;
+}
+
+/**
+ * Generates personalized Iranian transactional birthday SMS message
+ */
+export function generateBirthdaySmsMessage(contactName: string, companyName: string): string {
+  return `مشتری گرامی جناب/سرکار ${contactName}، زادروزتان خجسته باد. با آرزوی تندرستی و شادکامی، از طرف تیم ${companyName}.`;
+}
+

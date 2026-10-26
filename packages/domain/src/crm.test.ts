@@ -6,8 +6,11 @@ import {
   calculateInvoiceTotals,
   canConvertLead,
   formatMoney,
+  generateBirthdaySmsMessage,
   getLossReasonLabel,
+  isBirthdayToday,
   isCheckDueSoon,
+  isCustomerDormant,
   isDealRotting,
   isDuplicateCandidate,
   normalizeEmail,
@@ -140,6 +143,30 @@ describe('CRM domain business rules', () => {
       expect(speed.avgDaysToWin).toBe(10);
       expect(speed.avgDaysToLose).toBe(20);
       expect(speed.overallAvgDays).toBe(15);
+    });
+
+    it('determines if a contact birthday is today', () => {
+      const fixedDate = new Date('2026-10-26T12:00:00.000Z');
+      expect(isBirthdayToday('1990-10-26', fixedDate)).toBe(true);
+      expect(isBirthdayToday('1995-10-26T00:00:00.000Z', fixedDate)).toBe(true);
+      expect(isBirthdayToday('1990-05-15', fixedDate)).toBe(false);
+      expect(isBirthdayToday(null, fixedDate)).toBe(false);
+    });
+
+    it('detects dormant customers without activity past threshold days', () => {
+      const seventyDaysAgo = new Date(Date.now() - 86400000 * 70).toISOString();
+      const tenDaysAgo = new Date(Date.now() - 86400000 * 10).toISOString();
+
+      expect(isCustomerDormant(seventyDaysAgo, 60)).toBe(true);
+      expect(isCustomerDormant(tenDaysAgo, 60)).toBe(false);
+      expect(isCustomerDormant(null, 60)).toBe(true);
+    });
+
+    it('generates personalized Iranian transactional birthday SMS message', () => {
+      const msg = generateBirthdaySmsMessage('محمد رضایی', 'فولاد گستر آریا');
+      expect(msg).toContain('محمد رضایی');
+      expect(msg).toContain('فولاد گستر آریا');
+      expect(msg).toContain('زادروز');
     });
   });
 });

@@ -347,5 +347,37 @@ describe('CRM Module, Deduplication, and Idempotent Conversion', () => {
       expect(target.targetAmountMinor).toBe(500000000);
       expect(target.achievementPercent).toBeDefined();
     });
+
+    it('identifies today birthdays and sends automated birthday SMS', async () => {
+      // Seeded contact 1 has birthday today
+      const birthdays = await crmService.getTodayBirthdays(orgAlphaId);
+      expect(birthdays.length).toBeGreaterThan(0);
+      const contact1 = birthdays.find((c) => c.id === '60000000-0000-0000-0000-000000000001');
+      expect(contact1).toBeDefined();
+
+      // Send birthday SMS
+      const smsResult = await crmService.sendBirthdaySms(
+        orgAlphaId,
+        employeeAlphaId,
+        '60000000-0000-0000-0000-000000000001',
+      );
+      expect(smsResult.success).toBe(true);
+      expect(smsResult.smsText).toContain('محمد رضایی');
+      expect(smsResult.smsText).toContain('زادروز');
+
+      const audit = auditService
+        .getEvents(orgAlphaId)
+        .find((a) => a.action === 'CRM_BIRTHDAY_SMS_SENT');
+      expect(audit).toBeDefined();
+    });
+
+    it('identifies dormant customers without activity past 60 days', async () => {
+      // Seeded contact 2 has last interaction 70 days ago
+      const dormant = await crmService.getDormantCustomers(orgAlphaId, 60);
+      expect(dormant.length).toBeGreaterThan(0);
+      const dormantContact = dormant.find((c) => c.id === '60000000-0000-0000-0000-000000000002');
+      expect(dormantContact).toBeDefined();
+      expect(dormantContact?.isDormant).toBe(true);
+    });
   });
 });

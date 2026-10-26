@@ -94,6 +94,39 @@ export class CrmController {
     );
   }
 
+  @Get('contacts/birthdays/today')
+  @RequirePermission('view_crm')
+  async getTodayBirthdays(@CurrentUser() user: UserContext) {
+    return this.crmService.getTodayBirthdays(user.activeOrganization.id);
+  }
+
+  @Post('contacts/:id/birthday-sms')
+  @RequirePermission('edit_crm')
+  async sendBirthdaySms(
+    @CurrentUser() user: UserContext,
+    @Param('id') contactId: string,
+    @Req() req: Request,
+  ) {
+    const reqAny = req as any;
+    const requestId = reqAny.requestId as string | undefined;
+    return this.crmService.sendBirthdaySms(
+      user.activeOrganization.id,
+      user.id,
+      contactId,
+      requestId,
+    );
+  }
+
+  @Get('contacts/dormant')
+  @RequirePermission('view_crm')
+  async getDormantCustomers(
+    @CurrentUser() user: UserContext,
+    @Query('thresholdDays') thresholdDays?: string,
+  ) {
+    const days = thresholdDays ? parseInt(thresholdDays, 10) : 60;
+    return this.crmService.getDormantCustomers(user.activeOrganization.id, days);
+  }
+
   /* Leads */
   @Get('leads')
   @RequirePermission('view_crm')

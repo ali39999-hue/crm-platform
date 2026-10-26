@@ -105,6 +105,8 @@ export class PrismaCrmRepository implements ICrmRepository {
       lastName: c.lastName,
       email: c.email ?? null,
       phone: c.phone ?? null,
+      birthDate: c.birthDate ? (c.birthDate instanceof Date ? c.birthDate.toISOString() : c.birthDate) : undefined,
+      lastInteractionAt: c.lastInteractionAt ? (c.lastInteractionAt instanceof Date ? c.lastInteractionAt.toISOString() : c.lastInteractionAt) : undefined,
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
       updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt,
     };

@@ -13,6 +13,7 @@ import type {
   TaskPriority,
   TicketDto,
 } from '@crm/contracts';
+import { isBirthdayToday } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
 import { PriorityBadge, TicketStatusBadge } from './StatusBadge';
 import { EmptyState } from './EmptyState';
@@ -289,6 +290,15 @@ export function Customer360Drawer({
       notify(`خطا در ایجاد مخاطب: ${err.message || 'خطای شبکه'}`);
     } finally {
       setIsSubmittingAction(false);
+    }
+  };
+
+  const handleSendBirthdaySms = async (contactId: string, contactName: string) => {
+    try {
+      const res = await apiClient.sendBirthdaySms(contactId);
+      notify(res.message);
+    } catch (err: any) {
+      notify(`خطا در ارسال پیامک تبریک: ${err.message || 'خطای شبکه'}`);
     }
   };
 
@@ -925,13 +935,68 @@ export function Customer360Drawer({
                           <strong style={{ fontSize: '14px', display: 'block', color: 'var(--ink)' }}>
                             {contact.firstName} {contact.lastName}
                           </strong>
-                          <span style={{ color: 'var(--muted)', fontSize: '11px' }}>
-                            شناسه: {contact.id}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                              شناسه: {contact.id.slice(0, 8)}
+                            </span>
+                            {isBirthdayToday(contact.birthDate) && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '1px 6px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(234, 179, 8, 0.15)',
+                                  color: '#eab308',
+                                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                🎉 امروز روز تولد این مخاطب است!
+                              </span>
+                            )}
+                            {contact.isDormant && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '1px 6px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(244, 63, 94, 0.15)',
+                                  color: '#f43f5e',
+                                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ⚠️ عدم تعامل ۶۰+ روز (پیگیری دوره‌ای)
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '16px', fontSize: '12px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {isBirthdayToday(contact.birthDate) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSendBirthdaySms(
+                                contact.id,
+                                `${contact.firstName} ${contact.lastName}`,
+                              )
+                            }
+                            style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                            }}
+                          >
+                            📱 ارسال پیامک تبریک تولد
+                          </button>
+                        )}
                         {contact.phone && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ color: 'var(--muted)' }}>تلفن:</span>
