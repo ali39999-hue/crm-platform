@@ -87,6 +87,10 @@ import type {
   ClickToCallRequest,
   VoipCallEventDto,
   VoipCallerProfileDto,
+  CheckItemDto,
+  CheckStatus,
+  CreateInstallmentPlanRequest,
+  InstallmentPlanDto,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,
@@ -3700,6 +3704,152 @@ export class ApiClient {
           success: true,
           message: `تماس با شماره ${dto.phoneNumber} از طریق داخلی ${dto.extension} برقرار شد`,
           callId: `call-sim-${Date.now()}`,
+        };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar Installments & Sayadi Checks ---------------- */
+
+  async createInstallmentPlan(
+    dealId: string,
+    dto: CreateInstallmentPlanRequest,
+  ): Promise<InstallmentPlanDto> {
+    try {
+      return await this.request<InstallmentPlanDto>(
+        `/crm/deals/${encodeURIComponent(dealId)}/installments`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `plan-${Date.now()}`,
+          dealId,
+          totalAmountMinor:
+            dto.downPaymentMinor + dto.checks.reduce((s, c) => s + c.amountMinor, 0),
+          downPaymentMinor: dto.downPaymentMinor,
+          installmentsCount: dto.installmentsCount,
+          checks: dto.checks.map((c, i) => ({
+            ...c,
+            id: `chk-${Date.now()}-${i}`,
+            reminderSent: false,
+          })),
+          createdAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getInstallmentPlan(dealId: string): Promise<InstallmentPlanDto> {
+    try {
+      return await this.request<InstallmentPlanDto>(
+        `/crm/deals/${encodeURIComponent(dealId)}/installments`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `plan-mock-${dealId}`,
+          dealId,
+          totalAmountMinor: 350000000,
+          downPaymentMinor: 50000000,
+          installmentsCount: 2,
+          checks: [
+            {
+              id: 'chk-1',
+              checkNumber: 'CHK-8901',
+              sayadiNumber: '1234567890123456',
+              bankName: 'بانک ملت',
+              amountMinor: 150000000,
+              dueDate: new Date(Date.now() + 86400000 * 30).toISOString(),
+              status: 'PENDING',
+              drawerName: 'فولاد گستر آریا',
+              reminderSent: false,
+            },
+            {
+              id: 'chk-2',
+              checkNumber: 'CHK-8902',
+              sayadiNumber: '9876543210987654',
+              bankName: 'بانک پاسارگاد',
+              amountMinor: 150000000,
+              dueDate: new Date(Date.now() + 86400000 * 60).toISOString(),
+              status: 'PENDING',
+              drawerName: 'فولاد گستر آریا',
+              reminderSent: false,
+            },
+          ],
+          createdAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async updateCheckStatus(checkId: string, status: CheckStatus): Promise<CheckItemDto> {
+    try {
+      return await this.request<CheckItemDto>(
+        `/crm/checks/${encodeURIComponent(checkId)}/status`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status }),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: checkId,
+          checkNumber: 'CHK-8901',
+          bankName: 'بانک ملت',
+          amountMinor: 150000000,
+          dueDate: new Date().toISOString(),
+          status,
+          drawerName: 'فولاد گستر',
+          reminderSent: false,
+        };
+      }
+      throw err;
+    }
+  }
+
+  async sendCheckReminder(checkId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      return await this.request<{ success: boolean; message: string }>(
+        `/crm/checks/${encodeURIComponent(checkId)}/send-reminder`,
+        {
+          method: 'POST',
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return { success: true, message: 'پیامک یادآوری سررسید چک ارسال شد' };
+      }
+      throw err;
+    }
+  }
+
+  async getConversionSpeedAnalytics(): Promise<{
+    avgDaysToWin: number;
+    avgDaysToLose: number;
+    overallAvgDays: number;
+    channelBreakdown: Array<{ channel: string; leadsCount: number; conversionRate: number }>;
+  }> {
+    try {
+      return await this.request('/crm/analytics/conversion-speed');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          avgDaysToWin: 12,
+          avgDaysToLose: 18,
+          overallAvgDays: 14,
+          channelBreakdown: [
+            { channel: 'WEBSITE', leadsCount: 42, conversionRate: 48 },
+            { channel: 'REFERRAL', leadsCount: 28, conversionRate: 75 },
+            { channel: 'EXHIBITION', leadsCount: 15, conversionRate: 33 },
+          ],
         };
       }
       throw err;

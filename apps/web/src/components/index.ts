@@ -28,3 +28,5 @@ export * from './TeamsManagerView';
 export * from './OverviewDashboardView';
 export * from './AuditTrailView';
 export * from './VoipCallerIdPopup';
+export * from './InstallmentPlanModal';
+export * from './ConversionSpeedModal';

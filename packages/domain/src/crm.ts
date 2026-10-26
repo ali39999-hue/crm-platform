@@ -155,3 +155,110 @@ export function calculateAchievementPercent(achieved: number, target: number): n
   return Math.min(Math.round((achieved / target) * 100), 999);
 }
 
+/**
+ * Validates 16-digit Iranian Sayadi check numbers (شناسه صیادی چک).
+ * Converts Persian/Arabic digits to Latin digits and ensures exactly 16 digits.
+ */
+export function validateSayadiNumber(sayadiNumber?: string | null): boolean {
+  if (!sayadiNumber) return false;
+  const persianDigits = [/۰/g, /۱/g, /۲/g, /۳/g, /۴/g, /۵/g, /۶/g, /۷/g, /۸/g, /۹/g];
+  const arabicDigits = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
+
+  let cleaned = sayadiNumber.trim();
+  for (let i = 0; i <= 9; i++) {
+    cleaned = cleaned.replace(persianDigits[i]!, String(i)).replace(arabicDigits[i]!, String(i));
+  }
+
+  return /^\d{16}$/.test(cleaned);
+}
+
+/**
+ * Calculates equal installment splits after deducting down payment
+ */
+export function calculateInstallmentPlan(
+  totalAmountMinor: number,
+  downPaymentMinor: number,
+  installmentsCount: number,
+): Array<{ installmentIndex: number; amountMinor: number }> {
+  if (installmentsCount <= 0) return [];
+  const remainingMinor = Math.max(0, totalAmountMinor - downPaymentMinor);
+  const baseAmount = Math.floor(remainingMinor / installmentsCount);
+  const remainder = remainingMinor - baseAmount * installmentsCount;
+
+  const installments: Array<{ installmentIndex: number; amountMinor: number }> = [];
+  for (let i = 0; i < installmentsCount; i++) {
+    // Distribute remainder to the first installments
+    const amountMinor = i < remainder ? baseAmount + 1 : baseAmount;
+    installments.push({
+      installmentIndex: i + 1,
+      amountMinor,
+    });
+  }
+  return installments;
+}
+
+/**
+ * Checks if a bank check or installment is due soon within threshold days
+ */
+export function isCheckDueSoon(dueDateIso: string, thresholdDays = 3): boolean {
+  const due = new Date(dueDateIso).getTime();
+  const now = Date.now();
+  const diff = due - now;
+  return diff >= 0 && diff <= thresholdDays * 86400000;
+}
+
+/**
+ * Calculates Didar Conversion Speed (سرعت تبدیل):
+ * Average days to close won and lost deals based on initial deal registration cohort
+ */
+export function calculateConversionSpeed(
+  deals: Array<{
+    createdAt: string;
+    wonAt?: string | null;
+    lostAt?: string | null;
+    stage: string;
+  }>,
+): {
+  avgDaysToWin: number;
+  avgDaysToLose: number;
+  overallAvgDays: number;
+} {
+  const wonDays: number[] = [];
+  const lostDays: number[] = [];
+
+  for (const deal of deals) {
+    const createdTime = new Date(deal.createdAt).getTime();
+
+    if (deal.stage === 'WON' && deal.wonAt) {
+      const days = Math.max(
+        0,
+        Math.round((new Date(deal.wonAt).getTime() - createdTime) / 86400000),
+      );
+      wonDays.push(days);
+    } else if (deal.stage === 'LOST' && deal.lostAt) {
+      const days = Math.max(
+        0,
+        Math.round((new Date(deal.lostAt).getTime() - createdTime) / 86400000),
+      );
+      lostDays.push(days);
+    }
+  }
+
+  const avgDaysToWin =
+    wonDays.length > 0 ? Math.round(wonDays.reduce((a, b) => a + b, 0) / wonDays.length) : 0;
+  const avgDaysToLose =
+    lostDays.length > 0 ? Math.round(lostDays.reduce((a, b) => a + b, 0) / lostDays.length) : 0;
+
+  const allClosed = [...wonDays, ...lostDays];
+  const overallAvgDays =
+    allClosed.length > 0
+      ? Math.round(allClosed.reduce((a, b) => a + b, 0) / allClosed.length)
+      : 0;
+
+  return {
+    avgDaysToWin,
+    avgDaysToLose,
+    overallAvgDays,
+  };
+}
+

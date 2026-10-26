@@ -291,6 +291,12 @@ export class CrmController {
     return this.crmService.getSalesTarget(user.activeOrganization.id, user.id);
   }
 
+  @Get('analytics/conversion-speed')
+  @RequirePermission('view_crm')
+  async getConversionSpeedAnalytics(@CurrentUser() user: UserContext) {
+    return this.crmService.getConversionSpeedAnalytics(user.activeOrganization.id);
+  }
+
   /* Duplicate Resolution & Merging */
   @Get('duplicates/candidates')
   @RequirePermission('edit_crm')

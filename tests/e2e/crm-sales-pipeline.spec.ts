@@ -124,5 +124,25 @@ test.describe('CRM Deals Pipeline Kanban & Duplicate Resolution P1 Journey (R-03
       await expect(page.locator('text=مالیات بر ارزش افزوده (۱۰٪)')).toBeVisible();
       await page.locator('button:has-text("انصراف")').click();
     }
+
+    // 4. Open and verify Conversion Speed Modal (Didar Benchmark)
+    const speedBtn = page.locator('[data-testid="open-conversion-speed-btn"]');
+    await expect(speedBtn).toBeVisible();
+    await speedBtn.click();
+    await expect(page.locator('text=گزارش سرعت تبدیل و طول چرخه فروش')).toBeVisible();
+    await expect(page.locator('text=سرعت تا پیروزی')).toBeVisible();
+    await page.locator('button:has-text("بستن")').click();
+
+    // 5. Open and verify Installment Plan & Sayadi Checks Modal
+    const installmentBtn = firstCard.locator('button[title*="اقساط"]');
+    if (await installmentBtn.isVisible()) {
+      await installmentBtn.click();
+      await expect(page.locator('text=مدیریت فروش اقساطی و چک‌های صیادی')).toBeVisible();
+      await page.locator('button:has-text("بستن")').click();
+    }
+
+    // 6. Verify VoIP Caller-ID simulation trigger
+    const voipTrigger = page.locator('[data-testid="simulate-voip-call-btn"]');
+    await expect(voipTrigger).toBeVisible();
   });
 });

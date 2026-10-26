@@ -86,6 +86,8 @@ import { InMemoryJobRepository } from './modules/jobs/job.repository.js';
 import { JobWorkerService } from './modules/jobs/job-worker.service.js';
 import { VoipController } from './modules/integrations/voip/voip.controller.js';
 import { VoipService } from './modules/integrations/voip/voip.service.js';
+import { InstallmentsController } from './modules/crm/installments/installments.controller.js';
+import { InstallmentsService } from './modules/crm/installments/installments.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -116,9 +118,11 @@ import { VoipService } from './modules/integrations/voip/voip.service.js';
     ApiKeyController,
     AuditController,
     VoipController,
+    InstallmentsController,
   ],
   providers: [
     VoipService,
+    InstallmentsService,
     AuthService,
     TokenService,
     AuthGuard,

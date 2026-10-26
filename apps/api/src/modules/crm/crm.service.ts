@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   calculateAchievementPercent,
+  calculateConversionSpeed,
   calculateInvoiceTotals,
   canConvertLead,
   getLossReasonLabel,
@@ -998,6 +999,39 @@ export class CrmService {
       achievementPercent,
       year: new Date().getFullYear(),
       month: new Date().getMonth() + 1,
+    };
+  }
+
+  async getConversionSpeedAnalytics(organizationId: string) {
+    const deals = await this.crmRepo.findDeals(organizationId);
+    const speed = calculateConversionSpeed(
+      deals.map((d) => ({
+        createdAt: d.createdAt,
+        wonAt: d.stage === 'WON' ? d.updatedAt : null,
+        lostAt: d.stage === 'LOST' ? (d.lostAt || d.updatedAt) : null,
+        stage: d.stage,
+      })),
+    );
+
+    const leads = await this.crmRepo.findLeads(organizationId);
+    const channelMap = new Map<string, { count: number; wonCount: number }>();
+    for (const lead of leads) {
+      const src = lead.source || 'WEBSITE';
+      const cur = channelMap.get(src) || { count: 0, wonCount: 0 };
+      cur.count += 1;
+      if (lead.status === 'CONVERTED') cur.wonCount += 1;
+      channelMap.set(src, cur);
+    }
+
+    const channelBreakdown = Array.from(channelMap.entries()).map(([channel, data]) => ({
+      channel,
+      leadsCount: data.count,
+      conversionRate: data.count > 0 ? Math.round((data.wonCount / data.count) * 100) : 0,
+    }));
+
+    return {
+      ...speed,
+      channelBreakdown,
     };
   }
 

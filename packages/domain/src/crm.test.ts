@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateAchievementPercent,
+  calculateConversionSpeed,
+  calculateInstallmentPlan,
   calculateInvoiceTotals,
   canConvertLead,
   formatMoney,
   getLossReasonLabel,
+  isCheckDueSoon,
   isDealRotting,
   isDuplicateCandidate,
   normalizeEmail,
   normalizePhone,
+  validateSayadiNumber,
 } from './crm.js';
 
 describe('CRM domain business rules', () => {
@@ -95,6 +99,47 @@ describe('CRM domain business rules', () => {
     it('calculates sales target achievement percentage', () => {
       expect(calculateAchievementPercent(75000000, 100000000)).toBe(75);
       expect(calculateAchievementPercent(0, 100000000)).toBe(0);
+    });
+
+    it('validates 16-digit Iranian Sayadi check numbers', () => {
+      expect(validateSayadiNumber('1234567890123456')).toBe(true);
+      expect(validateSayadiNumber('۱۲۳۴۵۶۷۸۹۰۱۲۳۴۵۶')).toBe(true); // Persian numerals
+      expect(validateSayadiNumber('123456')).toBe(false); // Too short
+      expect(validateSayadiNumber('123456789012345a')).toBe(false); // Non-digit
+    });
+
+    it('calculates equal installment splits after down payment', () => {
+      // Total 100M, down payment 20M, 4 installments of 20M each
+      const plan = calculateInstallmentPlan(100000000, 20000000, 4);
+      expect(plan.length).toBe(4);
+      expect(plan[0]!.amountMinor).toBe(20000000);
+      expect(plan.reduce((sum, it) => sum + it.amountMinor, 0)).toBe(80000000);
+    });
+
+    it('detects when a check is due soon within threshold days', () => {
+      const inTwoDays = new Date(Date.now() + 86400000 * 2).toISOString();
+      const inTenDays = new Date(Date.now() + 86400000 * 10).toISOString();
+      expect(isCheckDueSoon(inTwoDays, 3)).toBe(true);
+      expect(isCheckDueSoon(inTenDays, 3)).toBe(false);
+    });
+
+    it('calculates conversion speed and sales cycle duration', () => {
+      const deals = [
+        {
+          createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+          wonAt: new Date().toISOString(),
+          stage: 'WON',
+        },
+        {
+          createdAt: new Date(Date.now() - 86400000 * 20).toISOString(),
+          lostAt: new Date().toISOString(),
+          stage: 'LOST',
+        },
+      ];
+      const speed = calculateConversionSpeed(deals);
+      expect(speed.avgDaysToWin).toBe(10);
+      expect(speed.avgDaysToLose).toBe(20);
+      expect(speed.overallAvgDays).toBe(15);
     });
   });
 });

@@ -11,6 +11,8 @@ import type {
   SalesTargetDto,
 } from '@crm/contracts';
 import { apiClient } from '../lib/api-client';
+import { InstallmentPlanModal } from './InstallmentPlanModal';
+import { ConversionSpeedModal } from './ConversionSpeedModal';
 
 interface DealsPipelineKanbanProps {
   initialDeals?: DealDto[];
@@ -65,6 +67,8 @@ export function DealsPipelineKanban({
   >([]);
 
   const [showLossAnalyticsModal, setShowLossAnalyticsModal] = useState(false);
+  const [showSpeedModal, setShowSpeedModal] = useState(false);
+  const [installmentModalDeal, setInstallmentModalDeal] = useState<DealDto | null>(null);
 
   const loadPipelineData = async () => {
     try {
@@ -395,6 +399,15 @@ export function DealsPipelineKanban({
               <span>📉 تحلیل دلایل شکست</span>
             </button>
 
+            {/* Conversion Speed Report Button */}
+            <button
+              onClick={() => setShowSpeedModal(true)}
+              data-testid="open-conversion-speed-btn"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 transition-colors"
+            >
+              <span>⚡ سرعت تبدیل</span>
+            </button>
+
             <div className="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
               کل: <strong>{deals.length}</strong>
             </div>
@@ -552,6 +565,17 @@ export function DealsPipelineKanban({
                             className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 transition-colors flex items-center gap-1"
                           >
                             <span>🧾 پیش‌فاکتور</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInstallmentModalDeal(deal);
+                            }}
+                            title="مدیریت فروش اقساطی و چک‌های صیادی"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 transition-colors flex items-center gap-1"
+                          >
+                            <span>💳 اقساط</span>
                           </button>
 
                           <select
@@ -898,6 +922,23 @@ export function DealsPipelineKanban({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal: Installment Plan & Sayadi Checks */}
+      {installmentModalDeal && (
+        <InstallmentPlanModal
+          deal={installmentModalDeal}
+          onClose={() => setInstallmentModalDeal(null)}
+          onNotify={onNotify}
+        />
+      )}
+
+      {/* Modal: Conversion Speed Analytics (Didar Benchmark) */}
+      {showSpeedModal && (
+        <ConversionSpeedModal
+          onClose={() => setShowSpeedModal(false)}
+          onNotify={onNotify}
+        />
       )}
     </div>
   );
