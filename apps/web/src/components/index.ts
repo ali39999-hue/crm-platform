@@ -22,3 +22,4 @@ export * from './CustomFieldSchemaBuilder';
 export * from './ProjectsView';
 export * from './TimeTrackingView';
 export * from './SupportMacrosView';
+export * from './MentionsInboxView';

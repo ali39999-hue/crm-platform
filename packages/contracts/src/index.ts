@@ -1099,5 +1099,32 @@ export type AssignTicketRequest = {
   status?: TicketStatus | undefined;
 };
 
+/* Enterprise Team Mentions & Collaboration Contracts */
+
+export type MentionEntityType = 'TASK' | 'TICKET' | 'DOCUMENT' | 'DEAL';
+
+export type MentionDto = {
+  id: string;
+  organizationId: string;
+  sourceEntityType: MentionEntityType;
+  sourceEntityId: string;
+  sourceTitle: string;
+  authorId: string;
+  authorName: string;
+  recipientId: string;
+  recipientName: string;
+  contextSnippet: string;
+  readAt?: string | null | undefined;
+  createdAt: string;
+};
+
+export type CreateMentionRequest = {
+  sourceEntityType: MentionEntityType;
+  sourceEntityId: string;
+  sourceTitle: string;
+  recipientId: string;
+  contextSnippet: string;
+};
+
 
 

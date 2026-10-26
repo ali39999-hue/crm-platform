@@ -30,6 +30,9 @@ import { InMemoryProjectRepository } from './modules/projects/project.repository
 import { TimeTrackingController } from './modules/timetracking/timetracking.controller.js';
 import { TimeTrackingService } from './modules/timetracking/timetracking.service.js';
 import { InMemoryTimeTrackingRepository } from './modules/timetracking/timetracking.repository.js';
+import { MentionController } from './modules/mentions/mention.controller.js';
+import { MentionService } from './modules/mentions/mention.service.js';
+import { InMemoryMentionRepository } from './modules/mentions/mention.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -100,6 +103,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     CustomFieldController,
     ProjectController,
     TimeTrackingController,
+    MentionController,
   ],
   providers: [
     AuthService,
@@ -208,6 +212,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     ProjectService,
     InMemoryTimeTrackingRepository,
     TimeTrackingService,
+    InMemoryMentionRepository,
+    MentionService,
   ],
 })
 export class AppModule implements NestModule {

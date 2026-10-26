@@ -36,6 +36,7 @@ import {
   getPriorityLabel,
   getTaskStatusLabel,
   LoadingSkeleton,
+  MentionsInboxView,
   PriorityBadge,
   ProjectsView,
   SupportMacrosView,
@@ -94,6 +95,7 @@ export default function WorkspaceApp() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
   const [crmSubTab, setCrmSubTab] = useState<'accounts' | 'pipeline' | 'duplicates'>('accounts');
   const [supportSubTab, setSupportSubTab] = useState<'tickets' | 'macros'>('tickets');
+  const [notifSubTab, setNotifSubTab] = useState<'notifications' | 'mentions'>('notifications');
 
   // Domain & Entity States
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
@@ -1095,6 +1097,8 @@ export default function WorkspaceApp() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: '16px',
+                flexWrap: 'wrap',
+                gap: '12px',
               }}
             >
               <div>
@@ -1102,67 +1106,123 @@ export default function WorkspaceApp() {
                   اعلان‌ها و رخدادهای درون‌برنامه‌ای (In-App Notifications)
                 </h3>
                 <p className="muted" style={{ margin: 0 }}>
-                  اعلان‌های خودکار حاصل از رویدادهای Outbox و تغییرات در وظایف و تیکت‌ها
+                  اعلان‌های خودکار حاصل از رویدادهای Outbox و ارجاعات مستقیم همکاران
                 </p>
+              </div>
+
+              {/* Sub-tabs switcher */}
+              <div
+                style={{
+                  display: 'flex',
+                  background: 'var(--soft)',
+                  padding: '3px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--line)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setNotifSubTab('notifications')}
+                  data-testid="notif-tab-system"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: notifSubTab === 'notifications' ? 'var(--paper)' : 'transparent',
+                    fontWeight: notifSubTab === 'notifications' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔔 اعلان‌های سیستمی ({notifications.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotifSubTab('mentions')}
+                  data-testid="notif-tab-mentions"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: notifSubTab === 'mentions' ? 'var(--paper)' : 'transparent',
+                    fontWeight: notifSubTab === 'mentions' ? 'bold' : 'normal',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📢 صندوق منشن‌ها و ارجاعات
+                </button>
               </div>
             </div>
 
-            {notifications.length === 0 ? (
-              <EmptyState
-                title="هیچ اعلانی ندارید"
-                description="همه اعلان‌ها مشاهده و بررسی شده‌اند."
-              />
-            ) : (
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    style={{
-                      padding: '14px 18px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--line)',
-                      background: n.readAt ? 'var(--canvas)' : 'var(--paper)',
-                      borderRight: n.readAt ? '3px solid #cbd5e1' : '3px solid var(--accent)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
+            {/* Sub-tab 1: System Notifications */}
+            {notifSubTab === 'notifications' && (
+              <>
+                {notifications.length === 0 ? (
+                  <EmptyState
+                    title="هیچ اعلانی ندارید"
+                    description="همه اعلان‌ها مشاهده و بررسی شده‌اند."
+                  />
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {notifications.map((n) => (
                       <div
+                        key={n.id}
                         style={{
-                          fontWeight: n.readAt ? 'normal' : '700',
-                          fontSize: '14px',
-                          marginBottom: '4px',
+                          padding: '14px 18px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--line)',
+                          background: n.readAt ? 'var(--canvas)' : 'var(--paper)',
+                          borderRight: n.readAt ? '3px solid #cbd5e1' : '3px solid var(--accent)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
                         }}
                       >
-                        {n.title}
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: n.readAt ? 'normal' : '700',
+                              fontSize: '14px',
+                              marginBottom: '4px',
+                            }}
+                          >
+                            {n.title}
+                          </div>
+                          <div style={{ color: 'var(--muted)', fontSize: '13px' }}>{n.message}</div>
+                          <small
+                            style={{
+                              color: '#94a3b8',
+                              fontSize: '11px',
+                              marginTop: '4px',
+                              display: 'block',
+                            }}
+                          >
+                            {new Date(n.createdAt).toLocaleTimeString('fa-IR')}
+                          </small>
+                        </div>
+                        {!n.readAt && (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            style={{ fontSize: '11px', padding: '6px 10px' }}
+                            onClick={() => handleMarkAsRead(n.id)}
+                          >
+                            ✓ علامت به عنوان خوانده‌شده
+                          </button>
+                        )}
                       </div>
-                      <div style={{ color: 'var(--muted)', fontSize: '13px' }}>{n.message}</div>
-                      <small
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: '11px',
-                          marginTop: '4px',
-                          display: 'block',
-                        }}
-                      >
-                        {new Date(n.createdAt).toLocaleTimeString('fa-IR')}
-                      </small>
-                    </div>
-                    {!n.readAt && (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        style={{ fontSize: '11px', padding: '6px 10px' }}
-                        onClick={() => handleMarkAsRead(n.id)}
-                      >
-                        ✓ علامت به عنوان خوانده‌شده
-                      </button>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+            )}
+
+            {/* Sub-tab 2: Team Mentions */}
+            {notifSubTab === 'mentions' && (
+              <MentionsInboxView onNotify={(msg) => showToast(msg)} />
             )}
           </div>
         )}

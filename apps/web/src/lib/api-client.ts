@@ -100,6 +100,9 @@ import type {
   CreateSupportMacroRequest,
   SupportMacroDto,
   UpdateSupportMacroRequest,
+  CreateMentionRequest,
+  MentionDto,
+  MentionEntityType,
 } from '@crm/contracts';
 
 import {
@@ -1079,6 +1082,37 @@ export class ApiClient {
       tags: ['حل_مشکل', 'تکمیل'],
       createdAt: '2026-10-01T00:00:00.000Z',
       updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackMentions: MentionDto[] = [
+    {
+      id: 'men-001',
+      organizationId: DEFAULT_ORG_ID,
+      sourceEntityType: 'TASK',
+      sourceEntityId: '10000000-0000-0000-0000-000000000001',
+      sourceTitle: 'بررسی لاگ‌های ورود و اتصال چندمستأجری',
+      authorId: '11111111-1111-1111-1111-111111111111',
+      authorName: 'علی مدیر',
+      recipientId: DEFAULT_EMPLOYEE_ID,
+      recipientName: 'سارا احمدی',
+      contextSnippet: '@سارا لطفاً لاگ‌های این وظیفه را قبل از جلسه دمو با پتروشیمی بازبینی کن',
+      readAt: null,
+      createdAt: '2026-10-26T06:00:00.000Z',
+    },
+    {
+      id: 'men-002',
+      organizationId: DEFAULT_ORG_ID,
+      sourceEntityType: 'TICKET',
+      sourceEntityId: '90000000-0000-0000-0000-000000000001',
+      sourceTitle: 'عدم دسترسی به ماژول گزارش‌گیری برای کاربر جدید',
+      authorId: '55555555-5555-5555-5555-555555555555',
+      authorName: 'پویا مرادی',
+      recipientId: DEFAULT_EMPLOYEE_ID,
+      recipientName: 'سارا احمدی',
+      contextSnippet: '@سارا مشکل SLA این تیکت رفع شد، لطفاً نسخه نهایی را تایید کنید',
+      readAt: '2026-10-26T07:00:00.000Z',
+      createdAt: '2026-10-26T05:00:00.000Z',
     },
   ];
 
@@ -3823,9 +3857,73 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Team Mentions & Collaboration ---------------- */
+
+  async getMentions(): Promise<MentionDto[]> {
+    try {
+      return await this.request<MentionDto[]>('/mentions');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackMentions.map((m) => ({ ...m }));
+      }
+      throw err;
+    }
+  }
+
+  async createMention(dto: CreateMentionRequest): Promise<MentionDto> {
+    try {
+      return await this.request<MentionDto>('/mentions', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newMen: MentionDto = {
+          id: `men-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          sourceEntityType: dto.sourceEntityType,
+          sourceEntityId: dto.sourceEntityId,
+          sourceTitle: dto.sourceTitle.trim(),
+          authorId: this.token,
+          authorName: 'سارا احمدی',
+          recipientId: dto.recipientId,
+          recipientName: 'همکار سازمانی',
+          contextSnippet: dto.contextSnippet.trim(),
+          readAt: null,
+          createdAt: now,
+        };
+        this.fallbackMentions.unshift(newMen);
+        return { ...newMen };
+      }
+      throw err;
+    }
+  }
+
+  async markMentionAsRead(id: string): Promise<MentionDto> {
+    try {
+      return await this.request<MentionDto>(`/mentions/${encodeURIComponent(id)}/read`, {
+        method: 'PATCH',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackMentions.find((m) => m.id === id);
+        if (!found) {
+          throw new ApiClientError(`Mention ${id} not found`, 404, 'NOT_FOUND');
+        }
+        found.readAt = new Date().toISOString();
+        return { ...found };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  CreateMentionRequest,
+  MentionDto,
+  MentionEntityType,
   AssignTicketRequest,
   CreateSupportMacroRequest,
   SupportMacroDto,
