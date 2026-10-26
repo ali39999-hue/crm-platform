@@ -34,6 +34,7 @@ export type ScheduledActivityEntity = {
   associatedEntityTitle?: string | undefined;
   visibility: 'INTERNAL' | 'CUSTOMER_SHARED';
   reminderMinutesBefore?: number | undefined;
+  isPinned?: boolean | undefined;
   createdAt: string;
   updatedAt: string;
 };

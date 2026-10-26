@@ -52,6 +52,7 @@ import {
   VoipCallerIdPopup,
   CardsPipelineView,
   WebFormBuilderView,
+  JalaliActivityCalendarView,
 } from '../components';
 
 type AuditItem = {
@@ -89,6 +90,7 @@ export default function WorkspaceApp() {
     | 'projects'
     | 'time'
     | 'crm'
+    | 'calendar'
     | 'support'
     | 'docs'
     | 'notifications'
@@ -484,6 +486,14 @@ export default function WorkspaceApp() {
             data-testid="nav-crm"
           >
             <span>👥</span> مشتریان و فرصت‌ها ({accounts.length})
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'calendar' ? 'active' : ''}`}
+            onClick={() => setActiveTab('calendar')}
+            data-testid="nav-calendar"
+          >
+            <span>📅</span> تقویم شمسی فعالیت‌ها
           </button>
           <button
             type="button"
@@ -964,6 +974,11 @@ export default function WorkspaceApp() {
               <WebFormBuilderView onNotify={(msg) => showToast(msg)} />
             )}
           </div>
+        )}
+
+        {/* Jalali Activity Calendar Tab (Didar Pattern) */}
+        {activeTab === 'calendar' && (
+          <JalaliActivityCalendarView onNotify={(msg) => showToast(msg)} />
         )}
 
         {/* Support Tab */}

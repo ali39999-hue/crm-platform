@@ -590,8 +590,9 @@ export type CustomerTimelineItem = {
   kind: string;
   summary: string;
   occurredAt: string;
-  actorName?: string | null;
-  metadata?: Record<string, any>;
+  actorName?: string | null | undefined;
+  isPinned?: boolean | undefined;
+  metadata?: Record<string, any> | undefined;
 };
 
 /* Support & Ticketing Contracts */
@@ -1029,8 +1030,30 @@ export type ActivityDto = {
   associatedEntityTitle?: string | undefined;
   visibility: 'INTERNAL' | 'CUSTOMER_SHARED';
   reminderMinutesBefore?: number | undefined;
+  isPinned?: boolean | undefined;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ActivityCalendarDayDto = {
+  date: string;
+  jalaliDate: string;
+  dayOfMonth: number;
+  jalaliDay: number;
+  jalaliMonthName: string;
+  isToday: boolean;
+  isWeekend: boolean;
+  activitiesCount: number;
+  activities: ActivityDto[];
+};
+
+export type ActivityCalendarMonthDto = {
+  year: number;
+  month: number;
+  jalaliYear: number;
+  jalaliMonthName: string;
+  days: ActivityCalendarDayDto[];
+  totalActivities: number;
 };
 
 export type CreateActivityRequest = {

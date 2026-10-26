@@ -56,6 +56,8 @@ import type {
   TransitionTaskRequest,
   WorkspaceDto,
   ActivityDto,
+  ActivityCalendarDayDto,
+  ActivityCalendarMonthDto,
   ActivityStatus,
   ActivityType,
   CalendarConflictDto,
@@ -4153,6 +4155,94 @@ export class ApiClient {
           isDormant: true,
           lastInteractionAt: new Date(Date.now() - 86400000 * 75).toISOString(),
         }));
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar Jalali Activity Calendar & Pinned Notes ---------------- */
+
+  async getJalaliCalendarMonth(
+    year?: number,
+    month?: number,
+  ): Promise<ActivityCalendarMonthDto> {
+    try {
+      const q = year && month ? `?year=${year}&month=${month}` : '';
+      return await this.request<ActivityCalendarMonthDto>(`/activities/calendar/jalali${q}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const days: ActivityCalendarDayDto[] = [];
+        const todayStr = new Date().toISOString().split('T')[0]!;
+        for (let d = 1; d <= 30; d++) {
+          const dateStr = `2026-10-${String(d).padStart(2, '0')}`;
+          const isWeekend = d % 7 === 5;
+          days.push({
+            date: dateStr,
+            jalaliDate: `1405/08/${String(d).padStart(2, '0')}`,
+            dayOfMonth: d,
+            jalaliDay: d,
+            jalaliMonthName: 'آبان',
+            isToday: dateStr === todayStr,
+            isWeekend,
+            activitiesCount: d === 15 || d === 26 ? 2 : 0,
+            activities: [],
+          });
+        }
+        return {
+          year: year || 2026,
+          month: month || 10,
+          jalaliYear: 1405,
+          jalaliMonthName: 'آبان',
+          days,
+          totalActivities: 4,
+        };
+      }
+      throw err;
+    }
+  }
+
+  async togglePinActivity(activityId: string): Promise<ActivityDto> {
+    try {
+      return await this.request<ActivityDto>(
+        `/activities/${encodeURIComponent(activityId)}/pin`,
+        {
+          method: 'POST',
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: activityId,
+          organizationId: DEFAULT_ORG_ID,
+          type: 'NOTE',
+          title: 'یادداشت مهم پین‌شده',
+          startsAt: new Date().toISOString(),
+          endsAt: new Date().toISOString(),
+          isAllDay: true,
+          status: 'COMPLETED',
+          ownerId: DEFAULT_EMPLOYEE_ID,
+          ownerName: 'کارشناس فروش',
+          participantIds: [],
+          visibility: 'INTERNAL',
+          isPinned: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getPinnedActivities(entityType?: string, entityId?: string): Promise<ActivityDto[]> {
+    try {
+      const params = new URLSearchParams();
+      if (entityType) params.append('entityType', entityType);
+      if (entityId) params.append('entityId', entityId);
+      const q = params.toString() ? `?${params.toString()}` : '';
+      return await this.request<ActivityDto[]>(`/activities/pinned${q}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [];
       }
       throw err;
     }

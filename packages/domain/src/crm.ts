@@ -293,3 +293,62 @@ export function generateBirthdaySmsMessage(contactName: string, companyName: str
   return `مشتری گرامی جناب/سرکار ${contactName}، زادروزتان خجسته باد. با آرزوی تندرستی و شادکامی، از طرف تیم ${companyName}.`;
 }
 
+/**
+ * Converts a Gregorian Date to Jalali/Persian calendar components and formatted string
+ */
+export function gregorianToJalali(date: Date): {
+  year: number;
+  month: number;
+  day: number;
+  formatted: string;
+} {
+  const formatter = new Intl.DateTimeFormat('en-US-u-ca-persian', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find((p) => p.type === 'year')?.value || '1400', 10);
+  const month = parseInt(parts.find((p) => p.type === 'month')?.value || '1', 10);
+  const day = parseInt(parts.find((p) => p.type === 'day')?.value || '1', 10);
+
+  const mStr = String(month).padStart(2, '0');
+  const dStr = String(day).padStart(2, '0');
+  return {
+    year,
+    month,
+    day,
+    formatted: `${year}/${mStr}/${dStr}`,
+  };
+}
+
+/**
+ * Identifies Iranian weekend days (Friday)
+ */
+export function isIranianWeekend(date: Date): boolean {
+  return date.getUTCDay() === 5;
+}
+
+const JALALI_MONTH_NAMES = [
+  'فروردین',
+  'اردیبهشت',
+  'خرداد',
+  'تیر',
+  'مرداد',
+  'شهریور',
+  'مهر',
+  'آبان',
+  'آذر',
+  'دی',
+  'بهمن',
+  'اسفند',
+];
+
+/**
+ * Returns Persian localized name for a Jalali month number (1 to 12)
+ */
+export function getJalaliMonthName(monthNumber: number): string {
+  if (monthNumber < 1 || monthNumber > 12) return '';
+  return JALALI_MONTH_NAMES[monthNumber - 1] || '';
+}
+

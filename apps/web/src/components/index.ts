@@ -32,3 +32,4 @@ export * from './InstallmentPlanModal';
 export * from './ConversionSpeedModal';
 export * from './CardsPipelineView';
 export * from './WebFormBuilderView';
+export * from './JalaliActivityCalendarView';

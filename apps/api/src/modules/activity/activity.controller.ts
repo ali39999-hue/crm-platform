@@ -91,6 +91,48 @@ export class ActivityController {
     );
   }
 
+  @Get('calendar/jalali')
+  async getJalaliCalendar(
+    @CurrentUser() user: UserContext,
+    @Query('year') yearStr?: string,
+    @Query('month') monthStr?: string,
+  ) {
+    const today = new Date();
+    const year = yearStr ? parseInt(yearStr, 10) : today.getFullYear();
+    const month = monthStr ? parseInt(monthStr, 10) : today.getMonth() + 1;
+    return this.activityService.getJalaliCalendarMonth(
+      user.activeOrganization.id,
+      year,
+      month,
+      user.activeOrganization.role,
+    );
+  }
+
+  @Get('pinned')
+  async getPinnedActivities(
+    @CurrentUser() user: UserContext,
+    @Query('entityType') entityType?: string,
+    @Query('entityId') entityId?: string,
+  ): Promise<ActivityDto[]> {
+    return this.activityService.getPinnedActivities(
+      user.activeOrganization.id,
+      entityType,
+      entityId,
+    );
+  }
+
+  @Post(':id/pin')
+  async togglePinActivity(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ): Promise<ActivityDto> {
+    return this.activityService.togglePinActivity(
+      user.activeOrganization.id,
+      user.id,
+      id,
+    );
+  }
+
   @Get('calendar')
   async getCalendarActivities(
     @CurrentUser() user: UserContext,

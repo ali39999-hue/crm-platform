@@ -3,7 +3,12 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import type { MembershipRole } from '@crm/domain';
+import {
+  getJalaliMonthName,
+  gregorianToJalali,
+  isIranianWeekend,
+  type MembershipRole,
+} from '@crm/domain';
 import {
   InMemoryActivityRepository,
   type ActivityEntity,
@@ -11,6 +16,8 @@ import {
 } from './activity.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 import type {
+  ActivityCalendarDayDto,
+  ActivityCalendarMonthDto,
   ActivityDto,
   ActivityStatus,
   ActivityType,
@@ -351,8 +358,108 @@ export class ActivityService {
       result.associatedEntityTitle = entity.associatedEntityTitle;
     if (entity.reminderMinutesBefore !== undefined)
       result.reminderMinutesBefore = entity.reminderMinutesBefore;
+    if (entity.isPinned !== undefined)
+      result.isPinned = entity.isPinned;
 
     return result;
+  }
+
+  /* Didar Pinned Notes and Annotations (AC-03) */
+
+  async togglePinActivity(
+    organizationId: string,
+    actorId: string,
+    activityId: string,
+  ): Promise<ActivityDto> {
+    const act = await this.activityRepo.findScheduledById(organizationId, activityId);
+    if (!act) {
+      throw new NotFoundException(`فعالیت با شناسه ${activityId} یافت نشد`);
+    }
+
+    const newPinned = !act.isPinned;
+    const updated = await this.activityRepo.updateScheduled(organizationId, activityId, {
+      isPinned: newPinned,
+    });
+
+    this.auditService.record({
+      organizationId,
+      actorId,
+      action: 'ACTIVITY_PIN_TOGGLED',
+      entityType: 'ScheduledActivity',
+      entityId: activityId,
+      metadata: { isPinned: newPinned, title: act.title },
+    });
+
+    return this.mapActivityDto(updated!);
+  }
+
+  async getPinnedActivities(
+    organizationId: string,
+    entityType?: string,
+    entityId?: string,
+  ): Promise<ActivityDto[]> {
+    const all = await this.activityRepo.findScheduled(organizationId, {});
+    const pinned = all.filter((a) => {
+      if (!a.isPinned) return false;
+      if (entityType && a.associatedEntityType !== entityType) return false;
+      if (entityId && a.associatedEntityId !== entityId) return false;
+      return true;
+    });
+    return pinned.map((a) => this.mapActivityDto(a));
+  }
+
+  /* Didar Jalali Activity Calendar (AC-04) */
+
+  async getJalaliCalendarMonth(
+    organizationId: string,
+    year: number,
+    month: number,
+    role: MembershipRole,
+  ): Promise<ActivityCalendarMonthDto> {
+    const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+    const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+
+    const activities = await this.getCalendarActivities(organizationId, role, {
+      from: startOfMonth.toISOString(),
+      to: endOfMonth.toISOString(),
+    });
+
+    const firstDayJalali = gregorianToJalali(startOfMonth);
+    const daysCount = new Date(year, month, 0).getDate();
+    const today = new Date();
+    const todayDateStr = today.toISOString().split('T')[0];
+
+    const days: ActivityCalendarDayDto[] = [];
+    for (let d = 1; d <= daysCount; d++) {
+      const dateObj = new Date(Date.UTC(year, month - 1, d));
+      const dateStr = dateObj.toISOString().split('T')[0]!;
+      const jalali = gregorianToJalali(dateObj);
+      const isToday = dateStr === todayDateStr;
+      const isWeekend = isIranianWeekend(dateObj);
+
+      const dayActivities = activities.filter((a) => a.startsAt.startsWith(dateStr));
+
+      days.push({
+        date: dateStr,
+        jalaliDate: jalali.formatted,
+        dayOfMonth: d,
+        jalaliDay: jalali.day,
+        jalaliMonthName: getJalaliMonthName(jalali.month),
+        isToday,
+        isWeekend,
+        activitiesCount: dayActivities.length,
+        activities: dayActivities,
+      });
+    }
+
+    return {
+      year,
+      month,
+      jalaliYear: firstDayJalali.year,
+      jalaliMonthName: getJalaliMonthName(firstDayJalali.month),
+      days,
+      totalActivities: activities.length,
+    };
   }
 
   private filterAndMap(

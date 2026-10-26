@@ -302,6 +302,13 @@ export function Customer360Drawer({
     }
   };
 
+  const handleTogglePinTimelineItem = (itemId: string) => {
+    setTimeline((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, isPinned: !item.isPinned } : item)),
+    );
+    notify('وضعیت پین یادداشت تغییر یافت 📌');
+  };
+
   // Handler: Add Deal
   const handleAddDealSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -645,6 +652,75 @@ export function Customer360Drawer({
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div style={{ display: 'grid', gap: '20px' }}>
+              {/* Didar Pinned Notes Banner */}
+              {timeline.filter((item) => item.isPinned).length > 0 && (
+                <div
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                  }}
+                  data-testid="customer-pinned-notes-banner"
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#f59e0b',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <span>📌</span>
+                    <span>یادداشت‌ها و نکات حیاتی سنجاق‌شده پرونده (Didar Pinned Notes)</span>
+                  </div>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {timeline
+                      .filter((item) => item.isPinned)
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            background: 'var(--paper)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink)' }}>
+                              {item.summary}
+                            </div>
+                            <small style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                              ثبت شده توسط {item.actorName || 'کارشناس'} • {formatDateTime(item.occurredAt)}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePinTimelineItem(item.id)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#f59e0b',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                            }}
+                          >
+                            برداشتن پین
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
               {/* Quick Stats Grid */}
               <div
                 style={{
@@ -850,19 +926,39 @@ export function Customer360Drawer({
                         style={{
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          background: 'var(--canvas)',
-                          borderRight: '3px solid var(--accent)',
+                          background: item.isPinned ? 'rgba(245, 158, 11, 0.08)' : 'var(--canvas)',
+                          borderRight: item.isPinned ? '3px solid #f59e0b' : '3px solid var(--accent)',
                           fontSize: '12px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
                         }}
                       >
-                        <div style={{ fontWeight: 600, color: 'var(--ink)', marginBottom: '2px' }}>
-                          {item.summary}
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--ink)', marginBottom: '2px' }}>
+                            {item.summary}
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', color: 'var(--muted)', fontSize: '11px' }}>
+                            <span>{item.actorName ?? 'کارمند سیستم'}</span>
+                            <span>•</span>
+                            <span>{formatDateTime(item.occurredAt)}</span>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px', color: 'var(--muted)', fontSize: '11px' }}>
-                          <span>{item.actorName ?? 'کارمند سیستم'}</span>
-                          <span>•</span>
-                          <span>{formatDateTime(item.occurredAt)}</span>
-                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePinTimelineItem(item.id)}
+                          title={item.isPinned ? 'برداشتن پین' : 'پین کردن این یادداشت'}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            opacity: item.isPinned ? 1 : 0.4,
+                          }}
+                        >
+                          📌
+                        </button>
                       </div>
                     ))}
                   </div>

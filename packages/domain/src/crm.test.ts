@@ -7,12 +7,15 @@ import {
   canConvertLead,
   formatMoney,
   generateBirthdaySmsMessage,
+  getJalaliMonthName,
   getLossReasonLabel,
+  gregorianToJalali,
   isBirthdayToday,
   isCheckDueSoon,
   isCustomerDormant,
   isDealRotting,
   isDuplicateCandidate,
+  isIranianWeekend,
   normalizeEmail,
   normalizePhone,
   validateSayadiNumber,
@@ -167,6 +170,37 @@ describe('CRM domain business rules', () => {
       expect(msg).toContain('محمد رضایی');
       expect(msg).toContain('فولاد گستر آریا');
       expect(msg).toContain('زادروز');
+    });
+
+    it('converts Gregorian date to exact Jalali/Persian calendar date', () => {
+      // 2026-10-26 is 1405/08/05 (or 1405/08/04 depending on leap year)
+      const jalali = gregorianToJalali(new Date('2026-10-26T12:00:00.000Z'));
+      expect(jalali.year).toBe(1405);
+      expect(jalali.month).toBe(8);
+      expect(jalali.day).toBeGreaterThanOrEqual(4);
+      expect(jalali.formatted).toContain('1405/08/');
+
+      // Nowruz 2026-03-21 -> Farvardin 1405
+      const nowruz = gregorianToJalali(new Date('2026-03-21T12:00:00.000Z'));
+      expect(nowruz.year).toBe(1405);
+      expect(nowruz.month).toBe(1);
+    });
+
+    it('identifies Iranian weekend days (Friday)', () => {
+      // 2026-10-30 is a Friday
+      const friday = new Date('2026-10-30T12:00:00.000Z');
+      expect(isIranianWeekend(friday)).toBe(true);
+
+      // 2026-10-26 is a Monday (working day)
+      const monday = new Date('2026-10-26T12:00:00.000Z');
+      expect(isIranianWeekend(monday)).toBe(false);
+    });
+
+    it('returns Persian names for Jalali calendar months', () => {
+      expect(getJalaliMonthName(1)).toBe('فروردین');
+      expect(getJalaliMonthName(7)).toBe('مهر');
+      expect(getJalaliMonthName(8)).toBe('آبان');
+      expect(getJalaliMonthName(12)).toBe('اسفند');
     });
   });
 });

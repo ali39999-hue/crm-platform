@@ -202,5 +202,38 @@ describe('Activity Service & Timeline & Scheduling (F5-05 & R-064)', () => {
       expect(customerActivities.some((a) => a.id === 'act-call-102')).toBe(false);
       expect(customerActivities.some((a) => a.id === 'act-meeting-101')).toBe(true);
     });
+
+    it('toggles pinning on an activity and retrieves pinned items', async () => {
+      // Toggle pin on act-meeting-101
+      const pinned = await activityService.togglePinActivity(orgAlpha, employeeAlpha.id, 'act-meeting-101');
+      expect(pinned.isPinned).toBe(true);
+
+      const pinnedList = await activityService.getPinnedActivities(orgAlpha);
+      expect(pinnedList.some((a) => a.id === 'act-meeting-101')).toBe(true);
+
+      // Unpin
+      const unpinned = await activityService.togglePinActivity(orgAlpha, employeeAlpha.id, 'act-meeting-101');
+      expect(unpinned.isPinned).toBe(false);
+    });
+
+    it('generates a Jalali calendar month with Iranian weekends and day activities', async () => {
+      const monthDto = await activityService.getJalaliCalendarMonth(
+        orgAlpha,
+        2026,
+        10,
+        'Employee',
+      );
+
+      expect(monthDto.year).toBe(2026);
+      expect(monthDto.month).toBe(10);
+      expect(monthDto.jalaliYear).toBe(1405);
+      expect(monthDto.jalaliMonthName).toBe('مهر');
+      expect(monthDto.days.length).toBe(31);
+
+      // Verify Friday is flagged as weekend
+      const fridayDay = monthDto.days.find((d) => d.date === '2026-10-30');
+      expect(fridayDay).toBeDefined();
+      expect(fridayDay?.isWeekend).toBe(true);
+    });
   });
 });

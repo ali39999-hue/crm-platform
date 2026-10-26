@@ -172,5 +172,15 @@ test.describe('CRM Deals Pipeline Kanban & Duplicate Resolution P1 Journey (R-03
     await expect(formsView).toBeVisible();
     await expect(formsView).toContainText('فرم‌ساز آنلاین و جذب مستقیم سرنخ');
     await expect(page.locator('[data-testid="create-web-form-btn"]')).toBeVisible();
+
+    // 3. Navigate to Jalali Activity Calendar tab
+    const calendarNav = page.locator('[data-testid="nav-calendar"]');
+    await expect(calendarNav).toBeVisible();
+    await calendarNav.click();
+
+    const calendarView = page.locator('[data-testid="jalali-activity-calendar-view"]');
+    await expect(calendarView).toBeVisible();
+    await expect(calendarView).toContainText('تقویم شمسی فعالیت‌ها');
+    await expect(page.locator('[data-testid="today-month-btn"]')).toBeVisible();
   });
 });
