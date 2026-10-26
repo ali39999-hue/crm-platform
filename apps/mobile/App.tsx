@@ -18,12 +18,16 @@ import type {
   TicketDto,
   TicketPriority,
   TicketStatus,
+  ProjectSummaryDto,
+  DocumentSummaryDto,
 } from '@crm/contracts';
 import { canTransitionTask } from '@crm/domain';
 import {
   ACTOR_CAPABILITIES,
   INITIAL_TASKS,
   INITIAL_TICKETS,
+  INITIAL_PROJECTS,
+  INITIAL_DOCUMENTS,
   getTaskStatusCfg,
   getTicketStatusCfg,
 } from './src/lib/constants';
@@ -35,11 +39,13 @@ import {
 import { offlineQueue, type QueuedMutation } from './src/lib/offline-queue';
 import { TaskCard } from './src/components/TaskCard';
 import { TicketCard } from './src/components/TicketCard';
+import { ProjectCard } from './src/components/ProjectCard';
+import { DocumentCard } from './src/components/DocumentCard';
 import { CreateTaskModal, type CreateTaskFormData } from './src/components/CreateTaskModal';
 import { CreateTicketModal, type CreateTicketFormData } from './src/components/CreateTicketModal';
 import { OfflineBanner } from './src/components/OfflineBanner';
 
-type ActiveTab = 'tasks' | 'tickets' | 'settings';
+type ActiveTab = 'tasks' | 'tickets' | 'projects' | 'docs' | 'settings';
 type TaskFilter = 'ALL' | 'IN_PROGRESS' | 'TODO' | 'BLOCKED' | 'DONE';
 type TicketFilter = 'ALL' | 'OPEN' | 'PENDING' | 'RESOLVED';
 
@@ -49,16 +55,20 @@ type ToastState = {
 };
 
 export default function App() {
-  // Navigation Tabs: "کارهای من", "تیکت‌ها", "وضعیت آفلاین / تنظیمات"
+  // Navigation Tabs: "کارهای من", "تیکت‌ها", "پروژه‌ها", "اسناد", "تنظیمات"
   const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('ALL');
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>('ALL');
   const [taskSearch, setTaskSearch] = useState('');
   const [ticketSearch, setTicketSearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
+  const [docSearch, setDocSearch] = useState('');
 
   // Data State
   const [tasks, setTasks] = useState<TaskSummary[]>(INITIAL_TASKS);
   const [tickets, setTickets] = useState<TicketDto[]>(INITIAL_TICKETS);
+  const [projects, setProjects] = useState<ProjectSummaryDto[]>(INITIAL_PROJECTS);
+  const [documents, setDocuments] = useState<DocumentSummaryDto[]>(INITIAL_DOCUMENTS);
 
   // Offline State & Durable Mutation Queue
   const [isOffline, setIsOffline] = useState(false);
@@ -485,8 +495,12 @@ export default function App() {
           onSync={handleManualSync}
         />
 
-        {/* Navigation Tabs: "کارهای من", "تیکت‌ها", "وضعیت آفلاین / تنظیمات" */}
-        <View style={styles.tabContainer}>
+        {/* Navigation Tabs: "کارهای من", "تیکت‌ها", "پروژه‌ها", "اسناد", "تنظیمات" */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabContainer}
+        >
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'tasks' && styles.tabButtonActive]}
             onPress={() => setActiveTab('tasks')}
@@ -548,6 +562,34 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'projects' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('projects')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabContentRow}>
+              <Text
+                style={[styles.tabText, activeTab === 'projects' && styles.tabTextActive]}
+              >
+                پروژه‌ها
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'docs' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('docs')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabContentRow}>
+              <Text
+                style={[styles.tabText, activeTab === 'docs' && styles.tabTextActive]}
+              >
+                اسناد
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'settings' && styles.tabButtonActive]}
             onPress={() => setActiveTab('settings')}
             activeOpacity={0.8}
@@ -567,7 +609,7 @@ export default function App() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
 
       {/* Floating Notification Toast */}
@@ -776,6 +818,82 @@ export default function App() {
                 />
               ))
             )}
+          </View>
+        )}
+
+        {activeTab === 'projects' && (
+          /* ================= TAB: پروژه‌ها ================= */
+          <View style={styles.sectionContainer}>
+            <View style={styles.actionBarRow}>
+              <Text style={styles.sectionHeading}>پروژه‌های سازمانی ({projects.length})</Text>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="جست‌وجوی پروژه یا کلید..."
+                placeholderTextColor="#94A3B8"
+                value={projectSearch}
+                onChangeText={setProjectSearch}
+                textAlign="right"
+              />
+              {projectSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setProjectSearch('')}>
+                  <Text style={styles.clearSearchBtn}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Project Cards */}
+            {projects
+              .filter(
+                (p) =>
+                  !projectSearch ||
+                  p.name.toLowerCase().includes(projectSearch.toLowerCase()) ||
+                  p.key.toLowerCase().includes(projectSearch.toLowerCase()),
+              )
+              .map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+          </View>
+        )}
+
+        {activeTab === 'docs' && (
+          /* ================= TAB: پایگاه دانش و اسناد ================= */
+          <View style={styles.sectionContainer}>
+            <View style={styles.actionBarRow}>
+              <Text style={styles.sectionHeading}>پایگاه دانش و اسناد ({documents.length})</Text>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="جست‌وجوی عنوان یا برچسب سند..."
+                placeholderTextColor="#94A3B8"
+                value={docSearch}
+                onChangeText={setDocSearch}
+                textAlign="right"
+              />
+              {docSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setDocSearch('')}>
+                  <Text style={styles.clearSearchBtn}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Document Cards */}
+            {documents
+              .filter(
+                (d) =>
+                  !docSearch ||
+                  d.title.toLowerCase().includes(docSearch.toLowerCase()) ||
+                  d.tags.some((t) => t.toLowerCase().includes(docSearch.toLowerCase())),
+              )
+              .map((doc) => (
+                <DocumentCard key={doc.id} document={doc} />
+              ))}
           </View>
         )}
 
@@ -1055,8 +1173,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tabButton: {
-    flex: 1,
     paddingVertical: 9,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
