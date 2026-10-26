@@ -1015,5 +1015,54 @@ export type CreateMilestoneRequest = {
   isCompleted?: boolean | undefined;
 };
 
+/* Enterprise Time Tracking & Work Logs Contracts */
+
+export type WorkLogEntityType = 'TASK' | 'PROJECT' | 'TICKET';
+
+export type WorkLogDto = {
+  id: string;
+  organizationId: string;
+  userId: string;
+  userName: string;
+  entityType: WorkLogEntityType;
+  entityId: string;
+  entityTitle: string;
+  durationMinutes: number;
+  description: string;
+  isBillable: boolean;
+  loggedDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWorkLogRequest = {
+  entityType: WorkLogEntityType;
+  entityId: string;
+  entityTitle: string;
+  durationMinutes: number;
+  description: string;
+  isBillable?: boolean | undefined;
+  loggedDate?: string | undefined;
+};
+
+export type UpdateWorkLogRequest = {
+  durationMinutes?: number | undefined;
+  description?: string | undefined;
+  isBillable?: boolean | undefined;
+  loggedDate?: string | undefined;
+};
+
+export type WorkLogSummaryDto = {
+  totalMinutes: number;
+  totalHours: number;
+  billableHours: number;
+  entriesCount: number;
+  dailyBreakdown: Array<{
+    date: string;
+    minutes: number;
+    hours: number;
+  }>;
+};
+
 
 

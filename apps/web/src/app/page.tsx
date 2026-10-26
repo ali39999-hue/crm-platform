@@ -43,6 +43,7 @@ import {
   TaskCalendar,
   TaskStatusBadge,
   TicketStatusBadge,
+  TimeTrackingView,
   WorkflowAutomationView,
 } from '../components';
 
@@ -79,6 +80,7 @@ export default function WorkspaceApp() {
     | 'overview'
     | 'my-work'
     | 'projects'
+    | 'time'
     | 'crm'
     | 'support'
     | 'docs'
@@ -446,6 +448,14 @@ export default function WorkspaceApp() {
           </button>
           <button
             type="button"
+            className={`nav-button ${activeTab === 'time' ? 'active' : ''}`}
+            onClick={() => setActiveTab('time')}
+            data-testid="nav-time"
+          >
+            <span>⏱️</span> زمان و کارکرد (Time)
+          </button>
+          <button
+            type="button"
             className={`nav-button ${activeTab === 'crm' ? 'active' : ''}`}
             onClick={() => setActiveTab('crm')}
             data-testid="nav-crm"
@@ -730,6 +740,13 @@ export default function WorkspaceApp() {
         {activeTab === 'projects' && (
           <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
             <ProjectsView onNotify={(msg) => showToast(msg)} />
+          </div>
+        )}
+
+        {/* Time Tracking Tab */}
+        {activeTab === 'time' && (
+          <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <TimeTrackingView onNotify={(msg) => showToast(msg)} />
           </div>
         )}
 

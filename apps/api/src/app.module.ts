@@ -27,6 +27,9 @@ import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-fi
 import { ProjectController } from './modules/projects/project.controller.js';
 import { ProjectService } from './modules/projects/project.service.js';
 import { InMemoryProjectRepository } from './modules/projects/project.repository.js';
+import { TimeTrackingController } from './modules/timetracking/timetracking.controller.js';
+import { TimeTrackingService } from './modules/timetracking/timetracking.service.js';
+import { InMemoryTimeTrackingRepository } from './modules/timetracking/timetracking.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -96,6 +99,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     OrganizationController,
     CustomFieldController,
     ProjectController,
+    TimeTrackingController,
   ],
   providers: [
     AuthService,
@@ -202,6 +206,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     CustomFieldService,
     InMemoryProjectRepository,
     ProjectService,
+    InMemoryTimeTrackingRepository,
+    TimeTrackingService,
   ],
 })
 export class AppModule implements NestModule {

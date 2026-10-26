@@ -20,3 +20,4 @@ export * from './DealsPipelineKanban';
 export * from './DuplicateReviewView';
 export * from './CustomFieldSchemaBuilder';
 export * from './ProjectsView';
+export * from './TimeTrackingView';

@@ -91,6 +91,11 @@ import type {
   ProjectStatus,
   ProjectSummaryDto,
   UpdateProjectRequest,
+  CreateWorkLogRequest,
+  UpdateWorkLogRequest,
+  WorkLogDto,
+  WorkLogEntityType,
+  WorkLogSummaryDto,
 } from '@crm/contracts';
 
 import {
@@ -986,6 +991,54 @@ export class ApiClient {
           createdAt: '2026-10-15T00:00:00.000Z',
         },
       ],
+    },
+  ];
+
+  private fallbackWorkLogs: WorkLogDto[] = [
+    {
+      id: 'wl-001',
+      organizationId: DEFAULT_ORG_ID,
+      userId: DEFAULT_EMPLOYEE_ID,
+      userName: 'سارا احمدی',
+      entityType: 'TASK',
+      entityId: '10000000-0000-0000-0000-000000000001',
+      entityTitle: 'بررسی لاگ‌های ورود و اتصال چندمستأجری',
+      durationMinutes: 120,
+      description: 'تحلیل امنیتی درخواست‌ها و تست اعتبارسنجی توکن',
+      isBillable: true,
+      loggedDate: '2026-10-24',
+      createdAt: '2026-10-24T10:00:00.000Z',
+      updatedAt: '2026-10-24T10:00:00.000Z',
+    },
+    {
+      id: 'wl-002',
+      organizationId: DEFAULT_ORG_ID,
+      userId: DEFAULT_EMPLOYEE_ID,
+      userName: 'سارا احمدی',
+      entityType: 'PROJECT',
+      entityId: 'prj-001',
+      entityTitle: 'استقرار و بومی‌سازی پلتفرم جامع سازمانی',
+      durationMinutes: 90,
+      description: 'هماهنگی با تیم زیرساخت جهت تست استقرار کانتینری',
+      isBillable: true,
+      loggedDate: '2026-10-25',
+      createdAt: '2026-10-25T11:00:00.000Z',
+      updatedAt: '2026-10-25T11:00:00.000Z',
+    },
+    {
+      id: 'wl-003',
+      organizationId: DEFAULT_ORG_ID,
+      userId: DEFAULT_EMPLOYEE_ID,
+      userName: 'سارا احمدی',
+      entityType: 'TICKET',
+      entityId: '90000000-0000-0000-0000-000000000001',
+      entityTitle: 'مشکل در خروجی اکسل گزارش‌ها',
+      durationMinutes: 45,
+      description: 'بررسی پارامترهای تاریخ جلالی و رفع باگ تایپ‌اسکریپت',
+      isBillable: false,
+      loggedDate: '2026-10-26',
+      createdAt: '2026-10-26T09:00:00.000Z',
+      updatedAt: '2026-10-26T09:00:00.000Z',
     },
   ];
 
@@ -3468,9 +3521,152 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Time Tracking & Work Logs ---------------- */
+
+  async getWorkLogs(filters?: {
+    userId?: string;
+    entityType?: WorkLogEntityType;
+    entityId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<WorkLogDto[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.userId) params.set('userId', filters.userId);
+      if (filters?.entityType) params.set('entityType', filters.entityType);
+      if (filters?.entityId) params.set('entityId', filters.entityId);
+      if (filters?.fromDate) params.set('fromDate', filters.fromDate);
+      if (filters?.toDate) params.set('toDate', filters.toDate);
+
+      const qs = params.toString();
+      return await this.request<WorkLogDto[]>(`/timetracking${qs ? `?${qs}` : ''}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackWorkLogs
+          .filter((l) => {
+            if (filters?.userId && l.userId !== filters.userId) return false;
+            if (filters?.entityType && l.entityType !== filters.entityType) return false;
+            if (filters?.entityId && l.entityId !== filters.entityId) return false;
+            if (filters?.fromDate && l.loggedDate < filters.fromDate) return false;
+            if (filters?.toDate && l.loggedDate > filters.toDate) return false;
+            return true;
+          })
+          .map((l) => ({ ...l }));
+      }
+      throw err;
+    }
+  }
+
+  async getWorkLogSummary(filters?: {
+    userId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<WorkLogSummaryDto> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.userId) params.set('userId', filters.userId);
+      if (filters?.fromDate) params.set('fromDate', filters.fromDate);
+      if (filters?.toDate) params.set('toDate', filters.toDate);
+
+      const qs = params.toString();
+      return await this.request<WorkLogSummaryDto>(`/timetracking/summary${qs ? `?${qs}` : ''}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const logs = this.fallbackWorkLogs.filter((l) => {
+          if (filters?.userId && l.userId !== filters.userId) return false;
+          if (filters?.fromDate && l.loggedDate < filters.fromDate) return false;
+          if (filters?.toDate && l.loggedDate > filters.toDate) return false;
+          return true;
+        });
+
+        let totalMinutes = 0;
+        let billableMinutes = 0;
+        const dailyMap = new Map<string, number>();
+
+        for (const log of logs) {
+          totalMinutes += log.durationMinutes;
+          if (log.isBillable) billableMinutes += log.durationMinutes;
+          const day = log.loggedDate;
+          dailyMap.set(day, (dailyMap.get(day) || 0) + log.durationMinutes);
+        }
+
+        const dailyBreakdown = Array.from(dailyMap.entries())
+          .map(([date, minutes]) => ({
+            date,
+            minutes,
+            hours: Number((minutes / 60).toFixed(1)),
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        return {
+          totalMinutes,
+          totalHours: Number((totalMinutes / 60).toFixed(1)),
+          billableHours: Number((billableMinutes / 60).toFixed(1)),
+          entriesCount: logs.length,
+          dailyBreakdown,
+        };
+      }
+      throw err;
+    }
+  }
+
+  async createWorkLog(dto: CreateWorkLogRequest): Promise<WorkLogDto> {
+    try {
+      return await this.request<WorkLogDto>('/timetracking', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newLog: WorkLogDto = {
+          id: `wl-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          userId: this.token,
+          userName: 'سارا احمدی',
+          entityType: dto.entityType,
+          entityId: dto.entityId,
+          entityTitle: dto.entityTitle.trim(),
+          durationMinutes: Math.round(dto.durationMinutes),
+          description: dto.description.trim(),
+          isBillable: dto.isBillable !== false,
+          loggedDate: dto.loggedDate || now.slice(0, 10),
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackWorkLogs.unshift(newLog);
+        return { ...newLog };
+      }
+      throw err;
+    }
+  }
+
+  async deleteWorkLog(id: string): Promise<{ success: boolean }> {
+    try {
+      await this.request<{ success: boolean }>(`/timetracking/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      return { success: true };
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackWorkLogs.findIndex((l) => l.id === id);
+        if (idx !== -1) {
+          this.fallbackWorkLogs.splice(idx, 1);
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  CreateWorkLogRequest,
+  UpdateWorkLogRequest,
+  WorkLogDto,
+  WorkLogEntityType,
+  WorkLogSummaryDto,
   CreateMilestoneRequest,
   CreateProjectRequest,
   MilestoneDto,
