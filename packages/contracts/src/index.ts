@@ -1126,5 +1126,54 @@ export type CreateMentionRequest = {
   contextSnippet: string;
 };
 
+/* Enterprise API Keys & Integration Providers Contracts */
+
+export type ApiKeyDto = {
+  id: string;
+  organizationId: string;
+  name: string;
+  keyPrefix: string;
+  secretKey?: string | undefined; // Only returned on creation
+  scopes: string[];
+  lastUsedAt?: string | null | undefined;
+  expiresAt?: string | null | undefined;
+  active: boolean;
+  createdAt: string;
+};
+
+export type CreateApiKeyRequest = {
+  name: string;
+  scopes?: string[] | undefined;
+  expiresInDays?: number | undefined;
+};
+
+export type IntegrationProviderKey =
+  | 'SLACK'
+  | 'GITHUB'
+  | 'SMS_KAVENEGAR'
+  | 'EMAIL_SMTP'
+  | 'ZAPPER';
+
+export type IntegrationStatus = 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+
+export type IntegrationProviderDto = {
+  id: string;
+  organizationId: string;
+  providerKey: IntegrationProviderKey;
+  name: string;
+  description: string;
+  icon: string;
+  status: IntegrationStatus;
+  configSummary?: Record<string, string> | undefined;
+  lastSyncedAt?: string | null | undefined;
+  errorMessage?: string | null | undefined;
+  updatedAt: string;
+};
+
+export type ConnectIntegrationRequest = {
+  providerKey: IntegrationProviderKey;
+  credentials: Record<string, string>;
+};
+
 
 

@@ -33,6 +33,9 @@ import { InMemoryTimeTrackingRepository } from './modules/timetracking/timetrack
 import { MentionController } from './modules/mentions/mention.controller.js';
 import { MentionService } from './modules/mentions/mention.service.js';
 import { InMemoryMentionRepository } from './modules/mentions/mention.repository.js';
+import { ApiKeyController } from './modules/integrations/api-key.controller.js';
+import { ApiKeyService } from './modules/integrations/api-key.service.js';
+import { InMemoryApiKeyRepository } from './modules/integrations/api-key.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -104,6 +107,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     ProjectController,
     TimeTrackingController,
     MentionController,
+    ApiKeyController,
   ],
   providers: [
     AuthService,
@@ -214,6 +218,8 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     TimeTrackingService,
     InMemoryMentionRepository,
     MentionService,
+    InMemoryApiKeyRepository,
+    ApiKeyService,
   ],
 })
 export class AppModule implements NestModule {

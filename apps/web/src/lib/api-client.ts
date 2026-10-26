@@ -103,6 +103,11 @@ import type {
   CreateMentionRequest,
   MentionDto,
   MentionEntityType,
+  ApiKeyDto,
+  CreateApiKeyRequest,
+  IntegrationProviderDto,
+  IntegrationProviderKey,
+  ConnectIntegrationRequest,
 } from '@crm/contracts';
 
 import {
@@ -1113,6 +1118,79 @@ export class ApiClient {
       contextSnippet: '@سارا مشکل SLA این تیکت رفع شد، لطفاً نسخه نهایی را تایید کنید',
       readAt: '2026-10-26T07:00:00.000Z',
       createdAt: '2026-10-26T05:00:00.000Z',
+    },
+  ];
+
+  private fallbackApiKeys: ApiKeyDto[] = [
+    {
+      id: 'key-001',
+      organizationId: DEFAULT_ORG_ID,
+      name: 'کلید وب‌سایت اصلی شرکت',
+      keyPrefix: 'crm_live_9f8a...',
+      scopes: ['leads:write', 'tasks:read'],
+      lastUsedAt: '2026-10-26T08:00:00.000Z',
+      expiresAt: '2027-01-26T00:00:00.000Z',
+      active: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackIntegrationProviders: IntegrationProviderDto[] = [
+    {
+      id: 'prov-001',
+      organizationId: DEFAULT_ORG_ID,
+      providerKey: 'SLACK',
+      name: 'پیام‌رسان سازمانی اسلک (Slack)',
+      description: 'ارسال خودکار اعلان تیکت‌های فوری و بردهای فرصت‌های فروش به کانال‌های تیم',
+      icon: '💬',
+      status: 'CONNECTED',
+      configSummary: { channel: '#crm-alerts', botName: 'CRM Bot' },
+      lastSyncedAt: '2026-10-26T08:30:00.000Z',
+      updatedAt: '2026-10-26T08:30:00.000Z',
+    },
+    {
+      id: 'prov-002',
+      organizationId: DEFAULT_ORG_ID,
+      providerKey: 'GITHUB',
+      name: 'گیت‌هاب (GitHub)',
+      description: 'اتصال ایشوها، کامیت‌ها و ردیابی وظایف فنی به پول‌ریکوئست‌ها',
+      icon: '🐙',
+      status: 'CONNECTED',
+      configSummary: { repo: 'ali39999-hue/crm-platform' },
+      lastSyncedAt: '2026-10-26T07:00:00.000Z',
+      updatedAt: '2026-10-26T07:00:00.000Z',
+    },
+    {
+      id: 'prov-003',
+      organizationId: DEFAULT_ORG_ID,
+      providerKey: 'SMS_KAVENEGAR',
+      name: 'سامانه پیامک کاوه‌نگار (SMS Gateway)',
+      description: 'ارسال کد تایید ورود دو مرحله‌ای و پیامک تغییر وضعیت تیکت به مشتریان',
+      icon: '📱',
+      status: 'CONNECTED',
+      configSummary: { senderLine: '10008585' },
+      lastSyncedAt: '2026-10-26T06:00:00.000Z',
+      updatedAt: '2026-10-26T06:00:00.000Z',
+    },
+    {
+      id: 'prov-004',
+      organizationId: DEFAULT_ORG_ID,
+      providerKey: 'EMAIL_SMTP',
+      name: 'سرور ارسال ایمیل (SMTP)',
+      description: 'ارسال فاکتورها، گزارش‌های هفتگی و دعوت‌نامه‌های همکاران',
+      icon: '✉️',
+      status: 'DISCONNECTED',
+      updatedAt: '2026-10-26T06:00:00.000Z',
+    },
+    {
+      id: 'prov-005',
+      organizationId: DEFAULT_ORG_ID,
+      providerKey: 'ZAPPER',
+      name: 'زپیر / اتوماسیون وب (Zapier Webhooks)',
+      description: 'ارسال بلادرنگ داده‌های CRM به بیش از ۵۰۰۰ اپلیکیشن تجاری',
+      icon: '⚡',
+      status: 'DISCONNECTED',
+      updatedAt: '2026-10-26T06:00:00.000Z',
     },
   ];
 
@@ -3918,9 +3996,148 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- API Keys & Integration Providers ---------------- */
+
+  async getApiKeys(): Promise<ApiKeyDto[]> {
+    try {
+      return await this.request<ApiKeyDto[]>('/integrations/api-keys');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackApiKeys.map((k) => ({ ...k }));
+      }
+      throw err;
+    }
+  }
+
+  async createApiKey(dto: CreateApiKeyRequest): Promise<ApiKeyDto> {
+    try {
+      return await this.request<ApiKeyDto>('/integrations/api-keys', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const randomSecret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const secretKey = `crm_live_${randomSecret}`;
+        const keyPrefix = secretKey.slice(0, 16) + '...';
+
+        const newKey: ApiKeyDto = {
+          id: `key-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          name: dto.name.trim(),
+          keyPrefix,
+          secretKey,
+          scopes: dto.scopes ?? ['*'],
+          expiresAt: dto.expiresInDays
+            ? new Date(Date.now() + 86400000 * dto.expiresInDays).toISOString()
+            : undefined,
+          active: true,
+          createdAt: now,
+        };
+        this.fallbackApiKeys.unshift(newKey);
+        return { ...newKey };
+      }
+      throw err;
+    }
+  }
+
+  async revokeApiKey(id: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(`/integrations/api-keys/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackApiKeys.find((k) => k.id === id);
+        if (found) {
+          found.active = false;
+        }
+        return { success: true };
+      }
+      throw err;
+    }
+  }
+
+  async getIntegrationProviders(): Promise<IntegrationProviderDto[]> {
+    try {
+      return await this.request<IntegrationProviderDto[]>('/integrations/providers');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackIntegrationProviders.map((p) => ({ ...p }));
+      }
+      throw err;
+    }
+  }
+
+  async connectIntegrationProvider(
+    dto: ConnectIntegrationRequest,
+  ): Promise<IntegrationProviderDto> {
+    try {
+      return await this.request<IntegrationProviderDto>('/integrations/providers/connect', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackIntegrationProviders.find((p) => p.providerKey === dto.providerKey);
+        const now = new Date().toISOString();
+        if (found) {
+          found.status = 'CONNECTED';
+          found.lastSyncedAt = now;
+          found.configSummary = { configuredAt: now };
+          return { ...found };
+        }
+        const created: IntegrationProviderDto = {
+          id: `prov-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          providerKey: dto.providerKey,
+          name: dto.providerKey,
+          description: 'ارائه‌دهنده سرویس متصل‌شده',
+          icon: '🔌',
+          status: 'CONNECTED',
+          configSummary: { configuredAt: now },
+          lastSyncedAt: now,
+          updatedAt: now,
+        };
+        this.fallbackIntegrationProviders.push(created);
+        return { ...created };
+      }
+      throw err;
+    }
+  }
+
+  async disconnectIntegrationProvider(
+    key: IntegrationProviderKey,
+  ): Promise<IntegrationProviderDto> {
+    try {
+      return await this.request<IntegrationProviderDto>(
+        `/integrations/providers/${encodeURIComponent(key)}/disconnect`,
+        { method: 'POST' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackIntegrationProviders.find((p) => p.providerKey === key);
+        if (found) {
+          found.status = 'DISCONNECTED';
+          found.configSummary = undefined;
+          found.updatedAt = new Date().toISOString();
+          return { ...found };
+        }
+        throw new ApiClientError(`Provider ${key} not found`, 404, 'NOT_FOUND');
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  ApiKeyDto,
+  CreateApiKeyRequest,
+  IntegrationProviderDto,
+  IntegrationProviderKey,
+  ConnectIntegrationRequest,
   CreateMentionRequest,
   MentionDto,
   MentionEntityType,
