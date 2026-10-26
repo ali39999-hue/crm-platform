@@ -1209,5 +1209,19 @@ export type AddTeamMemberRequest = {
   memberId: string;
 };
 
+/* Enterprise Audit Log Contracts */
+
+export type AuditRecordDto = {
+  id: string;
+  organizationId: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  requestId?: string | undefined;
+  metadata?: Record<string, any> | undefined;
+  createdAt: string;
+};
+
 
 

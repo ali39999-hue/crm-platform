@@ -44,6 +44,7 @@ import { RateLimiterGuard } from './common/security/rate-limiter.guard.js';
 import { SecurityHeadersMiddleware } from './common/security/security-headers.middleware.js';
 import { FilesService } from './modules/files/files.service.js';
 import { AuditService } from './modules/audit/audit.service.js';
+import { AuditController } from './modules/audit/audit.controller.js';
 import { OutboxService } from './modules/outbox/outbox.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PrismaService } from './prisma/prisma.service.js';
@@ -108,6 +109,7 @@ import { JobWorkerService } from './modules/jobs/job-worker.service.js';
     TimeTrackingController,
     MentionController,
     ApiKeyController,
+    AuditController,
   ],
   providers: [
     AuthService,

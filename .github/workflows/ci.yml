@@ -42,5 +42,8 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Security & License Audit
+        run: pnpm security:audit
+
       - name: Build
         run: pnpm build

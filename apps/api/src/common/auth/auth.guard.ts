@@ -31,11 +31,23 @@ export class AuthGuard implements CanActivate {
     const headerUserId = request.headers['x-user-id'] as string;
     const headerOrgId = request.headers['x-organization-id'] as string;
 
+    const isProd = process.env.NODE_ENV === 'production';
+    const isAllowedInsecure =
+      process.env.NODE_ENV !== 'production' &&
+      (process.env.ALLOW_INSECURE_DEV_AUTH === 'true' || process.env.NODE_ENV === 'test');
+
     let rawToken: string | undefined;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       rawToken = authHeader.substring(7).trim();
     } else if (headerUserId) {
+      // Security Gate F-01 / RA-001:
+      // Direct x-user-id header is strictly rejected in production!
+      if (isProd || !isAllowedInsecure) {
+        throw new UnauthorizedException(
+          'Insecure identity-only header (x-user-id) is strictly forbidden in production. A valid Bearer JWT is required.',
+        );
+      }
       rawToken = headerUserId.trim();
     }
 
@@ -54,11 +66,26 @@ export class AuthGuard implements CanActivate {
       // Verify JWT signature, expiration, revocation and access token type
       const payload = this.tokenService.verifyToken(rawToken, 'access');
       const targetOrgId = headerOrgId || payload.orgId;
+
       userContext = this.authService.resolveUser(payload.sub, targetOrgId);
+
+      // Security Gate: Ensure target organization matches user's valid membership (anti-IDOR)
+      if (headerOrgId && userContext.activeOrganization.id !== headerOrgId) {
+        throw new UnauthorizedException(
+          'Forbidden: User is not an active member of the requested organization',
+        );
+      }
+
       request.token = rawToken;
       request.tokenPayload = payload;
     } else {
-      // Fallback for mock/test environments passing user id or email directly
+      // Security Gate F-01: Direct identity string (email/userId) as token is forbidden in production
+      if (isProd || !isAllowedInsecure) {
+        throw new UnauthorizedException(
+          'Direct identity tokens are forbidden in production. A cryptographically signed Bearer JWT is required.',
+        );
+      }
+      // Fallback for non-production environments with explicit flag enabled
       userContext = this.authService.resolveUser(rawToken, headerOrgId);
       request.token = rawToken;
     }

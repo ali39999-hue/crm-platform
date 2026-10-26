@@ -1,0 +1,11 @@
+﻿gate_id,priority,area,gate,evidence_required,enforcement
+G-01,P0,Auth,Production request with x-user-id only is rejected,Integration test against production config,Required before merge/release
+G-02,P0,Auth,No hard-coded demo credential works in production,Auth integration + config test,Required before merge/release
+G-03,P1,Persistence,Each domain write survives API restart on PostgreSQL,DB integration test per repository,Required before production
+G-04,P1,Tenant isolation,Cross-org list/detail/search/export/file access denied,Negative integration tests,Required before production
+G-05,P1,Frontend,Production API outage never displays fake fallback success/data,Playwright with API failure injection,Required before production
+G-06,P1,Audit,UI audit feed reads persistent server audit records,API integration + E2E,Required before production
+G-07,P1,Routes,"Each P0/P1 route works on direct URL, refresh and browser navigation",Playwright route matrix,Required before production
+G-08,P1,CI,Unit + integration + E2E + security:audit + build are required checks,GitHub Actions status checks,Required before merge
+G-09,P1,Accessibility,"Core workflows keyboard-accessible, proper names/errors/focus and RTL",axe + manual keyboard review,Required before production
+G-10,P1,Release,Migration rollback and restore drill documented and successful,Staging run evidence,Required before production

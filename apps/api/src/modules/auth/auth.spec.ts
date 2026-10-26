@@ -532,4 +532,66 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       expect(current?.id).toBe(orgBetaId);
     });
   });
+
+  /* ---------------- 8. Production Security Gates (F-01, F-02, RA-001, RA-002) ---------------- */
+
+  describe('8. Production Security Gates & Insecure Auth Rejection', () => {
+    const originalEnv = process.env.NODE_ENV;
+
+    it('PRODUCTION GATE: strictly rejects x-user-id header in production', () => {
+      process.env.NODE_ENV = 'production';
+      try {
+        const { context } = createMockContext({
+          userId: '22222222-2222-2222-2222-222222222222',
+        });
+        expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
+        expect(() => authGuard.canActivate(context)).toThrow(/strictly forbidden in production/i);
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+
+    it('PRODUCTION GATE: strictly rejects raw userId or email as Bearer token in production', () => {
+      process.env.NODE_ENV = 'production';
+      try {
+        const { context } = createMockContext({
+          authorization: 'Bearer 22222222-2222-2222-2222-222222222222',
+        });
+        expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
+        expect(() => authGuard.canActivate(context)).toThrow(/forbidden in production/i);
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+
+    it('PRODUCTION GATE: rejects default demo credentials (password123) in production', () => {
+      process.env.NODE_ENV = 'production';
+      try {
+        expect(() =>
+          authService.validateCredentials(adminEmail, 'password123'),
+        ).toThrow(UnauthorizedException);
+        expect(() =>
+          authService.validateCredentials(adminEmail, 'password123'),
+        ).toThrow(/demo credentials/i);
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+
+    it('ANTI-IDOR GATE: rejects request if header x-organization-id does not match user memberships', async () => {
+      const loginRes = await authController.login({
+        email: employeeEmail, // Belongs ONLY to Org Alpha
+        password: validPassword,
+      });
+
+      // Employee attempts to pass x-organization-id of Org Beta
+      const { context } = createMockContext({
+        authorization: `Bearer ${loginRes.accessToken}`,
+        orgId: orgBetaId,
+      });
+
+      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
+      expect(() => authGuard.canActivate(context)).toThrow(/not an active member/i);
+    });
+  });
 });

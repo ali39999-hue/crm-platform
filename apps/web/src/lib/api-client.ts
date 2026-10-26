@@ -112,6 +112,7 @@ import type {
   CreateTeamRequest,
   TeamDto,
   UpdateTeamRequest,
+  AuditRecordDto,
 } from '@crm/contracts';
 
 import {
@@ -1249,6 +1250,21 @@ export class ApiClient {
 
   private isOfflineOrNetworkError(err: unknown): boolean {
     if (!err) return false;
+
+    // Security Gate RA-006 / F-04:
+    // Fallback datasets are strictly gated behind development, test, or explicit demo mode.
+    // In production without demo mode, API outages surface honestly and never simulate fake success.
+    const isDemoOrDev =
+      typeof process !== 'undefined' &&
+      (process.env.NEXT_PUBLIC_APP_MODE === 'demo' ||
+        process.env.NEXT_PUBLIC_ENABLE_OFFLINE_FALLBACK === 'true' ||
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'test');
+
+    if (!isDemoOrDev) {
+      return false; // Throw real network error in production
+    }
+
     if (err instanceof ApiClientError) {
       // 502, 503, 504 are gateway/unreachable errors
       return [502, 503, 504].includes(err.statusCode);
@@ -4307,9 +4323,33 @@ export class ApiClient {
       throw err;
     }
   }
+
+  /* ---------------- Audit Events ---------------- */
+
+  async getAuditEvents(limit = 50): Promise<AuditRecordDto[]> {
+    try {
+      return await this.request<AuditRecordDto[]>(`/audit?limit=${limit}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [
+          {
+            id: 'aud-live-1',
+            organizationId: DEFAULT_ORG_ID,
+            actorId: DEFAULT_EMPLOYEE_ID,
+            action: 'WORKSPACE_ACCESSED',
+            entityType: 'Workspace',
+            entityId: DEFAULT_ORG_ID,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+      throw err;
+    }
+  }
 }
 
 export type {
+  AuditRecordDto,
   AddTeamMemberRequest,
   CreateTeamRequest,
   TeamDto,

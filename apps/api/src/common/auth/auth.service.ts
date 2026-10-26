@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import crypto from 'crypto';
 import type { UserContext } from './auth.types.js';
 import type { MembershipRole } from '@crm/domain';
 
@@ -6,6 +7,7 @@ export type MockUserRecord = {
   id: string;
   email: string;
   password?: string;
+  passwordHash?: string;
   displayName: string;
   memberships: Array<{
     organizationId: string;
@@ -16,8 +18,23 @@ export type MockUserRecord = {
   }>;
 };
 
+export function hashPassword(password: string, salt = 'crm_static_salt_v1'): string {
+  return crypto.pbkdf2Sync(password, salt, 1000, 32, 'sha256').toString('hex');
+}
+
+export function verifyPassword(provided: string, expectedHashOrPlain: string, salt = 'crm_static_salt_v1'): boolean {
+  if (provided === expectedHashOrPlain) return true;
+  const hash = hashPassword(provided, salt);
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHashOrPlain));
+  } catch {
+    return false;
+  }
+}
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private users: Map<string, MockUserRecord> = new Map();
 
   constructor() {
@@ -25,6 +42,12 @@ export class AuthService {
   }
 
   private seedDefaultUsers() {
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      this.logger.warn(
+        '[SECURITY] Running in production mode. Mock seed accounts must not be used for production operations.',
+      );
+    }
     const users: MockUserRecord[] = [
       {
         id: '11111111-1111-1111-1111-111111111111',
@@ -137,17 +160,25 @@ export class AuthService {
   }
 
   validateCredentials(email: string, password?: string): MockUserRecord {
+    if (!password) {
+      throw new UnauthorizedException('Password is required');
+    }
+
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && password === 'password123') {
+      throw new UnauthorizedException(
+        'Default demo credentials (password123) are rejected in production. Please use configured credentials.',
+      );
+    }
+
     const user = this.findUserByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    if (user.password && password && user.password !== password) {
+    const expected = user.passwordHash || user.password;
+    if (expected && !verifyPassword(password, expected)) {
       throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (!password) {
-      throw new UnauthorizedException('Password is required');
     }
 
     return user;

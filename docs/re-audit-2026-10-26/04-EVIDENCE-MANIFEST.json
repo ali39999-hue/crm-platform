@@ -1,0 +1,34 @@
+{
+  "snapshot_date": "2026-10-26",
+  "repository": "https://github.com/ali39999-hue/crm-platform",
+  "branch": "main",
+  "latest_commit_observed": "7dc6f973faed76ed1b6a61977d69d51f0a5cb4d0",
+  "latest_ci_run_observed": "https://github.com/ali39999-hue/crm-platform/actions/runs/40286074622",
+  "evidence_urls": {
+    "readme": "https://github.com/ali39999-hue/crm-platform/blob/main/README.fa.md",
+    "routes": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/enterprise-ux/ux/01-page-route-inventory.csv",
+    "backlog": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/enterprise-ux/execution/02-backlog.csv",
+    "frontend_page": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/web/src/app/page.tsx",
+    "api_client": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/web/src/lib/api-client.ts",
+    "app_module": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/src/app.module.ts",
+    "auth_guard": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/src/common/auth/auth.guard.ts",
+    "auth_service": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/src/common/auth/auth.service.ts",
+    "prisma_schema": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/prisma/schema.prisma",
+    "ci_workflow": "https://github.com/ali39999-hue/crm-platform/blob/main/.github/workflows/ci.yml"
+  },
+  "limitations": [
+    "No local clone or build: GitHub host DNS was unavailable from the execution container.",
+    "No runtime UI, API, staging, or penetration testing was performed.",
+    "Passing GitHub Actions indicates only the checks in the workflow; E2E and security:audit are not called by the inspected workflow."
+  ],
+  "findings_count": 15,
+  "release_blockers": [
+    "RA-001",
+    "RA-002",
+    "RA-003",
+    "RA-004",
+    "RA-005",
+    "RA-006",
+    "RA-010"
+  ]
+}

@@ -107,7 +107,7 @@ export default function WorkspaceApp() {
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [reports, setReports] = useState<DashboardKpiReport | null>(null);
   const [rules, setRules] = useState<AutomationRuleDto[]>([]);
-  const [audits, setAudits] = useState<AuditItem[]>(INITIAL_AUDITS);
+  const [audits, setAudits] = useState<AuditItem[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
 
@@ -269,6 +269,7 @@ export default function WorkspaceApp() {
         notifsRes,
         reportsRes,
         rulesRes,
+        auditsRes,
       ] = await Promise.all([
         apiClient.getMe(),
         apiClient.getWorkspaces(),
@@ -281,6 +282,7 @@ export default function WorkspaceApp() {
         apiClient.getNotifications(),
         apiClient.getDashboardKpi(),
         apiClient.getAutomationRules(),
+        apiClient.getAuditEvents(),
       ]);
 
       setCurrentUser(userRes);
@@ -294,6 +296,16 @@ export default function WorkspaceApp() {
       setNotifications(notifsRes);
       setReports(reportsRes);
       setRules(rulesRes);
+
+      const mappedAudits: AuditItem[] = (auditsRes || []).map((a) => ({
+        id: a.id,
+        action: a.action,
+        actor: a.actorId ? `کاربر (${a.actorId.slice(0, 8)})` : 'سیستم خودکار',
+        entity: `${a.entityType}:${a.entityId}`,
+        time: new Date(a.createdAt).toLocaleTimeString('fa-IR'),
+        details: a.metadata ? JSON.stringify(a.metadata) : 'بدون متادیتا',
+      }));
+      setAudits(mappedAudits);
     } catch (err: any) {
       console.error('[WorkspaceApp] Error loading data:', err);
       setError('خطا در بارگذاری اطلاعات از سرویس‌دهنده CRM. لطفاً اتصال را بررسی نمایید.');
