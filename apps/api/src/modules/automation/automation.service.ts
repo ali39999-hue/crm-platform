@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,7 +14,7 @@ import type {
   SimulateAutomationResponse,
 } from '@crm/contracts';
 import {
-  InMemoryAutomationRepository,
+  type IAutomationRepository,
   type AutomationRuleEntity,
   type AutomationRunEntity,
 } from './automation.repository.js';
@@ -25,7 +26,8 @@ export class AutomationService {
   private readonly MAX_CHAIN_DEPTH = 3;
 
   constructor(
-    private readonly automationRepo: InMemoryAutomationRepository,
+    @Inject('AUTOMATION_REPOSITORY')
+    private readonly automationRepo: IAutomationRepository,
     private readonly auditService: AuditService,
   ) {}
 

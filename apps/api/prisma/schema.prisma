@@ -86,6 +86,11 @@ model Organization {
   apiKeys ApiKey[]
   integrationProviders IntegrationProvider[]
   backupRecords BackupRecord[]
+  deadLetters NotificationDeadLetter[]
+  jobs Job[]
+  customFields CustomField[]
+  automationRules AutomationRule[]
+  automationRuns AutomationRun[]
 }
 
 model User {
@@ -570,4 +575,100 @@ model RestoreDrill {
   validationErrors        String[]
   backup BackupRecord @relation(fields: [backupId], references: [id], onDelete: Cascade)
   @@index([backupId])
+}
+
+model NotificationDeadLetter {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  channel        String
+  recipient      String
+  title          String
+  message        String
+  payload        Json?
+  dedupeKey      String?
+  retryCount     Int      @default(0)
+  maxRetries     Int      @default(3)
+  lastError      String
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  failedAt       DateTime @default(now()) @db.Timestamptz(6)
+  resolvedAt     DateTime? @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status, failedAt])
+}
+
+model Job {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  type           String
+  priority       String   @default("NORMAL")
+  payload        Json
+  result         Json?
+  error          String?
+  status         String   @default("QUEUED")
+  maxAttempts    Int      @default(3)
+  attempts       Int      @default(0)
+  runAt          DateTime @default(now()) @db.Timestamptz(6)
+  startedAt      DateTime? @db.Timestamptz(6)
+  completedAt    DateTime? @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([status, runAt, priority])
+  @@index([organizationId, status])
+  @@index([type])
+}
+
+model CustomField {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  entityType     String
+  key            String
+  label          String
+  type           String
+  options        String[]
+  isRequired     Boolean  @default(false)
+  defaultValue   Json?
+  order          Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, entityType, key])
+  @@index([organizationId, entityType, active])
+}
+
+model AutomationRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  trigger        String
+  conditionField String?
+  conditionValue String?
+  actionType     String
+  actionPayload  Json
+  enabled        Boolean  @default(true)
+  executionCount Int      @default(0)
+  lastExecutedAt DateTime? @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, trigger, enabled])
+}
+
+model AutomationRun {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  ruleId         String   @db.Uuid
+  ruleName       String
+  trigger        String
+  status         String
+  executedAction String
+  actionDetails  String
+  payloadSummary String
+  executedAt     DateTime @default(now()) @db.Timestamptz(6)
+  durationMs     Int
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, executedAt])
+  @@index([ruleId])
 }

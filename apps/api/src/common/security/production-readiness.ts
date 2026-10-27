@@ -9,12 +9,8 @@ const logger = new Logger('ProductionReadiness');
  * `pnpm audit:persistence` reports the same reality from app.module.ts.
  */
 export const DOMAINS_WITHOUT_DURABLE_REPOSITORY: readonly string[] = [
-  'automation',
-  'custom-fields',
   'documents',
   'webhook',
-  'jobs',
-  'notification-dlq',
 ];
 
 export function assertProductionReadiness(env: Record<string, string | undefined> = process.env): void {

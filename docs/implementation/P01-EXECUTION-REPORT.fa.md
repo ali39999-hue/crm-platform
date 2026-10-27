@@ -127,7 +127,24 @@
 | `pnpm audit:persistence` | **۱۴ توکن: ۱۲ database / ۲ in-memory** |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
-## ۹. Rollback
+## ۹. اجرای مرحله پنجم — jobs، dlq، custom-fields و automation durable شدند (۱۶/۱۶ توکن database)
+
+- مدل‌های جدید: **`NotificationDeadLetter`**، **`Job`**، **`CustomField`**، **`AutomationRule`** + **`AutomationRun`**
+- `Job` عمداً scoped نیست (صف سیستم است؛ worker بیرون HTTP اجرا می‌شود) — worker حالا `job.organizationId` را در tenant-context تزریق می‌کند تا هندلرهای آینده (P09) روی مدل‌های scoped سالم کار کنند
+- `claimNextRunnableJob` اتمیک است: updateMany شرطی — اگر دو worker همزمان claim کنند فقط یکی count=1 می‌گیرد
+- سرویس‌های CustomField و Automation به توکن مهاجرت شدند؛ DLQ و Job از قبل توکن‌محور بودند و فقط سوییچ conditional گرفتند
+- `pnpm audit:persistence`: **۱۶ توکن = ۱۶ database / ۰ in-memory**
+- `DOMAINS_WITHOUT_DURABLE_REPOSITORY` → ۲ دامنه: documents، webhook
+
+### شواهد مرحله پنجم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۰۶/۶۰۶** (۵۴ فایل — +۱۳ تست repo)؛ domain: ۸۸/۸۸ |
+| `pnpm audit:persistence` | ۱۶/۱۶ توکن database |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
+## ۱۰. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

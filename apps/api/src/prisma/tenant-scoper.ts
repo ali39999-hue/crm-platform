@@ -20,6 +20,10 @@ export const TENANT_SCOPED_MODELS = [
   'Mention',
   'ApiKey',
   'IntegrationProvider',
+  'NotificationDeadLetter',
+  'CustomField',
+  'AutomationRule',
+  'AutomationRun',
 ];
 
 /**

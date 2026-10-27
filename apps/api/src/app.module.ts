@@ -26,6 +26,7 @@ import { OrganizationService } from './modules/organization/organization.service
 import { CustomFieldController } from './modules/custom-fields/custom-field.controller.js';
 import { CustomFieldService } from './modules/custom-fields/custom-field.service.js';
 import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-field.repository.js';
+import { PrismaCustomFieldRepository } from './modules/custom-fields/prisma-custom-field.repository.js';
 import { ProjectController } from './modules/projects/project.controller.js';
 import { ProjectService } from './modules/projects/project.service.js';
 import { InMemoryProjectRepository } from './modules/projects/project.repository.js';
@@ -71,6 +72,7 @@ import { SupportService } from './modules/support/support.service.js';
 import { InMemoryNotificationRepository } from './modules/notifications/notification.repository.js';
 import { PrismaNotificationRepository } from './modules/notifications/prisma-notification.repository.js';
 import { InMemoryNotificationDlqRepository } from './modules/notifications/notification-dlq.repository.js';
+import { PrismaNotificationDlqRepository } from './modules/notifications/prisma-notification-dlq.repository.js';
 import { NotificationService } from './modules/notifications/notification.service.js';
 import { NotificationDispatcherService } from './modules/notifications/notification-dispatcher.service.js';
 import { EmailAdapter } from './modules/notifications/adapters/email.adapter.js';
@@ -78,6 +80,7 @@ import { PushAdapter } from './modules/notifications/adapters/push.adapter.js';
 import { SmsAdapter } from './modules/notifications/adapters/sms.adapter.js';
 import { ReportingService } from './modules/reporting/reporting.service.js';
 import { InMemoryAutomationRepository } from './modules/automation/automation.repository.js';
+import { PrismaAutomationRepository } from './modules/automation/prisma-automation.repository.js';
 import { AutomationService } from './modules/automation/automation.service.js';
 import { InMemoryActivityRepository } from './modules/activity/activity.repository.js';
 import { PrismaActivityRepository } from './modules/activity/prisma-activity.repository.js';
@@ -92,6 +95,7 @@ import { InMemoryBackupRepository } from './modules/operations/backup.repository
 import { PrismaBackupRepository } from './modules/operations/prisma-backup.repository.js';
 import { BackupService } from './modules/operations/backup.service.js';
 import { InMemoryJobRepository } from './modules/jobs/job.repository.js';
+import { PrismaJobRepository } from './modules/jobs/prisma-job.repository.js';
 import { JobWorkerService } from './modules/jobs/job-worker.service.js';
 import { VoipController } from './modules/integrations/voip/voip.controller.js';
 import { VoipService } from './modules/integrations/voip/voip.service.js';
@@ -210,16 +214,25 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     PrismaNotificationRepository,
     {
       provide: 'NOTIFICATION_DLQ_REPOSITORY',
-      useClass: InMemoryNotificationDlqRepository,
+      useClass:
+        process.env.USE_DATABASE === 'true'
+          ? PrismaNotificationDlqRepository
+          : InMemoryNotificationDlqRepository,
     },
     InMemoryNotificationDlqRepository,
+    PrismaNotificationDlqRepository,
     EmailAdapter,
     PushAdapter,
     SmsAdapter,
     NotificationDispatcherService,
     NotificationService,
     ReportingService,
+    {
+      provide: 'AUTOMATION_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaAutomationRepository : InMemoryAutomationRepository,
+    },
     InMemoryAutomationRepository,
+    PrismaAutomationRepository,
     AutomationService,
     {
       provide: 'ACTIVITY_REPOSITORY',
@@ -242,9 +255,10 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     BackupService,
     {
       provide: 'JOB_REPOSITORY',
-      useClass: InMemoryJobRepository,
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaJobRepository : InMemoryJobRepository,
     },
     InMemoryJobRepository,
+    PrismaJobRepository,
     JobWorkerService,
     InMemoryDocumentRepository,
     DocumentsService,
@@ -252,7 +266,15 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     // These were previously registered only in `exports`, which does NOT
     // register a provider — AppModule could never actually bootstrap (latent
     // runtime crash, invisible to unit tests that never compile the module).
+    {
+      provide: 'CUSTOM_FIELD_REPOSITORY',
+      useClass:
+        process.env.USE_DATABASE === 'true'
+          ? PrismaCustomFieldRepository
+          : InMemoryCustomFieldRepository,
+    },
     InMemoryCustomFieldRepository,
+    PrismaCustomFieldRepository,
     CustomFieldService,
     InMemoryProjectRepository,
     PrismaProjectRepository,
@@ -314,10 +336,14 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     PushAdapter,
     SmsAdapter,
     InMemoryNotificationDlqRepository,
+    PrismaNotificationDlqRepository,
     NotificationDispatcherService,
     NotificationService,
     PrismaNotificationRepository,
     ReportingService,
+    'AUTOMATION_REPOSITORY',
+    InMemoryAutomationRepository,
+    PrismaAutomationRepository,
     AutomationService,
     'ACTIVITY_REPOSITORY',
     InMemoryActivityRepository,
@@ -332,10 +358,13 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     BackupService,
     'JOB_REPOSITORY',
     InMemoryJobRepository,
+    PrismaJobRepository,
     JobWorkerService,
     InMemoryDocumentRepository,
     DocumentsService,
+    'CUSTOM_FIELD_REPOSITORY',
     InMemoryCustomFieldRepository,
+    PrismaCustomFieldRepository,
     CustomFieldService,
     InMemoryProjectRepository,
     PrismaProjectRepository,

@@ -8,6 +8,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
+import { runWithTenantContext } from '../../prisma/tenant-context.js';
 import type { IJobRepository } from './job.repository.js';
 import {
   EnqueueJobInput,
@@ -238,7 +239,13 @@ export class JobWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const result = await handler(job);
+      // Handlers run inside the job's own tenant scope (server-side identity
+      // from the job record, never from request input) so tenant-scoped
+      // repositories resolve correctly outside an HTTP request.
+      const result = await runWithTenantContext(
+        { organizationId: job.organizationId, isPlatformAdmin: false, contextReady: true },
+        () => handler(job),
+      );
       return await this.handleSuccess(job, result, referenceTime);
     } catch (error) {
       return await this.handleFailure(job, error, referenceTime);

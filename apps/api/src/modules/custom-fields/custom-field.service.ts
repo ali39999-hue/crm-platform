@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -13,7 +14,7 @@ import type {
   ValidateCustomFieldsResponse,
 } from '@crm/contracts';
 import {
-  InMemoryCustomFieldRepository,
+  type ICustomFieldRepository,
   type CustomFieldEntity,
 } from './custom-field.repository.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -23,7 +24,8 @@ export class CustomFieldService {
   private readonly logger = new Logger(CustomFieldService.name);
 
   constructor(
-    private readonly fieldRepo: InMemoryCustomFieldRepository,
+    @Inject('CUSTOM_FIELD_REPOSITORY')
+    private readonly fieldRepo: ICustomFieldRepository,
     private readonly auditService: AuditService,
   ) {}
 
