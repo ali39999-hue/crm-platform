@@ -10,6 +10,9 @@ import type {
   TicketDto,
   TicketMessageDto,
   TransitionTaskRequest,
+  DealDto,
+  UpdateDealDto,
+  MarkDealLostRequest,
 } from '@crm/contracts';
 import {
   canTransitionTask,
@@ -236,6 +239,36 @@ export class ApiClient {
     dto: AddTicketMessageRequest,
   ): Promise<TicketMessageDto> {
     return this.request<TicketMessageDto>(`/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  /**
+   * GET /crm/deals
+   * Fetches sales pipeline deals.
+   */
+  public async getDeals(): Promise<DealDto[]> {
+    return this.request<DealDto[]>('/crm/deals');
+  }
+
+  /**
+   * PATCH /crm/deals/:id
+   * Updates deal stage or attributes.
+   */
+  public async updateDeal(id: string, dto: UpdateDealDto): Promise<DealDto> {
+    return this.request<DealDto>(`/crm/deals/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  /**
+   * POST /crm/deals/:id/lost
+   * Marks a deal as lost with mandatory loss reason taxonomy.
+   */
+  public async markDealLost(id: string, dto: MarkDealLostRequest): Promise<DealDto> {
+    return this.request<DealDto>(`/crm/deals/${id}/lost`, {
       method: 'POST',
       body: JSON.stringify(dto),
     });

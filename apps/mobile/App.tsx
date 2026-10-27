@@ -20,6 +20,7 @@ import type {
   TicketStatus,
   ProjectSummaryDto,
   DocumentSummaryDto,
+  DealDto,
 } from '@crm/contracts';
 import { canTransitionTask } from '@crm/domain';
 import {
@@ -28,6 +29,7 @@ import {
   INITIAL_TICKETS,
   INITIAL_PROJECTS,
   INITIAL_DOCUMENTS,
+  INITIAL_DEALS,
   getTaskStatusCfg,
   getTicketStatusCfg,
 } from './src/lib/constants';
@@ -39,15 +41,17 @@ import {
 import { offlineQueue, type QueuedMutation } from './src/lib/offline-queue';
 import { TaskCard } from './src/components/TaskCard';
 import { TicketCard } from './src/components/TicketCard';
+import { DealCard } from './src/components/DealCard';
 import { ProjectCard } from './src/components/ProjectCard';
 import { DocumentCard } from './src/components/DocumentCard';
 import { CreateTaskModal, type CreateTaskFormData } from './src/components/CreateTaskModal';
 import { CreateTicketModal, type CreateTicketFormData } from './src/components/CreateTicketModal';
 import { OfflineBanner } from './src/components/OfflineBanner';
 
-type ActiveTab = 'tasks' | 'tickets' | 'projects' | 'docs' | 'settings';
+type ActiveTab = 'tasks' | 'tickets' | 'deals' | 'projects' | 'docs' | 'settings';
 type TaskFilter = 'ALL' | 'IN_PROGRESS' | 'TODO' | 'BLOCKED' | 'DONE';
 type TicketFilter = 'ALL' | 'OPEN' | 'PENDING' | 'RESOLVED';
+type DealFilter = 'ALL' | 'ACTIVE' | 'ROTTING' | 'WON' | 'LOST';
 
 type ToastState = {
   message: string;
@@ -69,6 +73,9 @@ export default function App() {
   const [tickets, setTickets] = useState<TicketDto[]>(INITIAL_TICKETS);
   const [projects, setProjects] = useState<ProjectSummaryDto[]>(INITIAL_PROJECTS);
   const [documents, setDocuments] = useState<DocumentSummaryDto[]>(INITIAL_DOCUMENTS);
+  const [deals, setDeals] = useState<DealDto[]>(INITIAL_DEALS);
+  const [dealFilter, setDealFilter] = useState<DealFilter>('ALL');
+  const [dealSearch, setDealSearch] = useState('');
 
   // Offline State & Durable Mutation Queue
   const [isOffline, setIsOffline] = useState(false);
@@ -343,6 +350,47 @@ export default function App() {
   };
 
   // ==========================================
+  // CRM DEALS ACTIONS (Didar Pattern)
+  // ==========================================
+
+  const STAGE_ORDER = ['QUALIFICATION', 'NEED_ANALYSIS', 'PROPOSAL', 'NEGOTIATION', 'WON'];
+
+  const handleAdvanceDeal = async (deal: DealDto) => {
+    const curIdx = STAGE_ORDER.indexOf(deal.stage);
+    if (curIdx >= 0 && curIdx < STAGE_ORDER.length - 1) {
+      const nextStage = STAGE_ORDER[curIdx + 1]!;
+      try {
+        const updated = await apiClient.updateDeal(deal.id, { stage: nextStage });
+        setDeals((prev) => prev.map((d) => (d.id === deal.id ? updated : d)));
+        showToast(`فرصت «${deal.name}» به مرحله بعد منتقل شد.`, 'success');
+      } catch {
+        setDeals((prev) =>
+          prev.map((d) => (d.id === deal.id ? { ...d, stage: nextStage } : d)),
+        );
+        showToast(`معامله در حالت محلی به ${nextStage} منتقل شد.`, 'info');
+      }
+    } else {
+      showToast('معامله در آخرین مرحله کاریز قرار دارد.', 'info');
+    }
+  };
+
+  const handleMarkDealLost = async (deal: DealDto) => {
+    try {
+      const updated = await apiClient.markDealLost(deal.id, {
+        lossReason: 'PRICE_TOO_HIGH',
+        lossDescription: 'ثبت باخت از طریق اپ موبایل',
+      });
+      setDeals((prev) => prev.map((d) => (d.id === deal.id ? updated : d)));
+      showToast(`فرصت «${deal.name}» با موفقیت به عنوان ناموفق ثبت شد.`, 'info');
+    } catch {
+      setDeals((prev) =>
+        prev.map((d) => (d.id === deal.id ? { ...d, stage: 'LOST', isRotting: false } : d)),
+      );
+      showToast(`معامله به عنوان ناموفق علامت‌گذاری شد.`, 'info');
+    }
+  };
+
+  // ==========================================
   // SYNC & NETWORK CONTROLS
   // ==========================================
 
@@ -476,9 +524,32 @@ export default function App() {
     });
   }, [tickets, ticketFilter, ticketSearch]);
 
+  const filteredDeals = useMemo(() => {
+    return deals.filter((d) => {
+      if (dealFilter === 'ACTIVE' && (d.stage === 'WON' || d.stage === 'LOST')) return false;
+      if (
+        dealFilter === 'ROTTING' &&
+        !d.isRotting &&
+        (!d.daysInCurrentStage || d.daysInCurrentStage < 14)
+      )
+        return false;
+      if (dealFilter === 'WON' && d.stage !== 'WON') return false;
+      if (dealFilter === 'LOST' && d.stage !== 'LOST') return false;
+
+      if (dealSearch.trim()) {
+        const q = dealSearch.trim().toLowerCase();
+        if (!d.name.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [deals, dealFilter, dealSearch]);
+
   const activeTasksCount = tasks.filter((t) => t.status !== 'DONE' && t.status !== 'CANCELED').length;
   const activeTicketsCount = tickets.filter(
     (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED',
+  ).length;
+  const rottingDealsCount = deals.filter(
+    (d) => d.isRotting || (d.daysInCurrentStage !== undefined && d.daysInCurrentStage >= 14),
   ).length;
 
   return (
@@ -557,6 +628,37 @@ export default function App() {
                 style={[styles.tabText, activeTab === 'tickets' && styles.tabTextActive]}
               >
                 تیکت‌ها
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'deals' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('deals')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabContentRow}>
+              <View
+                style={[
+                  styles.tabBadge,
+                  activeTab === 'deals' ? styles.tabBadgeActive : styles.tabBadgeInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabBadgeText,
+                    activeTab === 'deals'
+                      ? styles.tabBadgeTextActive
+                      : styles.tabBadgeTextInactive,
+                  ]}
+                >
+                  {deals.length}
+                </Text>
+              </View>
+              <Text
+                style={[styles.tabText, activeTab === 'deals' && styles.tabTextActive]}
+              >
+                معاملات
               </Text>
             </View>
           </TouchableOpacity>
@@ -815,6 +917,95 @@ export default function App() {
                   key={ticket.id}
                   ticket={ticket}
                   onToggleStatus={handleToggleTicketStatus}
+                />
+              ))
+            )}
+          </View>
+        )}
+
+        {activeTab === 'deals' && (
+          /* ================= TAB: فرصت‌ها و معاملات فروش (Didar Pipeline) ================= */
+          <View style={styles.sectionContainer}>
+            <View style={styles.actionBarRow}>
+              <Text style={styles.sectionHeading}>
+                کاریز و فرصت‌های فروش ({deals.length})
+              </Text>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="جست‌وجوی فرصت معامله..."
+                placeholderTextColor="#94A3B8"
+                value={dealSearch}
+                onChangeText={setDealSearch}
+                textAlign="right"
+              />
+              {dealSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setDealSearch('')}>
+                  <Text style={styles.clearSearchBtn}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Filter Chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChipRow}
+            >
+              {(
+                [
+                  { key: 'ALL', label: 'همه معاملات' },
+                  { key: 'ROTTING', label: `⚠️ راکد (${rottingDealsCount})` },
+                  { key: 'ACTIVE', label: 'در جریان کاریز' },
+                  { key: 'WON', label: 'موفق و بسته‌شده' },
+                  { key: 'LOST', label: 'از دست‌رفته' },
+                ] as const
+              ).map((chip) => {
+                const isSelected = dealFilter === chip.key;
+                return (
+                  <TouchableOpacity
+                    key={chip.key}
+                    style={[
+                      styles.chip,
+                      isSelected && { backgroundColor: '#1570EF', borderColor: '#1570EF' },
+                    ]}
+                    onPress={() => setDealFilter(chip.key)}
+                  >
+                    <Text
+                      style={[styles.chipText, isSelected && styles.chipTextActive]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Count Summary */}
+            <View style={styles.countSummaryRow}>
+              <Text style={styles.countSummaryText}>
+                {filteredDeals.length} معامله نمایش داده شده
+              </Text>
+            </View>
+
+            {/* Deal Cards List */}
+            {filteredDeals.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardTitle}>معامله‌ای یافت نشد</Text>
+                <Text style={styles.emptyCardDesc}>
+                  هیچ فرصت فروشی با این فیلتر یا جست‌وجو در کاریز وجود ندارد.
+                </Text>
+              </View>
+            ) : (
+              filteredDeals.map((deal) => (
+                <DealCard
+                  key={deal.id}
+                  deal={deal}
+                  onAdvanceStage={handleAdvanceDeal}
+                  onMarkLost={handleMarkDealLost}
                 />
               ))
             )}

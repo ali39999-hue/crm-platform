@@ -7,6 +7,7 @@ import type {
   TicketStatus,
   ProjectSummaryDto,
   DocumentSummaryDto,
+  DealDto,
 } from '@crm/contracts';
 import type { TransitionActorCapabilities } from '@crm/domain';
 
@@ -357,6 +358,44 @@ export const INITIAL_DOCUMENTS: DocumentSummaryDto[] = [
     tags: ['پشتیبانی', 'آموزش'],
     createdAt: '۱۴۰۵/۰۷/۲۱',
     updatedAt: '۱۴۰5/۰۷/۲۱',
+  },
+];
+
+export const DEAL_STAGE_CONFIG: Record<string, StatusConfig> = {
+  QUALIFICATION: { label: 'اهلیت‌سنجی', color: '#175CD3', bg: '#EFF8FF', borderColor: '#B2DDFF' },
+  NEED_ANALYSIS: { label: 'تحلیل نیازها', color: '#026AA2', bg: '#E0F2FE', borderColor: '#B9E6FE' },
+  PROPOSAL: { label: 'پیش‌فاکتور و آفر', color: '#B54708', bg: '#FEF0C7', borderColor: '#FEDF89' },
+  NEGOTIATION: { label: 'مذاکره قرارداد', color: '#6938EF', bg: '#F4EBFF', borderColor: '#D9D6FE' },
+  WON: { label: 'موفق و بسته‌شده', color: '#067647', bg: '#ECFDF3', borderColor: '#A6F4C5' },
+  LOST: { label: 'از دست‌رفته', color: '#B42318', bg: '#FEE4E2', borderColor: '#FECDCA' },
+};
+
+export const INITIAL_DEALS: DealDto[] = [
+  {
+    id: '80000000-0000-0000-0000-000000000001',
+    name: 'قرارداد سالانه لایسنس فولاد گستر آریا',
+    stage: 'PROPOSAL',
+    amountMinor: 350000000,
+    currency: 'IRR',
+    probability: 70,
+    nextActionTitle: 'جلسه دمو و ارائه آفر نهایی',
+    nextActionDueAt: '2026-10-30T10:00:00.000Z',
+    isRotting: false,
+    daysInCurrentStage: 4,
+    createdAt: '2026-10-10T14:00:00.000Z',
+    updatedAt: '2026-10-26T16:00:00.000Z',
+  },
+  {
+    id: '80000000-0000-0000-0000-000000000002',
+    name: 'توسعه سفارشی و اتصال سانترال VoIP پتروشیمی',
+    stage: 'NEED_ANALYSIS',
+    amountMinor: 180000000,
+    currency: 'IRR',
+    probability: 40,
+    isRotting: true,
+    daysInCurrentStage: 20,
+    createdAt: '2026-10-01T11:00:00.000Z',
+    updatedAt: '2026-10-06T10:00:00.000Z',
   },
 ];
 
