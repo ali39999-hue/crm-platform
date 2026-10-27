@@ -330,6 +330,21 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام دوازدهم: حلقه UI دعوت‌نامه‌ها بسته شد
+
+- قرارداد **`OrganizationInvitationDto`** به contracts اضافه شد (منبع واحد برای وب و API)
+- `api-client`: `inviteOrganizationMember` حالا اتحاد `member | {invitation, token}` را برمی‌گرداند + دو متد `listOrganizationInvitations` و `revokeOrganizationInvitation`
+- **AdminSettingsView**: پاسخ invitation تشخیص داده می‌شود و token یک‌بارمصرف با هشدار «دوباره نمایش داده نمی‌شود» به inviter نشان داده می‌شود؛ fixture mode مسیر member فوری قبلی را دارد و E2E دست‌نخورده ماند
+- بدهی UI باقی: رندر فهرست دعوت‌نامه‌های PENDING در تب اعضا (endpoint آماده است) — کنار مهاجرت نهایی getMembers
+
+### شواهد گام دوازدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ (وب شامل) |
+| `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

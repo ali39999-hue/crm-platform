@@ -1167,6 +1167,17 @@ export type UpdateOrganizationSettingsRequest = {
   } | undefined;
 };
 
+export type OrganizationInvitationDto = {
+  id: string;
+  organizationId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED';
+  expiresAt: string;
+  createdAt: string;
+};
+
 export type OrganizationMemberDto = {
   id: string;
   userId: string;

@@ -73,6 +73,7 @@ import type {
   UpdateDocumentRequest,
   InviteMemberRequest,
   OrganizationMemberDto,
+  OrganizationInvitationDto,
   OrganizationSettingsDto,
   UpdateMemberRoleRequest,
   UpdateOrganizationSettingsRequest,
@@ -3287,9 +3288,33 @@ export class ApiClient {
     }
   }
 
-  async inviteOrganizationMember(dto: InviteMemberRequest): Promise<OrganizationMemberDto> {
+  /**
+   * P02: in database mode the API returns a one-time invitation token instead
+   * of an instant member. The caller MUST surface the token to the inviter —
+   * it is never retrievable again.
+   */
+  async listOrganizationInvitations(): Promise<OrganizationInvitationDto[]> {
     try {
-      return await this.request<OrganizationMemberDto>('/organization/members/invite', {
+      return await this.request<OrganizationInvitationDto[]>('/organization/invitations');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) return [];
+      throw err;
+    }
+  }
+
+  async revokeOrganizationInvitation(id: string): Promise<OrganizationInvitationDto> {
+    return this.request<OrganizationInvitationDto>(`/organization/invitations/${id}/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  async inviteOrganizationMember(
+    dto: InviteMemberRequest,
+  ): Promise<OrganizationMemberDto | { invitation: OrganizationInvitationDto; token: string }> {
+    try {
+      return await this.request<
+        OrganizationMemberDto | { invitation: OrganizationInvitationDto; token: string }
+      >('/organization/members/invite', {
         method: 'POST',
         body: JSON.stringify(dto),
       });

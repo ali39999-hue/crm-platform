@@ -106,16 +106,30 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
 
     try {
       setInviting(true);
-      const newMem = await apiClient.inviteOrganizationMember({
+      const result = await apiClient.inviteOrganizationMember({
         email: inviteEmail.trim(),
         displayName: inviteName.trim(),
         role: inviteRole,
       });
-      setMembers((prev) => [...prev, newMem]);
-      setIsInviteOpen(false);
-      setInviteEmail('');
-      setInviteName('');
-      onNotify?.(`عضو جدید «${newMem.displayName}» با نقش ${newMem.role} افزوده شد`, 'success');
+
+      // P02: database mode returns a one-time invitation token instead of an
+      // active member. The token must reach the invitee out-of-band and is
+      // never retrievable again.
+      if ('token' in result) {
+        setIsInviteOpen(false);
+        setInviteEmail('');
+        setInviteName('');
+        onNotify?.(
+          `دعوت‌نامه برای «${result.invitation.email}» ساخته شد. این توکن یک‌بارمصرف را برای او بفرستید (دوباره نمایش داده نمی‌شود): ${result.token}`,
+          'success',
+        );
+      } else {
+        setMembers((prev) => [...prev, result]);
+        setIsInviteOpen(false);
+        setInviteEmail('');
+        setInviteName('');
+        onNotify?.(`عضو جدید «${result.displayName}» با نقش ${result.role} افزوده شد`, 'success');
+      }
     } catch (err: any) {
       onNotify?.(err?.message || 'خطا در افزودن کاربر', 'error');
     } finally {
