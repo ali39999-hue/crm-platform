@@ -26,6 +26,9 @@ import type {
   NotificationPreferencesDto,
 } from '@crm/contracts';
 
+  // Self-service writes (mark-read, preferences) stay at view_internal_tasks
+  // by design: they only mutate the caller's own rows; a dedicated
+  // self-service action is a P02 matrix follow-up.
 @Controller('notifications')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class NotificationController {

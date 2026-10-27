@@ -269,6 +269,22 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام هفتم: سخت‌گیری مجوزهای ضعیف (یافته‌های ممیزی RBAC)
+
+- **saved-views** create/update/delete: `view_crm` → `edit_crm` (نوشتن داده tenant؛ Auditor و portal user به‌درستی قطع، Employee/SupportAgent طبق scope حفظ)
+- **voip call-event**: `view_crm` → `edit_crm` (ثبت رویداد تماس = نوشتن؛ IntegrationAccount با explicit_scope حفظ شد)
+- **منشن read و notifications read-all/preferences** عمداً در سطح view ماندند: self-service روی ردیف‌های خود کاربرند و اکشن اختصاصی در ماتریس وجود ندارد — rationale در کنترلرها مستند و به‌عنوان follow-up ماتریس ثبت شد
+- E2E و تست‌های واحد پس از سخت‌گیری همه سبز ماندند (تأیید اینکه نقش‌های فعال جریان‌ها دسترسی صحیح دارند)
+
+### شواهد گام هفتم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: ۶۳۳/۶۳۳؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+| `pnpm security:audit` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

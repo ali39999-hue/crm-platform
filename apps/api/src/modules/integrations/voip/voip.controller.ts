@@ -23,7 +23,7 @@ export class VoipController {
   constructor(private readonly voipService: VoipService) {}
 
   @Post('call-event')
-  @RequirePermission('view_crm')
+  @RequirePermission('edit_crm')
   async handleCallEvent(
     @CurrentUser() user: UserContext,
     @Body() dto: VoipCallEventDtoClass,

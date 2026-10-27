@@ -27,7 +27,7 @@ export class SavedViewController {
   constructor(private readonly savedViewService: SavedViewService) {}
 
   @Post()
-  @RequirePermission('view_crm')
+  @RequirePermission('edit_crm')
   async createView(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateSavedViewDto,
@@ -71,7 +71,7 @@ export class SavedViewController {
   }
 
   @Patch(':id')
-  @RequirePermission('view_crm')
+  @RequirePermission('edit_crm')
   async updateView(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -91,7 +91,7 @@ export class SavedViewController {
   }
 
   @Delete(':id')
-  @RequirePermission('view_crm')
+  @RequirePermission('edit_crm')
   async deleteView(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
