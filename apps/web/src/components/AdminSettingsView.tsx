@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import type {
   InviteMemberRequest,
   OrganizationMemberDto,
+  OrganizationInvitationDto,
   OrganizationSettingsDto,
 } from '@crm/contracts';
 import { apiClient } from '../lib/api-client';
@@ -22,6 +23,9 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
 
   const [settings, setSettings] = useState<OrganizationSettingsDto | null>(null);
   const [members, setMembers] = useState<OrganizationMemberDto[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<
+    OrganizationInvitationDto[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   // Workspace form state
@@ -54,9 +58,10 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [loadedSettings, loadedMembers] = await Promise.all([
+      const [loadedSettings, loadedMembers, loadedInvitations] = await Promise.all([
         apiClient.getOrganizationSettings(),
         apiClient.getOrganizationMembers(),
+        apiClient.listOrganizationInvitations(),
       ]);
       setSettings(loadedSettings);
       setOrgName(loadedSettings.name);
@@ -67,6 +72,7 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
         setTempFileDays(loadedSettings.retentionPolicy.tempFilesDays);
       }
       setMembers(loadedMembers);
+      setPendingInvitations(loadedInvitations.filter((i) => i.status === 'PENDING'));
     } catch (err: any) {
       onNotify?.(err?.message || 'خطا در بارگذاری تنظیمات سازمان', 'error');
     } finally {
@@ -116,6 +122,7 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
       // active member. The token must reach the invitee out-of-band and is
       // never retrievable again.
       if ('token' in result) {
+        setPendingInvitations((prev) => [...prev, result.invitation]);
         setIsInviteOpen(false);
         setInviteEmail('');
         setInviteName('');
@@ -499,6 +506,52 @@ export function AdminSettingsView({ onNotify }: AdminSettingsViewProps) {
                     </tbody>
                   </table>
                 </div>
+
+                {pendingInvitations.length > 0 && (
+                  <div
+                    className="bg-slate-900 border border-amber-800/60 rounded-xl shadow"
+                    data-testid="pending-invitations"
+                  >
+                    <div className="px-4 py-3 border-b border-slate-800 text-amber-400 text-xs font-semibold">
+                      دعوت‌نامه‌های در انتظار پذیرش ({pendingInvitations.length})
+                    </div>
+                    <ul className="divide-y divide-slate-800/60">
+                      {pendingInvitations.map((inv) => (
+                        <li
+                          key={inv.id}
+                          data-testid={`pending-invitation-${inv.id}`}
+                          className="px-4 py-3 flex items-center justify-between text-xs"
+                        >
+                          <span className="text-slate-200">
+                            {inv.displayName} — <span className="font-mono text-slate-400">{inv.email}</span>
+                          </span>
+                          <span className="flex items-center gap-3">
+                            <span className="px-2 py-0.5 rounded bg-amber-900/40 text-amber-300">
+                              {inv.role}
+                            </span>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const revoked = await apiClient.revokeOrganizationInvitation(inv.id);
+                                  setPendingInvitations((prev) =>
+                                    prev.filter((p) => p.id !== revoked.id),
+                                  );
+                                  onNotify?.('دعوت‌نامه لغو شد', 'success');
+                                } catch (err: any) {
+                                  onNotify?.(err?.message || 'خطا در لغو دعوت‌نامه', 'error');
+                                }
+                              }}
+                              data-testid={`revoke-invitation-${inv.id}`}
+                              className="px-2 py-1 rounded bg-red-900/40 text-red-300 hover:bg-red-900/60"
+                            >
+                              لغو
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 

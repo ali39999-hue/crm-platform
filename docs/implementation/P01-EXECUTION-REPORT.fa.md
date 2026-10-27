@@ -345,6 +345,20 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام سیزدهم: رندر دعوت‌نامه‌های PENDING در تب اعضا
+
+- `AdminSettingsView`: بارگذاری موازی دعوت‌نامه‌ها + بخش «دعوت‌نامه‌های در انتظار پذیرش» با دکمه لغو (testidهای اختصاصی)
+- بعد از هر دعوت DB-mode، فهرست PENDING بلافاصله به‌روز می‌شود؛ fixture mode فهرست خالی است و E2E دست‌نخورده
+- `loadData` هر سه منبع را موازی می‌گیرد
+
+### شواهد گام سیزدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
