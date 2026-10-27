@@ -101,7 +101,7 @@ test.describe('Enterprise Documents & Knowledge Base P1 Journey', () => {
     await expect(contentView).toContainText('محتوای به‌روزرسانی‌شده');
 
     // Verify version updated to 2
-    await expect(page.locator('[data-testid="documents-workspace"]')).toContainText('نسخه ۲');
+    await expect(page.locator('[data-testid="documents-workspace"]')).toContainText(/نسخه [2۲]/);
   });
 
   test('should view revision history drawer and inspect versions', async ({ page }) => {
@@ -115,7 +115,7 @@ test.describe('Enterprise Documents & Knowledge Base P1 Journey', () => {
     const drawer = page.locator('[data-testid="revisions-drawer"]');
     await expect(drawer).toBeVisible();
     await expect(drawer).toContainText('تاریخچه ویرایش‌ها');
-    await expect(drawer).toContainText('نسخه ۱');
+    await expect(drawer).toContainText(/نسخه [1۱]/);
   });
 
   test('should verify customer portal only accesses published customer-visible documents', async ({

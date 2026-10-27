@@ -48,11 +48,22 @@ export function DocumentsView({ onNotify, isCustomerPortal = false }: DocumentsV
         client.getSpaces(),
         client.getDocuments(),
       ]);
-      setSpaces(loadedSpaces);
-      setDocuments(loadedDocs);
 
-      if (loadedDocs.length > 0 && !selectedDocId) {
-        setSelectedDocId(loadedDocs[0]!.id);
+      const visibleDocs = isCustomerPortal
+        ? loadedDocs.filter((d) => d.visibility === 'CUSTOMER_VISIBLE' && d.isPublished !== false)
+        : loadedDocs;
+
+      const visibleSpaces = isCustomerPortal
+        ? loadedSpaces.filter((s) => visibleDocs.some((d) => d.spaceId === s.id))
+        : loadedSpaces;
+
+      setSpaces(visibleSpaces);
+      setDocuments(visibleDocs);
+
+      if (visibleDocs.length > 0 && (!selectedDocId || !visibleDocs.some((d) => d.id === selectedDocId))) {
+        setSelectedDocId(visibleDocs[0]!.id);
+      } else if (visibleDocs.length === 0) {
+        setSelectedDocId(null);
       }
     } catch (err: any) {
       onNotify?.(err?.message || 'خطا در بارگذاری اسناد', 'error');
@@ -63,7 +74,7 @@ export function DocumentsView({ onNotify, isCustomerPortal = false }: DocumentsV
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isCustomerPortal]);
 
   // Fetch document detail when selected
   useEffect(() => {
@@ -77,6 +88,10 @@ export function DocumentsView({ onNotify, isCustomerPortal = false }: DocumentsV
       .getDocumentDetail(selectedDocId)
       .then((detail) => {
         if (active) {
+          if (isCustomerPortal && (detail.visibility !== 'CUSTOMER_VISIBLE' || !detail.isPublished)) {
+            setSelectedDocDetail(null);
+            return;
+          }
           setSelectedDocDetail(detail);
           setEditTitle(detail.title);
           setEditContent(detail.content);
@@ -95,11 +110,14 @@ export function DocumentsView({ onNotify, isCustomerPortal = false }: DocumentsV
     return () => {
       active = false;
     };
-  }, [selectedDocId]);
+  }, [selectedDocId, isCustomerPortal]);
 
   // Filter documents
   const filteredDocs = useMemo(() => {
     return documents.filter((doc) => {
+      if (isCustomerPortal && (doc.visibility !== 'CUSTOMER_VISIBLE' || doc.isPublished === false)) {
+        return false;
+      }
       if (selectedSpaceId !== 'all' && doc.spaceId !== selectedSpaceId) return false;
       if (visibilityFilter !== 'all' && doc.visibility !== visibilityFilter) return false;
       if (searchQuery.trim()) {
@@ -110,7 +128,7 @@ export function DocumentsView({ onNotify, isCustomerPortal = false }: DocumentsV
       }
       return true;
     });
-  }, [documents, selectedSpaceId, visibilityFilter, searchQuery]);
+  }, [documents, selectedSpaceId, visibilityFilter, searchQuery, isCustomerPortal]);
 
   const handleCreateDocument = async (dto: any) => {
     try {
