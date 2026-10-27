@@ -16,9 +16,9 @@ import { MentionService } from './mention.service.js';
 import type { MentionDto } from '@crm/contracts';
 import { CreateMentionDto } from './dto/create-mention.dto.js';
 
-  // Self-service read-state writes stay at view_internal_tasks by design:
-  // a dedicated self-service action does not exist in the matrix yet (P02
-  // follow-up); the route only mutates the caller's own mention state.
+  // Self-service read-state writes use the dedicated self_service action:
+  // they only ever mutate the caller's own mention rows (scoped by the token
+  // identity inside the service, never by request input).
 @Controller('mentions')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class MentionController {
@@ -47,7 +47,7 @@ export class MentionController {
   }
 
   @Patch(':id/read')
-  @RequirePermission('view_internal_tasks')
+  @RequirePermission('self_service')
   async markAsRead(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,

@@ -300,6 +300,20 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام نهم: اکشن self_service در ماتریس مجوزها
+
+- اکشن **`self_service`** به ACTIONS و ماتریس برای هر ۹ نقش اضافه شد ('yes') — امن به‌دلیل طراحی: این مسیرها فقط ردیف‌های خود کاربر را تغییر می‌دهند و scope از token داخل سرویس می‌آید، نه ورودی
+- مسیرهای `mentions :id/read`، `notifications read-all` و `preferences` از `view_internal_tasks` به `self_service` مهاجرت کردند؛ لیست canonical در `rbac-coverage.spec` به‌روز شد
+- follow-up باقی: مسیرهای مشابه آینده (مثلاً ویرایش پروفایل) هم باید از این اکشن استفاده کنند
+
+### شواهد گام نهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۳۷/۶۳۷**؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

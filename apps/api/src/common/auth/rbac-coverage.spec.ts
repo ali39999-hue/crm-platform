@@ -93,6 +93,7 @@ describe('RBAC coverage (GATE-002)', () => {
       'export_data',
       'view_audit',
       'manage_integrations',
+      'self_service', // P02: caller-owned read-state/preference writes
     ]);
     const actionRe = /@RequirePermission\(\s*['"]([^'"]+)['"]\s*\)/g;
     const used = new Set<string>();

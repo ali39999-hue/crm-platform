@@ -26,9 +26,10 @@ import type {
   NotificationPreferencesDto,
 } from '@crm/contracts';
 
-  // Self-service writes (mark-read, preferences) stay at view_internal_tasks
-  // by design: they only mutate the caller's own rows; a dedicated
-  // self-service action is a P02 matrix follow-up.
+  // Self-service writes (mark-read, read-all, preferences) use the dedicated
+  // self_service action: they only mutate rows owned by the caller (scoped by
+  // the token identity inside the service, never by request input).
+
 @Controller('notifications')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class NotificationController {
@@ -99,7 +100,7 @@ export class NotificationController {
   }
 
   @Post(':id/read')
-  @RequirePermission('view_internal_tasks')
+  @RequirePermission('self_service')
   async markAsRead(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -112,7 +113,7 @@ export class NotificationController {
   }
 
   @Post('read-all')
-  @RequirePermission('view_internal_tasks')
+  @RequirePermission('self_service')
   async markAllAsRead(@CurrentUser() user: UserContext): Promise<{ count: number }> {
     return this.notificationService.markAllAsRead(
       user.activeOrganization.id,
@@ -127,7 +128,7 @@ export class NotificationController {
   }
 
   @Put('preferences')
-  @RequirePermission('view_internal_tasks')
+  @RequirePermission('self_service')
   async setPreferences(
     @CurrentUser() user: UserContext,
     @Body() prefs: NotificationPreferencesDto,
