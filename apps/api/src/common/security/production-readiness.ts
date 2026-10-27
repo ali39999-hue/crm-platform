@@ -8,10 +8,7 @@ const logger = new Logger('ProductionReadiness');
  * repositories land; when it is empty the gate below passes by itself.
  * `pnpm audit:persistence` reports the same reality from app.module.ts.
  */
-export const DOMAINS_WITHOUT_DURABLE_REPOSITORY: readonly string[] = [
-  'documents',
-  'webhook',
-];
+export const DOMAINS_WITHOUT_DURABLE_REPOSITORY: readonly string[] = [];
 
 export function assertProductionReadiness(env: Record<string, string | undefined> = process.env): void {
   const isProd = env.NODE_ENV === 'production';

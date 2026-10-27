@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -14,7 +15,7 @@ import {
   type MembershipRole,
 } from '@crm/domain';
 import {
-  InMemoryDocumentRepository,
+  type IDocumentRepository,
   type DocumentEntity,
   type DocumentSpaceEntity,
 } from './document.repository.js';
@@ -36,7 +37,8 @@ export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
-    private readonly docRepo: InMemoryDocumentRepository,
+    @Inject('DOCUMENT_REPOSITORY')
+    private readonly docRepo: IDocumentRepository,
     private readonly auditService: AuditService,
     private readonly activityService: ActivityService,
   ) {}

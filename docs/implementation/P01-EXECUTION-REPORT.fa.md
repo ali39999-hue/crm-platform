@@ -144,7 +144,25 @@
 | `pnpm audit:persistence` | ۱۶/۱۶ توکن database |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
-## ۱۰. Rollback
+## ۱۰. اجرای مرحله ششم (پایانی) — documents و webhook durable شدند
+
+- مدل‌های جدید: **`DocumentSpace`**، **`Document`**، **`DocumentRevision`** (unique نسخه per document)، **`WebhookSubscription`**، **`WebhookDelivery`**، **`WebhookNonce`** (کلید ترکیبی scope+nonce برای ضد-replay)
+- `IDocumentRepository` به کلاس in-memory اضافه شد (قبلاً کلاس خام تزریق می‌شد)؛ سرویس‌های Documents و Webhook به توکن مهاجرت کردند
+- `DOMAINS_WITHOUT_DURABLE_REPOSITORY` حالا **خالی** است — گیت fail-closed production خودبه‌خود سبز می‌شود
+- `pnpm audit:persistence:strict` (گیت پیش از P14) **سبز** شد
+
+### شواهد مرحله ششم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۱۴/۶۱۴** (۵۶ فایل — +۸ تست)؛ domain: ۸۸/۸۸ |
+| `pnpm audit:persistence:strict` | **exit 0** — ۱۸ توکن = ۱۸ database |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
+### باقی‌مانده صادقانه GAP-001
+سه Map درون repoهای پرisma موجود: products/invoices در `PrismaCrmRepository` و macros/orgCounter در `PrismaSupportRepository` — داده ثانویه داخل دامنه‌های durable؛ مدل ProductCatalog/ProformaInvoice/SupportMacro لازم است. به‌علاوه تست منفی DB-level روی postgres واقعی (اولین run CI).
+
+## ۱۱. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

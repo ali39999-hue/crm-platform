@@ -51,8 +51,37 @@ export type DocumentSpaceEntity = {
   updatedAt: string;
 };
 
+export interface IDocumentRepository {
+  createSpace(data: Omit<DocumentSpaceEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentSpaceEntity>;
+  findSpaces(organizationId: string): Promise<DocumentSpaceEntity[]>;
+  findSpaceById(organizationId: string, spaceId: string): Promise<DocumentSpaceEntity | null>;
+
+  createDocument(data: Omit<DocumentEntity, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Promise<DocumentEntity>;
+  updateDocument(
+    organizationId: string,
+    documentId: string,
+    data: Partial<Omit<DocumentEntity, 'id' | 'organizationId' | 'createdAt'>> & {
+      summaryChange?: string | undefined;
+    },
+  ): Promise<DocumentEntity | null>;
+  findDocumentById(organizationId: string, documentId: string): Promise<DocumentEntity | null>;
+  findDocuments(
+    organizationId: string,
+    filters?: {
+      spaceId?: string | undefined;
+      visibility?: DocumentVisibility | undefined;
+      isPublished?: boolean | undefined;
+      search?: string | undefined;
+    },
+  ): Promise<DocumentEntity[]>;
+  deleteDocument(organizationId: string, documentId: string): Promise<boolean>;
+
+  findRevisions(documentId: string): Promise<DocumentRevisionEntity[]>;
+  findRevisionByVersion(documentId: string, version: number): Promise<DocumentRevisionEntity | null>;
+}
+
 @Injectable()
-export class InMemoryDocumentRepository {
+export class InMemoryDocumentRepository implements IDocumentRepository {
   private spaces: DocumentSpaceEntity[] = [
     {
       id: 'space-general-001',

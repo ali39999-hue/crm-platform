@@ -1,12 +1,13 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import crypto, { randomBytes, randomUUID } from 'crypto';
 import net from 'net';
-import { InMemoryWebhookRepository, type IWebhookRepository } from './webhook.repository.js';
+import { type IWebhookRepository } from './webhook.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 import type {
   CreateWebhookSubscriptionDto,
@@ -42,7 +43,8 @@ export class WebhookService {
   private httpDispatcher: HttpDispatcher;
 
   constructor(
-    private readonly repository: InMemoryWebhookRepository,
+    @Inject('WEBHOOK_REPOSITORY')
+    private readonly repository: IWebhookRepository,
     private readonly auditService: AuditService,
   ) {
     this.httpDispatcher = this.defaultDispatcher.bind(this);

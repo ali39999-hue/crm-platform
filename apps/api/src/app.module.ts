@@ -21,6 +21,7 @@ import { JobController } from './modules/jobs/job.controller.js';
 import { DocumentsController } from './modules/documents/document.controller.js';
 import { DocumentsService } from './modules/documents/document.service.js';
 import { InMemoryDocumentRepository } from './modules/documents/document.repository.js';
+import { PrismaDocumentRepository } from './modules/documents/prisma-document.repository.js';
 import { OrganizationController } from './modules/organization/organization.controller.js';
 import { OrganizationService } from './modules/organization/organization.service.js';
 import { CustomFieldController } from './modules/custom-fields/custom-field.controller.js';
@@ -88,6 +89,7 @@ import { ActivityService } from './modules/activity/activity.service.js';
 import { ImportExportService } from './modules/crm/csv/import-export.service.js';
 import { SearchService } from './modules/search/search.service.js';
 import { InMemoryWebhookRepository } from './modules/integrations/webhook.repository.js';
+import { PrismaWebhookRepository } from './modules/integrations/prisma-webhook.repository.js';
 import { WebhookService } from './modules/integrations/webhook.service.js';
 import { MetricsService } from './common/observability/metrics.service.js';
 import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
@@ -242,7 +244,12 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     PrismaActivityRepository,
     ActivityService,
     SearchService,
+    {
+      provide: 'WEBHOOK_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaWebhookRepository : InMemoryWebhookRepository,
+    },
     InMemoryWebhookRepository,
+    PrismaWebhookRepository,
     WebhookService,
     MetricsService,
     MetricsInterceptor,
@@ -260,7 +267,12 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryJobRepository,
     PrismaJobRepository,
     JobWorkerService,
+    {
+      provide: 'DOCUMENT_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaDocumentRepository : InMemoryDocumentRepository,
+    },
     InMemoryDocumentRepository,
+    PrismaDocumentRepository,
     DocumentsService,
     OrganizationService,
     // These were previously registered only in `exports`, which does NOT
@@ -350,6 +362,9 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     PrismaActivityRepository,
     ActivityService,
     SearchService,
+    'WEBHOOK_REPOSITORY',
+    InMemoryWebhookRepository,
+    PrismaWebhookRepository,
     WebhookService,
     MetricsService,
     InMemoryBackupRepository,
@@ -360,7 +375,9 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryJobRepository,
     PrismaJobRepository,
     JobWorkerService,
+    'DOCUMENT_REPOSITORY',
     InMemoryDocumentRepository,
+    PrismaDocumentRepository,
     DocumentsService,
     'CUSTOM_FIELD_REPOSITORY',
     InMemoryCustomFieldRepository,

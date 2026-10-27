@@ -91,6 +91,10 @@ model Organization {
   customFields CustomField[]
   automationRules AutomationRule[]
   automationRuns AutomationRun[]
+  documentSpaces DocumentSpace[]
+  documents Document[]
+  webhookSubscriptions WebhookSubscription[]
+  webhookDeliveries WebhookDelivery[]
 }
 
 model User {
@@ -671,4 +675,105 @@ model AutomationRun {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   @@index([organizationId, executedAt])
   @@index([ruleId])
+}
+
+model DocumentSpace {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  icon           String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents Document[]
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model Document {
+  id                  String   @id @default(uuid()) @db.Uuid
+  organizationId      String   @db.Uuid
+  spaceId             String   @db.Uuid
+  title               String
+  slug                String
+  content             String   @db.Text
+  visibility          String   @default("WORKSPACE")
+  isPublished         Boolean  @default(false)
+  authorId            String   @db.Uuid
+  authorName          String
+  version             Int      @default(1)
+  tags                String[]
+  associatedEntityType String?
+  associatedEntityId  String?
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  space        DocumentSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  revisions    DocumentRevision[]
+  @@index([organizationId, spaceId, isPublished])
+  @@index([organizationId, visibility])
+}
+
+model DocumentRevision {
+  id            String   @id @default(uuid()) @db.Uuid
+  documentId    String   @db.Uuid
+  organizationId String  @db.Uuid
+  version       Int
+  title         String
+  content       String   @db.Text
+  summaryChange String?
+  authorId      String   @db.Uuid
+  authorName    String
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  @@unique([documentId, version])
+  @@index([documentId])
+}
+
+model WebhookSubscription {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  url            String
+  secret         String
+  events         String[]
+  description    String?
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+  @@index([organizationId, enabled])
+}
+
+model WebhookDelivery {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  subscriptionId String   @db.Uuid
+  event          String
+  payload        Json
+  attemptNumber  Int      @default(1)
+  maxRetries     Int      @default(3)
+  status         String   @default("PENDING")
+  statusCode     Int?
+  responseBody   String?  @db.Text
+  error          String?
+  durationMs     Int?
+  headers        Json
+  timestamp      DateTime @default(now()) @db.Timestamptz(6)
+  nextRetryAt    DateTime? @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status, timestamp])
+  @@index([subscriptionId])
+}
+
+model WebhookNonce {
+  scope     String
+  nonce     String
+  expiresAt DateTime @db.Timestamptz(6)
+  @@id([scope, nonce])
+  @@index([expiresAt])
 }

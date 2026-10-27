@@ -24,6 +24,11 @@ export const TENANT_SCOPED_MODELS = [
   'CustomField',
   'AutomationRule',
   'AutomationRun',
+  'DocumentSpace',
+  'Document',
+  'DocumentRevision',
+  'WebhookSubscription',
+  'WebhookDelivery',
 ];
 
 /**
