@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
   Logger,
@@ -13,7 +14,7 @@ import type {
   IntegrationProviderKey,
 } from '@crm/contracts';
 import {
-  InMemoryApiKeyRepository,
+  type IApiKeyRepository,
   type ApiKeyEntity,
   type IntegrationProviderEntity,
 } from './api-key.repository.js';
@@ -24,7 +25,8 @@ export class ApiKeyService {
   private readonly logger = new Logger(ApiKeyService.name);
 
   constructor(
-    private readonly repo: InMemoryApiKeyRepository,
+    @Inject('API_KEY_REPOSITORY')
+    private readonly repo: IApiKeyRepository,
     private readonly auditService: AuditService,
   ) {}
 

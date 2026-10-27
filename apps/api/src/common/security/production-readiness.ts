@@ -12,12 +12,9 @@ export const DOMAINS_WITHOUT_DURABLE_REPOSITORY: readonly string[] = [
   'automation',
   'custom-fields',
   'documents',
-  'api-key',
   'webhook',
   'jobs',
-  'mentions',
   'notification-dlq',
-  'backup',
 ];
 
 export function assertProductionReadiness(env: Record<string, string | undefined> = process.env): void {

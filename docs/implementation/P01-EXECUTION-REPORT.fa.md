@@ -110,7 +110,24 @@
 | `pnpm audit:persistence` | **۱۱ توکن: ۹ database / ۲ in-memory** (notification-dlq، job) |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
-## ۸. Rollback
+## ۸. اجرای مرحله چهارم — mentions، api-key و backup durable شدند (۷ → ۱۰ دامنه)
+
+- مدل‌های جدید schema: **`Mention`**، **`ApiKey`** + **`IntegrationProvider`** (unique per org+providerKey)، **`BackupRecord`** + **`RestoreDrill`** (organizationId نال‌پذیر برای بکاپ‌های سیستمی؛ sizeBytes با BigInt)
+- `Mention`/`ApiKey`/`IntegrationProvider` به `TENANT_SCOPED_MODELS` اضافه شدند؛ `BackupRecord`/`RestoreDrill` عمداً scoped نیستند (findById/findAll عملیات platform-admin بدون آرگومان org است — فیلتر دستی در findByOrg، مستند در کامنت repo)
+- هر سه سرویس (Mention/ApiKey/Backup) از تزریق مستقیم کلاس InMemory به توکن‌های `'MENTION_REPOSITORY'`/`'API_KEY_REPOSITORY'`/`'BACKUP_REPOSITORY'` مهاجرت شدند
+- `update` در backup repo حالا خطای `P2025` را می‌گیرد و null برمی‌گرداند (قرارداد interface)
+- migration `20261028_mentions_apikeys_backups` — آفلاین با diff تولید شد
+- `DOMAINS_WITHOUT_DURABLE_REPOSITORY` → ۶ دامنه باقی: automation، custom-fields، documents، webhook، jobs، notification-dlq
+
+### شواهد مرحله چهارم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۵۹۳/۵۹۳** (۵۰ فایل — +۱۰ تست repo جدید)؛ domain: ۸۸/۸۸ |
+| `pnpm audit:persistence` | **۱۴ توکن: ۱۲ database / ۲ in-memory** |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
+## ۹. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

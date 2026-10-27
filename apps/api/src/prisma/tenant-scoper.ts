@@ -17,6 +17,9 @@ export const TENANT_SCOPED_MODELS = [
   'Activity',
   'AuditEvent',
   'Notification',
+  'Mention',
+  'ApiKey',
+  'IntegrationProvider',
 ];
 
 /**

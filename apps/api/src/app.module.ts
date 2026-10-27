@@ -37,9 +37,11 @@ import { PrismaTimeTrackingRepository } from './modules/timetracking/prisma-time
 import { MentionController } from './modules/mentions/mention.controller.js';
 import { MentionService } from './modules/mentions/mention.service.js';
 import { InMemoryMentionRepository } from './modules/mentions/mention.repository.js';
+import { PrismaMentionRepository } from './modules/mentions/prisma-mention.repository.js';
 import { ApiKeyController } from './modules/integrations/api-key.controller.js';
 import { ApiKeyService } from './modules/integrations/api-key.service.js';
 import { InMemoryApiKeyRepository } from './modules/integrations/api-key.repository.js';
+import { PrismaApiKeyRepository } from './modules/integrations/prisma-api-key.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -87,6 +89,7 @@ import { WebhookService } from './modules/integrations/webhook.service.js';
 import { MetricsService } from './common/observability/metrics.service.js';
 import { MetricsInterceptor } from './common/observability/metrics.interceptor.js';
 import { InMemoryBackupRepository } from './modules/operations/backup.repository.js';
+import { PrismaBackupRepository } from './modules/operations/prisma-backup.repository.js';
 import { BackupService } from './modules/operations/backup.service.js';
 import { InMemoryJobRepository } from './modules/jobs/job.repository.js';
 import { JobWorkerService } from './modules/jobs/job-worker.service.js';
@@ -230,7 +233,12 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     WebhookService,
     MetricsService,
     MetricsInterceptor,
+    {
+      provide: 'BACKUP_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaBackupRepository : InMemoryBackupRepository,
+    },
     InMemoryBackupRepository,
+    PrismaBackupRepository,
     BackupService,
     {
       provide: 'JOB_REPOSITORY',
@@ -263,9 +271,19 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
           : InMemoryTimeTrackingRepository,
     },
     TimeTrackingService,
+    {
+      provide: 'MENTION_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaMentionRepository : InMemoryMentionRepository,
+    },
     InMemoryMentionRepository,
+    PrismaMentionRepository,
     MentionService,
+    {
+      provide: 'API_KEY_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaApiKeyRepository : InMemoryApiKeyRepository,
+    },
     InMemoryApiKeyRepository,
+    PrismaApiKeyRepository,
     ApiKeyService,
   ],
   exports: [
@@ -309,6 +327,8 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     WebhookService,
     MetricsService,
     InMemoryBackupRepository,
+    PrismaBackupRepository,
+    'BACKUP_REPOSITORY',
     BackupService,
     'JOB_REPOSITORY',
     InMemoryJobRepository,
@@ -334,9 +354,13 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
           : InMemoryTimeTrackingRepository,
     },
     TimeTrackingService,
+    'MENTION_REPOSITORY',
     InMemoryMentionRepository,
+    PrismaMentionRepository,
     MentionService,
+    'API_KEY_REPOSITORY',
     InMemoryApiKeyRepository,
+    PrismaApiKeyRepository,
     ApiKeyService,
   ],
 })

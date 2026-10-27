@@ -1,12 +1,13 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   Logger,
 } from '@nestjs/common';
 import type { CreateMentionRequest, MentionDto } from '@crm/contracts';
 import {
-  InMemoryMentionRepository,
+  type IMentionRepository,
   type MentionEntity,
 } from './mention.repository.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -16,7 +17,8 @@ export class MentionService {
   private readonly logger = new Logger(MentionService.name);
 
   constructor(
-    private readonly repo: InMemoryMentionRepository,
+    @Inject('MENTION_REPOSITORY')
+    private readonly repo: IMentionRepository,
     private readonly auditService: AuditService,
   ) {}
 

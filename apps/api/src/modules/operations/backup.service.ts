@@ -19,7 +19,7 @@ import { InMemoryAutomationRepository } from '../automation/automation.repositor
 import { InMemoryWebhookRepository } from '../integrations/webhook.repository.js';
 import {
   BackupEntity,
-  InMemoryBackupRepository,
+  type IBackupRepository,
   RestoreDrillRecord,
 } from './backup.repository.js';
 import {
@@ -43,7 +43,8 @@ export class BackupService {
   private readonly encryptionSecret: string;
 
   constructor(
-    private readonly backupRepo: InMemoryBackupRepository,
+    @Inject('BACKUP_REPOSITORY')
+    private readonly backupRepo: IBackupRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
     @Optional() @Inject('TASK_REPOSITORY') private readonly taskRepo?: ITaskRepository,

@@ -82,6 +82,10 @@ model Organization {
   auditEvents AuditEvent[]
   notifications Notification[]
   scheduledActivities ScheduledActivity[]
+  mentions Mention[]
+  apiKeys ApiKey[]
+  integrationProviders IntegrationProvider[]
+  backupRecords BackupRecord[]
 }
 
 model User {
@@ -463,4 +467,107 @@ model NotificationPreference {
   digest    Boolean  @default(true)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Mention {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @db.Uuid
+  sourceEntityType String
+  sourceEntityId  String
+  sourceTitle     String
+  authorId        String   @db.Uuid
+  authorName      String
+  recipientId     String   @db.Uuid
+  recipientName   String
+  contextSnippet  String
+  readAt          DateTime? @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, recipientId, readAt])
+  @@index([organizationId, sourceEntityType, sourceEntityId])
+}
+
+model ApiKey {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  keyPrefix      String
+  hashedKey      String
+  scopes         String[]
+  lastUsedAt     DateTime? @db.Timestamptz(6)
+  expiresAt      DateTime? @db.Timestamptz(6)
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, active])
+}
+
+model IntegrationProvider {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  providerKey    String
+  name           String
+  description    String
+  icon           String
+  status         String    @default("DISCONNECTED")
+  configSummary  Json?
+  lastSyncedAt   DateTime? @db.Timestamptz(6)
+  errorMessage   String?
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, providerKey])
+  @@index([organizationId, status])
+}
+
+model BackupRecord {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String?  @db.Uuid
+  scope             String
+  status            String
+  description       String?
+  version           String
+  algorithm         String
+  iv                String
+  authTag           String
+  checksumSha256    String
+  encryptedData     String   @db.Text
+  sizeBytes         BigInt
+  recordCounts      Json
+  rpoTargetMinutes  Int
+  rtoEstimatedSeconds Int
+  retentionDays     Int
+  expiresAt         DateTime @db.Timestamptz(6)
+  createdBy         String   @db.Uuid
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+  completedAt       DateTime? @db.Timestamptz(6)
+  metadata          Json?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  drills RestoreDrill[]
+  @@index([organizationId, status])
+  @@index([expiresAt])
+}
+
+model RestoreDrill {
+  id                      String   @id @default(uuid()) @db.Uuid
+  backupId                String   @db.Uuid
+  organizationId          String?  @db.Uuid
+  executedBy              String   @db.Uuid
+  success                 Boolean
+  integrityVerified       Boolean
+  checksumMatched         Boolean
+  decryptionSuccessful    Boolean
+  versionCompatible       Boolean
+  schemaCompatible        Boolean
+  simulatedRecordsRestored Int
+  rtoActualMs             Int
+  rpoActualMinutes        Int
+  rpoTargetMinutes        Int
+  rtoEstimatedSeconds     Int
+  meetsRpoTarget          Boolean
+  meetsRtoTarget          Boolean
+  executedAt              DateTime @default(now()) @db.Timestamptz(6)
+  details                 String   @db.Text
+  validationErrors        String[]
+  backup BackupRecord @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  @@index([backupId])
 }
