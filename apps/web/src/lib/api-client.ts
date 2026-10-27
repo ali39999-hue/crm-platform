@@ -140,6 +140,17 @@ import type {
   TeamDto,
   UpdateTeamRequest,
   AuditRecordDto,
+  LetterDto,
+  CreateLetterRequest,
+  ReferLetterRequest,
+  LetterParaffDto,
+  CreateParaffRequest,
+  MeetingMinuteDto,
+  CreateMeetingMinuteRequest,
+  MeetingResolutionDto,
+  SignatureStatus,
+  ConvertResolutionToTaskRequest,
+  ExecutiveMonitoringDto,
 } from '@crm/contracts';
 
 import {
@@ -1252,6 +1263,119 @@ export class ApiClient {
       membersCount: 2,
       createdAt: '2026-10-01T00:00:00.000Z',
       updatedAt: '2026-10-01T00:00:00.000Z',
+    },
+  ];
+
+  private fallbackLetters: LetterDto[] = [
+    {
+      id: 'let-001',
+      organizationId: DEFAULT_ORG_ID,
+      indicatorNumber: '1405/SEC/0012',
+      letterType: 'INTERNAL',
+      subject: 'ابلاغ شیوه‌نامه جدید کنترل پروژه و وزن‌دهی وظایف',
+      content: 'به اطلاع کلیه مدیران پروژه‌ها می‌رساند ضریب اهمیت و وزن وظایف در محاسبه پیشرفت فازها فعال گردید.',
+      urgency: 'URGENT',
+      classification: 'NORMAL',
+      status: 'SENT',
+      senderId: '11111111-1111-1111-1111-111111111111',
+      senderName: 'علی مدیر',
+      recipientIds: [DEFAULT_EMPLOYEE_ID],
+      recipientNames: ['سارا احمدی'],
+      ccIds: [],
+      isRead: true,
+      readAt: '2026-10-25T11:00:00.000Z',
+      paraffs: [
+        {
+          id: 'par-001',
+          letterId: 'let-001',
+          authorId: DEFAULT_EMPLOYEE_ID,
+          authorName: 'سارا احمدی',
+          text: 'رویت شد، جهت اعمال در ساختار شکست کار (WBS) به تیم فنی ارجاع داده شد.',
+          isRead: true,
+          createdAt: '2026-10-25T11:30:00.000Z',
+        },
+      ],
+      createdAt: '2026-10-25T10:00:00.000Z',
+      updatedAt: '2026-10-25T11:30:00.000Z',
+    },
+    {
+      id: 'let-002',
+      organizationId: DEFAULT_ORG_ID,
+      indicatorNumber: '1405/SEC/0015',
+      letterType: 'OUTGOING',
+      subject: 'پیش‌نویس قرارداد تامین تجهیزات و لایسنس سازمانی',
+      content: 'پیرو مذاکرات انجام‌شده، شرایط فنی و بازرگانی قرارداد به پیوست تقدیم می‌گردد.',
+      urgency: 'NORMAL',
+      classification: 'CONFIDENTIAL',
+      status: 'SENT',
+      senderId: DEFAULT_EMPLOYEE_ID,
+      senderName: 'سارا احمدی',
+      recipientIds: ['33333333-3333-3333-3333-333333333333'],
+      recipientNames: ['فولاد گستر آریا'],
+      isRead: false,
+      paraffs: [],
+      createdAt: '2026-10-26T14:00:00.000Z',
+      updatedAt: '2026-10-26T14:00:00.000Z',
+    },
+  ];
+
+  private fallbackMeetings: MeetingMinuteDto[] = [
+    {
+      id: 'meet-001',
+      organizationId: DEFAULT_ORG_ID,
+      title: 'جلسه هماهنگی هفتگی توسعه و پایش عملکرد تیم‌ها',
+      agenda: 'بررسی مصوبات قبلی، گزارش پیشرفت کاریز و تعیین اولویت‌های هفته آینده',
+      location: 'اتاق جلسات ۱ (طبقه ۳) + لینک تصویری آنلاین',
+      meetingUrl: 'https://meet.mizito.ir/room/eng-sync-01',
+      startsAt: '2026-10-26T09:00:00.000Z',
+      endsAt: '2026-10-26T10:30:00.000Z',
+      status: 'COMPLETED',
+      attendees: [
+        {
+          userId: '11111111-1111-1111-1111-111111111111',
+          name: 'علی مدیر',
+          role: 'CHAIR',
+          signatureStatus: 'SIGNED',
+          signedAt: '2026-10-26T10:35:00.000Z',
+        },
+        {
+          userId: DEFAULT_EMPLOYEE_ID,
+          name: 'سارا احمدی',
+          role: 'SECRETARY',
+          signatureStatus: 'SIGNED',
+          signedAt: '2026-10-26T10:32:00.000Z',
+        },
+        {
+          userId: '55555555-5555-5555-5555-555555555555',
+          name: 'پویا مرادی',
+          role: 'MEMBER',
+          signatureStatus: 'PENDING',
+        },
+      ],
+      resolutions: [
+        {
+          id: 'res-001',
+          meetingId: 'meet-001',
+          title: 'بررسی و اتصال وب‌هوک سانترال به پرونده مشتریان',
+          assigneeId: DEFAULT_EMPLOYEE_ID,
+          assigneeName: 'سارا احمدی',
+          dueAt: '2026-10-30T18:00:00.000Z',
+          status: 'CONVERTED_TO_TASK',
+          taskId: 'task-101',
+        },
+        {
+          id: 'res-002',
+          meetingId: 'meet-001',
+          title: 'ارسال پیش‌فاکتور رسمی به مشتریان نمایشگاهی داغ',
+          assigneeId: '55555555-5555-5555-5555-555555555555',
+          assigneeName: 'پویا مرادی',
+          dueAt: '2026-10-28T17:00:00.000Z',
+          status: 'PENDING',
+        },
+      ],
+      notes: 'جلسه با حضور اکثریت اعضا رسمیت یافت و کلیه بندهای دستور جلسه بررسی شد.',
+      createdAt: '2026-10-26T10:30:00.000Z',
+      updatedAt: '2026-10-26T10:35:00.000Z',
     },
   ];
 
@@ -5233,6 +5357,291 @@ export class ApiClient {
     }
   }
 
+  /* ---------------- Mizito Office Automation & Letters ---------------- */
+
+  async getLetters(mailbox?: 'inbox' | 'sent' | 'all'): Promise<LetterDto[]> {
+    try {
+      const q = mailbox ? `?mailbox=${mailbox}` : '';
+      return await this.request<LetterDto[]>(`/letters${q}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        if (mailbox === 'sent') {
+          return this.fallbackLetters.filter((l) => l.senderId === this.token);
+        }
+        if (mailbox === 'inbox') {
+          return this.fallbackLetters.filter((l) => l.recipientIds.includes(this.token));
+        }
+        return this.fallbackLetters.map((l) => ({ ...l }));
+      }
+      throw err;
+    }
+  }
+
+  async createLetter(dto: CreateLetterRequest): Promise<LetterDto> {
+    try {
+      return await this.request<LetterDto>('/letters', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newLetter: LetterDto = {
+          id: `let-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          indicatorNumber: `1405/SEC/${String(this.fallbackLetters.length + 1).padStart(4, '0')}`,
+          letterType: dto.letterType,
+          subject: dto.subject.trim(),
+          content: dto.content.trim(),
+          urgency: dto.urgency || 'NORMAL',
+          classification: dto.classification || 'NORMAL',
+          status: 'SENT',
+          senderId: this.token,
+          senderName: 'سارا احمدی',
+          recipientIds: dto.recipientIds,
+          ccIds: dto.ccIds || [],
+          isRead: false,
+          paraffs: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackLetters.unshift(newLetter);
+        return { ...newLetter };
+      }
+      throw err;
+    }
+  }
+
+  async getLetterById(id: string): Promise<LetterDto> {
+    try {
+      return await this.request<LetterDto>(`/letters/${encodeURIComponent(id)}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const found = this.fallbackLetters.find((l) => l.id === id);
+        if (!found) throw new ApiClientError(`Letter ${id} not found`, 404, 'NOT_FOUND');
+        found.isRead = true;
+        found.readAt = new Date().toISOString();
+        return { ...found };
+      }
+      throw err;
+    }
+  }
+
+  async deleteLetter(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      return await this.request<{ success: boolean; message: string }>(
+        `/letters/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const idx = this.fallbackLetters.findIndex((l) => l.id === id);
+        if (idx !== -1) {
+          this.fallbackLetters.splice(idx, 1);
+        }
+        return { success: true, message: 'نامه با موفقیت حذف شد' };
+      }
+      throw err;
+    }
+  }
+
+  async referLetter(id: string, dto: ReferLetterRequest): Promise<LetterDto> {
+    try {
+      return await this.request<LetterDto>(`/letters/${encodeURIComponent(id)}/referrals`, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const letter = this.fallbackLetters.find((l) => l.id === id);
+        if (!letter) throw new ApiClientError(`Letter ${id} not found`, 404, 'NOT_FOUND');
+        if (!letter.recipientIds.includes(dto.recipientId)) {
+          letter.recipientIds.push(dto.recipientId);
+        }
+        return { ...letter };
+      }
+      throw err;
+    }
+  }
+
+  async addLetterParaff(letterId: string, dto: CreateParaffRequest): Promise<LetterParaffDto> {
+    try {
+      return await this.request<LetterParaffDto>(
+        `/letters/${encodeURIComponent(letterId)}/paraffs`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const letter = this.fallbackLetters.find((l) => l.id === letterId);
+        if (!letter) throw new ApiClientError(`Letter ${letterId} not found`, 404, 'NOT_FOUND');
+        const newParaff: LetterParaffDto = {
+          id: `par-${Date.now()}`,
+          letterId,
+          authorId: this.token,
+          authorName: 'سارا احمدی',
+          text: dto.text.trim(),
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        if (!letter.paraffs) letter.paraffs = [];
+        letter.paraffs.push(newParaff);
+        return { ...newParaff };
+      }
+      throw err;
+    }
+  }
+
+  async deleteLetterParaff(
+    letterId: string,
+    paraffId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      return await this.request<{ success: boolean; message: string }>(
+        `/letters/${encodeURIComponent(letterId)}/paraffs/${encodeURIComponent(paraffId)}`,
+        { method: 'DELETE' },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const letter = this.fallbackLetters.find((l) => l.id === letterId);
+        if (letter && letter.paraffs) {
+          letter.paraffs = letter.paraffs.filter((p) => p.id !== paraffId);
+        }
+        return { success: true, message: 'پاراف حذف شد' };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Mizito Digital Meeting Minutes & Resolutions ---------------- */
+
+  async getMeetings(): Promise<MeetingMinuteDto[]> {
+    try {
+      return await this.request<MeetingMinuteDto[]>('/meetings');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return this.fallbackMeetings.map((m) => ({ ...m }));
+      }
+      throw err;
+    }
+  }
+
+  async createMeeting(dto: CreateMeetingMinuteRequest): Promise<MeetingMinuteDto> {
+    try {
+      return await this.request<MeetingMinuteDto>('/meetings', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const now = new Date().toISOString();
+        const newMeeting: MeetingMinuteDto = {
+          id: `meet-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          title: dto.title.trim(),
+          agenda: dto.agenda.trim(),
+          location: dto.location,
+          meetingUrl: dto.meetingUrl,
+          startsAt: dto.startsAt,
+          endsAt: dto.endsAt,
+          status: 'COMPLETED',
+          attendees: dto.attendees.map((a) => ({
+            userId: a.userId,
+            name: a.name,
+            role: a.role || 'MEMBER',
+            signatureStatus: 'PENDING',
+          })),
+          resolutions: (dto.resolutions || []).map((r, i) => ({
+            id: `res-${Date.now()}-${i}`,
+            meetingId: `meet-${Date.now()}`,
+            title: r.title.trim(),
+            assigneeId: r.assigneeId,
+            dueAt: r.dueAt,
+            status: 'PENDING',
+          })),
+          notes: dto.notes,
+          createdAt: now,
+          updatedAt: now,
+        };
+        this.fallbackMeetings.unshift(newMeeting);
+        return { ...newMeeting };
+      }
+      throw err;
+    }
+  }
+
+  async signMeeting(meetingId: string, status: SignatureStatus): Promise<MeetingMinuteDto> {
+    try {
+      return await this.request<MeetingMinuteDto>(`/meetings/${encodeURIComponent(meetingId)}/sign`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const meeting = this.fallbackMeetings.find((m) => m.id === meetingId);
+        if (!meeting) throw new ApiClientError(`Meeting ${meetingId} not found`, 404, 'NOT_FOUND');
+        const attendee = meeting.attendees.find((a) => a.userId === this.token);
+        if (attendee) {
+          attendee.signatureStatus = status;
+          attendee.signedAt = new Date().toISOString();
+        }
+        return { ...meeting };
+      }
+      throw err;
+    }
+  }
+
+  async convertResolutionToTask(
+    meetingId: string,
+    resolutionId: string,
+    dto: ConvertResolutionToTaskRequest,
+  ): Promise<{ resolution: MeetingResolutionDto; taskId: string }> {
+    try {
+      return await this.request<{ resolution: MeetingResolutionDto; taskId: string }>(
+        `/meetings/${encodeURIComponent(meetingId)}/resolutions/${encodeURIComponent(resolutionId)}/convert-to-task`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dto),
+        },
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        const meeting = this.fallbackMeetings.find((m) => m.id === meetingId);
+        if (!meeting) throw new ApiClientError(`Meeting ${meetingId} not found`, 404, 'NOT_FOUND');
+        const resolution = meeting.resolutions.find((r) => r.id === resolutionId);
+        if (!resolution) throw new ApiClientError(`Resolution ${resolutionId} not found`, 404, 'NOT_FOUND');
+        resolution.status = 'CONVERTED_TO_TASK';
+        resolution.taskId = `task-conv-${Date.now()}`;
+        return { resolution, taskId: resolution.taskId };
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Mizito 5-Axis Executive Monitoring ---------------- */
+
+  async getExecutive5AxisMonitoring(): Promise<ExecutiveMonitoringDto> {
+    try {
+      return await this.request<ExecutiveMonitoringDto>('/reporting/executive-5-axis');
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          overallHealthScore: 88,
+          axes: {
+            projects: { rate: 92, delayedCount: 1, activeCount: 5 },
+            tasks: { onTimeRate: 85, awaitingApprovalCount: 2, delayedCount: 3 },
+            meetings: { resolutionSignRate: 90, heldCount: 4 },
+            customers: { activeCount: 28, dormantCount: 2 },
+            financials: { totalArrearsMinor: 0, overdueChecksCount: 0, hasOverdueAlert: false },
+          },
+          generatedAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
   /* ---------------- Audit Events ---------------- */
 
   async getAuditEvents(limit = 50): Promise<AuditRecordDto[]> {
@@ -5322,6 +5731,17 @@ export type {
   SearchQueryDto,
   SearchResultDto,
   SearchResultItem,
+  LetterDto,
+  CreateLetterRequest,
+  ReferLetterRequest,
+  LetterParaffDto,
+  CreateParaffRequest,
+  MeetingMinuteDto,
+  CreateMeetingMinuteRequest,
+  MeetingResolutionDto,
+  SignatureStatus,
+  ConvertResolutionToTaskRequest,
+  ExecutiveMonitoringDto,
 };
 export const DEFAULT_CUSTOMER_ID = '33333333-3333-3333-3333-333333333333';
 export const apiClient = new ApiClient();

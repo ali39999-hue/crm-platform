@@ -13,6 +13,8 @@ import type {
   DealDto,
   UpdateDealDto,
   MarkDealLostRequest,
+  LetterDto,
+  MeetingMinuteDto,
 } from '@crm/contracts';
 import {
   canTransitionTask,
@@ -272,6 +274,23 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify(dto),
     });
+  }
+
+  /**
+   * GET /letters
+   * Fetches office automation letters.
+   */
+  public async getLetters(mailbox?: 'inbox' | 'sent' | 'all'): Promise<LetterDto[]> {
+    const q = mailbox ? `?mailbox=${mailbox}` : '';
+    return this.request<LetterDto[]>(`/letters${q}`);
+  }
+
+  /**
+   * GET /meetings
+   * Fetches digital meeting minutes.
+   */
+  public async getMeetings(): Promise<MeetingMinuteDto[]> {
+    return this.request<MeetingMinuteDto[]>('/meetings');
   }
 }
 

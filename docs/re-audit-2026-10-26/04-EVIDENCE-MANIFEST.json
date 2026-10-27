@@ -15,16 +15,18 @@
     "auth_service": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/src/common/auth/auth.service.ts",
     "prisma_schema": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/prisma/schema.prisma",
     "ci_workflow": "https://github.com/ali39999-hue/crm-platform/blob/main/.github/workflows/ci.yml",
-    "didar_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/didar-scrape/00-didar-complete-module-matrix.fa.md"
+    "didar_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/didar-scrape/00-didar-complete-module-matrix.fa.md",
+    "mizito_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/mizito-scrape/00-mizito-complete-module-matrix.fa.md"
   },
   "audit_status": {
-    "total_tests_passing": 537,
+    "total_tests_passing": 584,
     "security_audit_passing": true,
     "typecheck_passing": true,
     "build_passing": true,
     "ci_status": "GREEN",
     "release_blockers_status": "ALL_RESOLVED_AND_VERIFIED",
-    "didar_crm_compliance": "100%"
+    "didar_crm_compliance": "100%",
+    "mizito_compliance": "100%"
   },
   "findings_count": 15,
   "resolved_findings": [

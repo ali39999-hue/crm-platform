@@ -94,6 +94,10 @@ import { WebFormController } from './modules/crm/forms/web-form.controller.js';
 import { WebFormService } from './modules/crm/forms/web-form.service.js';
 import { ExhibitionController } from './modules/crm/exhibition/exhibition.controller.js';
 import { ExhibitionService } from './modules/crm/exhibition/exhibition.service.js';
+import { LettersController } from './modules/letters/letters.controller.js';
+import { LettersService } from './modules/letters/letters.service.js';
+import { MeetingsController } from './modules/meetings/meetings.controller.js';
+import { MeetingsService } from './modules/meetings/meetings.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -128,6 +132,8 @@ import { ExhibitionService } from './modules/crm/exhibition/exhibition.service.j
     CardsPipelineController,
     WebFormController,
     ExhibitionController,
+    LettersController,
+    MeetingsController,
   ],
   providers: [
     VoipService,
@@ -135,6 +141,8 @@ import { ExhibitionService } from './modules/crm/exhibition/exhibition.service.j
     CardsPipelineService,
     WebFormService,
     ExhibitionService,
+    LettersService,
+    MeetingsService,
     AuthService,
     TokenService,
     AuthGuard,

@@ -58,6 +58,10 @@ export type TaskSummary = {
   version: number;
   createdAt: string;
   updatedAt: string;
+  weight?: number | undefined;
+  approverId?: string | null | undefined;
+  approverName?: string | null | undefined;
+  progressPercent?: number | undefined;
 };
 
 export type TaskDetails = TaskSummary & {
@@ -76,6 +80,8 @@ export type CreateTaskRequest = {
   projectId?: string;
   assigneeId?: string;
   dueAt?: string;
+  weight?: number | undefined;
+  approverId?: string | undefined;
 };
 
 export type TransitionTaskRequest = {
@@ -1561,6 +1567,139 @@ export type AuditRecordDto = {
   metadata?: Record<string, any> | undefined;
   createdAt: string;
 };
+
+/* Mizito Office Automation & Secretariat Letters Contracts */
+
+export type LetterType = 'INCOMING' | 'OUTGOING' | 'INTERNAL';
+export type LetterUrgency = 'NORMAL' | 'URGENT' | 'IMMEDIATE';
+export type LetterClassification = 'NORMAL' | 'CONFIDENTIAL' | 'SECRET';
+export type LetterStatus = 'DRAFT' | 'SENT' | 'RECEIVED' | 'ARCHIVED';
+
+export type LetterParaffDto = {
+  id: string;
+  letterId: string;
+  authorId: string;
+  authorName: string;
+  text: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
+export type LetterDto = {
+  id: string;
+  organizationId: string;
+  indicatorNumber: string;
+  letterType: LetterType;
+  subject: string;
+  content: string;
+  urgency: LetterUrgency;
+  classification: LetterClassification;
+  status: LetterStatus;
+  senderId: string;
+  senderName: string;
+  recipientIds: string[];
+  recipientNames?: string[] | undefined;
+  ccIds?: string[] | undefined;
+  isRead: boolean;
+  readAt?: string | null | undefined;
+  attachmentUrls?: string[] | undefined;
+  paraffs?: LetterParaffDto[] | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateLetterRequest = {
+  letterType: LetterType;
+  subject: string;
+  content: string;
+  urgency?: LetterUrgency | undefined;
+  classification?: LetterClassification | undefined;
+  recipientIds: string[];
+  ccIds?: string[] | undefined;
+  attachmentUrls?: string[] | undefined;
+};
+
+export type ReferLetterRequest = {
+  recipientId: string;
+  actionInstruction: string;
+  deadlineAt?: string | undefined;
+};
+
+export type CreateParaffRequest = {
+  text: string;
+};
+
+/* Mizito Digital Meeting Minutes & Resolutions Contracts */
+
+export type MeetingStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+export type SignatureStatus = 'PENDING' | 'SIGNED' | 'REJECTED';
+
+export type MeetingAttendeeDto = {
+  userId: string;
+  name: string;
+  role: 'SECRETARY' | 'CHAIR' | 'MEMBER' | 'GUEST';
+  signatureStatus: SignatureStatus;
+  signedAt?: string | null | undefined;
+};
+
+export type MeetingResolutionDto = {
+  id: string;
+  meetingId: string;
+  title: string;
+  assigneeId: string;
+  assigneeName?: string | undefined;
+  dueAt?: string | undefined;
+  status: 'PENDING' | 'CONVERTED_TO_TASK' | 'DONE';
+  taskId?: string | undefined;
+};
+
+export type MeetingMinuteDto = {
+  id: string;
+  organizationId: string;
+  title: string;
+  agenda: string;
+  location?: string | undefined;
+  meetingUrl?: string | undefined;
+  startsAt: string;
+  endsAt?: string | undefined;
+  status: MeetingStatus;
+  attendees: MeetingAttendeeDto[];
+  resolutions: MeetingResolutionDto[];
+  notes?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateMeetingMinuteRequest = {
+  title: string;
+  agenda: string;
+  startsAt: string;
+  endsAt?: string | undefined;
+  location?: string | undefined;
+  meetingUrl?: string | undefined;
+  attendees: Array<{ userId: string; name: string; role?: 'SECRETARY' | 'CHAIR' | 'MEMBER' | 'GUEST' | undefined }>;
+  resolutions?: Array<{ title: string; assigneeId: string; dueAt?: string | undefined }> | undefined;
+  notes?: string | undefined;
+};
+
+export type ConvertResolutionToTaskRequest = {
+  projectId?: string | undefined;
+};
+
+/* Mizito 5-Axis Executive Monitoring Contracts */
+
+export type ExecutiveMonitoringDto = {
+  overallHealthScore: number;
+  axes: {
+    projects: { rate: number; delayedCount: number; activeCount: number };
+    tasks: { onTimeRate: number; awaitingApprovalCount: number; delayedCount: number };
+    meetings: { resolutionSignRate: number; heldCount: number };
+    customers: { activeCount: number; dormantCount: number };
+    financials: { totalArrearsMinor: number; overdueChecksCount: number; hasOverdueAlert: boolean };
+  };
+  generatedAt: string;
+};
+
 
 
 

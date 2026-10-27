@@ -34,3 +34,6 @@ export * from './CardsPipelineView';
 export * from './WebFormBuilderView';
 export * from './JalaliActivityCalendarView';
 export * from './ExhibitionLeadIntakeModal';
+export * from './OfficeLettersView';
+export * from './MeetingMinutesView';
+export * from './ExecutiveMonitoringView';

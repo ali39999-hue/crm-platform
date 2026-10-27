@@ -18,6 +18,7 @@ import type {
   CustomReportQueryDto,
   CustomReportResultDto,
   DashboardKpiReport,
+  ExecutiveMonitoringDto,
   SupportSlaReport,
   WorkloadReportItem,
 } from '@crm/contracts';
@@ -26,6 +27,12 @@ import type {
 @UseGuards(AuthGuard, PermissionsGuard)
 export class ReportingController {
   constructor(private readonly reportingService: ReportingService) {}
+
+  @Get('executive-5-axis')
+  @RequirePermission('view_internal_tasks')
+  async getExecutive5AxisMonitoring(@CurrentUser() user: UserContext): Promise<ExecutiveMonitoringDto> {
+    return this.reportingService.getExecutive5AxisMonitoring(user.activeOrganization.id);
+  }
 
   @Get('dashboard')
   @RequirePermission('view_internal_tasks')

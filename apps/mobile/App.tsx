@@ -21,6 +21,7 @@ import type {
   ProjectSummaryDto,
   DocumentSummaryDto,
   DealDto,
+  LetterDto,
 } from '@crm/contracts';
 import { canTransitionTask } from '@crm/domain';
 import {
@@ -48,7 +49,58 @@ import { CreateTaskModal, type CreateTaskFormData } from './src/components/Creat
 import { CreateTicketModal, type CreateTicketFormData } from './src/components/CreateTicketModal';
 import { OfflineBanner } from './src/components/OfflineBanner';
 
-type ActiveTab = 'tasks' | 'tickets' | 'deals' | 'projects' | 'docs' | 'settings';
+const INITIAL_LETTERS: LetterDto[] = [
+  {
+    id: 'let-mob-1',
+    organizationId: 'org-alpha',
+    indicatorNumber: '1405/SEC/0024',
+    letterType: 'INTERNAL',
+    subject: 'ابلاغ شیوه‌نامه جدید کنترل پروژه و وزن‌دهی وظایف',
+    content: 'به اطلاع می‌رساند محاسبه پیشرفت وزنی پروژه‌ها بر اساس اوزان ۱ تا ۵ در کارتابل فعال گردید.',
+    urgency: 'URGENT',
+    classification: 'NORMAL',
+    status: 'SENT',
+    senderId: 'usr-1',
+    senderName: 'علی مدیر',
+    recipientIds: [DEFAULT_AUTH_TOKEN],
+    recipientNames: ['سارا احمدی'],
+    isRead: false,
+    paraffs: [
+      {
+        id: 'par-1',
+        letterId: 'let-mob-1',
+        authorId: DEFAULT_AUTH_TOKEN,
+        authorName: 'سارا احمدی',
+        text: 'رویت شد، جهت اعمال در کارتابل تیم فنی ارجاع شد.',
+        isRead: true,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'let-mob-2',
+    organizationId: 'org-alpha',
+    indicatorNumber: '1405/SEC/0025',
+    letterType: 'OUTGOING',
+    subject: 'پیش‌نویس قرارداد تامین تجهیزات و لایسنس سازمانی',
+    content: 'پیرو مذاکرات، پیش‌نویس نهایی قرارداد جهت بررسی و امضا ارسال می‌گردد.',
+    urgency: 'NORMAL',
+    classification: 'CONFIDENTIAL',
+    status: 'SENT',
+    senderId: DEFAULT_AUTH_TOKEN,
+    senderName: 'سارا احمدی',
+    recipientIds: ['cust-1'],
+    recipientNames: ['پتروشیمی سپهر'],
+    isRead: true,
+    paraffs: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+type ActiveTab = 'tasks' | 'tickets' | 'deals' | 'letters' | 'projects' | 'docs' | 'settings';
 type TaskFilter = 'ALL' | 'IN_PROGRESS' | 'TODO' | 'BLOCKED' | 'DONE';
 type TicketFilter = 'ALL' | 'OPEN' | 'PENDING' | 'RESOLVED';
 type DealFilter = 'ALL' | 'ACTIVE' | 'ROTTING' | 'WON' | 'LOST';
@@ -74,6 +126,7 @@ export default function App() {
   const [projects, setProjects] = useState<ProjectSummaryDto[]>(INITIAL_PROJECTS);
   const [documents, setDocuments] = useState<DocumentSummaryDto[]>(INITIAL_DOCUMENTS);
   const [deals, setDeals] = useState<DealDto[]>(INITIAL_DEALS);
+  const [letters, setLetters] = useState<LetterDto[]>(INITIAL_LETTERS);
   const [dealFilter, setDealFilter] = useState<DealFilter>('ALL');
   const [dealSearch, setDealSearch] = useState('');
 
@@ -664,6 +717,37 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'letters' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('letters')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabContentRow}>
+              <View
+                style={[
+                  styles.tabBadge,
+                  activeTab === 'letters' ? styles.tabBadgeActive : styles.tabBadgeInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabBadgeText,
+                    activeTab === 'letters'
+                      ? styles.tabBadgeTextActive
+                      : styles.tabBadgeTextInactive,
+                  ]}
+                >
+                  {letters.length}
+                </Text>
+              </View>
+              <Text
+                style={[styles.tabText, activeTab === 'letters' && styles.tabTextActive]}
+              >
+                مکاتبات
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'projects' && styles.tabButtonActive]}
             onPress={() => setActiveTab('projects')}
             activeOpacity={0.8}
@@ -1009,6 +1093,112 @@ export default function App() {
                 />
               ))
             )}
+          </View>
+        )}
+
+        {activeTab === 'letters' && (
+          /* ================= TAB: کارتابل مکاتبات و نامه‌ها (مدل میزیتو) ================= */
+          <View style={styles.sectionContainer}>
+            <View style={styles.actionBarRow}>
+              <Text style={styles.sectionHeading}>کارتابل مکاتبات و نامه‌های اداری</Text>
+            </View>
+
+            {/* Letter Cards List */}
+            {letters.map((l) => (
+              <View
+                key={l.id}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#E2E8F0',
+                  borderWidth: 1,
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 10,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row-reverse',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: '#4F46E5',
+                      backgroundColor: '#EEF2FF',
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                    }}
+                  >
+                    {l.indicatorNumber}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: l.urgency === 'URGENT' ? '#B45309' : '#475467',
+                      backgroundColor: l.urgency === 'URGENT' ? '#FEF3C7' : '#F1F5F9',
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                    }}
+                  >
+                    {l.urgency === 'URGENT' ? 'فوری ⚠️' : 'عادی'}
+                  </Text>
+                </View>
+
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '800',
+                    color: '#0F172A',
+                    textAlign: 'right',
+                    marginBottom: 6,
+                  }}
+                >
+                  {l.subject}
+                </Text>
+
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: '#475467',
+                    textAlign: 'right',
+                    lineHeight: 18,
+                    marginBottom: 8,
+                  }}
+                  numberOfLines={2}
+                >
+                  {l.content}
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: 'row-reverse',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTopWidth: 1,
+                    borderTopColor: '#F1F5F9',
+                    paddingTop: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: '#64748B' }}>
+                    فرستنده: <Text style={{ fontWeight: '700', color: '#1E293B' }}>{l.senderName}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#4F46E5', fontWeight: '600' }}>
+                    {l.paraffs && l.paraffs.length > 0
+                      ? `💬 ${l.paraffs.length} پاراف ثبت‌شده`
+                      : 'بدون پاراف'}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 

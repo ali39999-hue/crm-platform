@@ -18,6 +18,9 @@ import type {
   TaskSummary,
   TicketDto,
   WorkspaceDto,
+  LetterDto,
+  MeetingMinuteDto,
+  ExecutiveMonitoringDto,
 } from '@crm/contracts';
 import { canTransitionTask } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
@@ -54,6 +57,9 @@ import {
   WebFormBuilderView,
   JalaliActivityCalendarView,
   ExhibitionLeadIntakeModal,
+  OfficeLettersView,
+  MeetingMinutesView,
+  ExecutiveMonitoringView,
 } from '../components';
 
 type AuditItem = {
@@ -92,6 +98,9 @@ export default function WorkspaceApp() {
     | 'time'
     | 'crm'
     | 'calendar'
+    | 'letters'
+    | 'meetings'
+    | 'monitoring'
     | 'support'
     | 'docs'
     | 'notifications'
@@ -114,6 +123,9 @@ export default function WorkspaceApp() {
   const [leads, setLeads] = useState<LeadDto[]>([]);
   const [deals, setDeals] = useState<DealDto[]>([]);
   const [tickets, setTickets] = useState<TicketDto[]>([]);
+  const [letters, setLetters] = useState<LetterDto[]>([]);
+  const [meetings, setMeetings] = useState<MeetingMinuteDto[]>([]);
+  const [monitoringData, setMonitoringData] = useState<ExecutiveMonitoringDto | null>(null);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [reports, setReports] = useState<DashboardKpiReport | null>(null);
   const [rules, setRules] = useState<AutomationRuleDto[]>([]);
@@ -281,6 +293,9 @@ export default function WorkspaceApp() {
         reportsRes,
         rulesRes,
         auditsRes,
+        lettersRes,
+        meetingsRes,
+        monitoringRes,
       ] = await Promise.all([
         apiClient.getMe(),
         apiClient.getWorkspaces(),
@@ -294,6 +309,9 @@ export default function WorkspaceApp() {
         apiClient.getDashboardKpi(),
         apiClient.getAutomationRules(),
         apiClient.getAuditEvents(),
+        apiClient.getLetters(),
+        apiClient.getMeetings(),
+        apiClient.getExecutive5AxisMonitoring(),
       ]);
 
       setCurrentUser(userRes);
@@ -307,6 +325,9 @@ export default function WorkspaceApp() {
       setNotifications(notifsRes);
       setReports(reportsRes);
       setRules(rulesRes);
+      setLetters(lettersRes);
+      setMeetings(meetingsRes);
+      setMonitoringData(monitoringRes);
 
       const mappedAudits: AuditItem[] = (auditsRes || []).map((a) => ({
         id: a.id,
@@ -419,6 +440,77 @@ export default function WorkspaceApp() {
     }
   };
 
+  const handleCreateLetter = async (dto: any) => {
+    const created = await apiClient.createLetter(dto);
+    setLetters((prev) => [created, ...prev]);
+    showToast(`نامه با شماره اندیکاتور «${created.indicatorNumber}» در دبیرخانه ثبت شد`);
+  };
+
+  const handleDeleteLetter = async (id: string) => {
+    await apiClient.deleteLetter(id);
+    setLetters((prev) => prev.filter((l) => l.id !== id));
+    showToast('نامه با موفقیت حذف گردید');
+  };
+
+  const handleReferLetter = async (id: string, dto: any) => {
+    const updated = await apiClient.referLetter(id, dto);
+    setLetters((prev) => prev.map((l) => (l.id === id ? updated : l)));
+    showToast('نامه با موفقیت ارجاع داده شد');
+  };
+
+  const handleAddParaff = async (id: string, dto: any) => {
+    const paraff = await apiClient.addLetterParaff(id, dto);
+    setLetters((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, paraffs: [...(l.paraffs || []), paraff] } : l)),
+    );
+    showToast('پاراف با موفقیت ثبت شد');
+  };
+
+  const handleDeleteParaff = async (letterId: string, paraffId: string) => {
+    await apiClient.deleteLetterParaff(letterId, paraffId);
+    setLetters((prev) =>
+      prev.map((l) =>
+        l.id === letterId
+          ? { ...l, paraffs: (l.paraffs || []).filter((p) => p.id !== paraffId) }
+          : l,
+      ),
+    );
+    showToast('پاراف با موفقیت حذف شد');
+  };
+
+  const handleCreateMeeting = async (dto: any) => {
+    const created = await apiClient.createMeeting(dto);
+    setMeetings((prev) => [created, ...prev]);
+    showToast(`صورتجلسه «${created.title}» با موفقیت ثبت گردید`);
+  };
+
+  const handleSignMeeting = async (meetingId: string, status: any) => {
+    const updated = await apiClient.signMeeting(meetingId, status);
+    setMeetings((prev) => prev.map((m) => (m.id === meetingId ? updated : m)));
+    showToast(status === 'SIGNED' ? 'صورتجلسه با موفقیت امضا گردید' : 'عدم تایید ثبت شد');
+  };
+
+  const handleConvertResolution = async (meetingId: string, resolutionId: string, dto: any) => {
+    const res = await apiClient.convertResolutionToTask(meetingId, resolutionId, dto);
+    setMeetings((prev) =>
+      prev.map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              resolutions: m.resolutions.map((r) => (r.id === resolutionId ? res.resolution : r)),
+            }
+          : m,
+      ),
+    );
+    showToast('مصوبه به وظیفه در کارتابل پروژه تبدیل گردید');
+  };
+
+  const handleRefreshMonitoring = async () => {
+    const mon = await apiClient.getExecutive5AxisMonitoring();
+    setMonitoringData(mon);
+    showToast('شاخص‌های مانیتورینگ ۵گانه به‌روزرسانی شد');
+  };
+
   const activeWorkspace = workspaces.find((w) => w.isCurrent) || workspaces[0];
 
   return (
@@ -496,6 +588,30 @@ export default function WorkspaceApp() {
             data-testid="nav-calendar"
           >
             <span>📅</span> تقویم شمسی فعالیت‌ها
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'letters' ? 'active' : ''}`}
+            onClick={() => setActiveTab('letters')}
+            data-testid="nav-letters"
+          >
+            <span>📬</span> کارتابل نامه‌ها ({letters.length})
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'meetings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('meetings')}
+            data-testid="nav-meetings"
+          >
+            <span>📝</span> صورتجلسات دیجیتال ({meetings.length})
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${activeTab === 'monitoring' ? 'active' : ''}`}
+            onClick={() => setActiveTab('monitoring')}
+            data-testid="nav-monitoring"
+          >
+            <span>📊</span> مانیتورینگ ۵گانه
           </button>
           <button
             type="button"
@@ -1000,6 +1116,52 @@ export default function WorkspaceApp() {
         {/* Jalali Activity Calendar Tab (Didar Pattern) */}
         {activeTab === 'calendar' && (
           <JalaliActivityCalendarView onNotify={(msg) => showToast(msg)} />
+        )}
+
+        {/* Mizito Office Automation & Letters Tab */}
+        {activeTab === 'letters' && (
+          <OfficeLettersView
+            letters={letters}
+            currentUserToken={currentUser?.id || '22222222-2222-2222-2222-222222222222'}
+            onRefresh={loadData}
+            onCreateLetter={handleCreateLetter}
+            onDeleteLetter={handleDeleteLetter}
+            onReferLetter={handleReferLetter}
+            onAddParaff={handleAddParaff}
+            onDeleteParaff={handleDeleteParaff}
+          />
+        )}
+
+        {/* Mizito Digital Meeting Minutes Tab */}
+        {activeTab === 'meetings' && (
+          <MeetingMinutesView
+            meetings={meetings}
+            currentUserToken={currentUser?.id || '22222222-2222-2222-2222-222222222222'}
+            onRefresh={loadData}
+            onCreateMeeting={handleCreateMeeting}
+            onSignMeeting={handleSignMeeting}
+            onConvertResolution={handleConvertResolution}
+          />
+        )}
+
+        {/* Mizito 5-Axis Executive Monitoring Tab */}
+        {activeTab === 'monitoring' && (
+          <ExecutiveMonitoringView
+            data={
+              monitoringData || {
+                overallHealthScore: 88,
+                axes: {
+                  projects: { rate: 92, delayedCount: 1, activeCount: 5 },
+                  tasks: { onTimeRate: 85, awaitingApprovalCount: 2, delayedCount: 3 },
+                  meetings: { resolutionSignRate: 90, heldCount: 4 },
+                  customers: { activeCount: 28, dormantCount: 2 },
+                  financials: { totalArrearsMinor: 0, overdueChecksCount: 0, hasOverdueAlert: false },
+                },
+                generatedAt: new Date().toISOString(),
+              }
+            }
+            onRefresh={handleRefreshMonitoring}
+          />
         )}
 
         {/* Support Tab */}
