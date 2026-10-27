@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { apiClient } from '../../../lib/api-client';
 import { useRouter } from 'next/navigation';
 
 export default function CustomerPortalSignInPage() {
@@ -34,6 +35,23 @@ export default function CustomerPortalSignInPage() {
         setOtpCode('12345'); // Pre-fill test OTP for easy testing
         setLoading(false);
         return;
+      }
+
+      // GAP-012 step 1: try the real API first. When the API is unreachable
+      // (dev without API server / E2E), fall back to the legacy mock flow so
+      // existing behavior and tests stay green.
+      try {
+        await apiClient.login(email, password);
+        router.push('/portal');
+        return;
+      } catch (apiErr: any) {
+        // Real API answered and rejected the credentials — surface the error.
+        if (!apiClient.isOfflineOrNetworkError(apiErr)) {
+          setError(apiErr?.message || 'ایمیل یا رمز عبور نادرست است');
+          setLoading(false);
+          return;
+        }
+        // else: API unreachable → legacy mock path below
       }
 
       // Simulate authentication delay

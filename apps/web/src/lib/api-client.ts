@@ -1387,7 +1387,56 @@ export class ApiClient {
       baseUrl ||
       (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
       DEFAULT_API_URL;
-    this.token = token || DEFAULT_EMPLOYEE_ID;
+    // GAP-012 step 1: prefer a real token persisted by login(); the fixture
+    // identity remains the dev/E2E fallback when no stored token exists.
+    this.token =
+      token ||
+      (typeof window !== 'undefined' ? window.localStorage.getItem('crm.accessToken') : null) ||
+      DEFAULT_EMPLOYEE_ID;
+  }
+
+  /** Real auth (GAP-012): exchanges credentials for a token pair, persists
+   * them and switches the client onto the access token. */
+  async login(email: string, password: string, mfaCode?: string): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, ...(mfaCode ? { mfaCode } : {}) }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || 'ورود ناموفق بود');
+    }
+    const data = await res.json();
+    this.setToken(data.accessToken);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('crm.accessToken', data.accessToken);
+      window.localStorage.setItem('crm.refreshToken', data.refreshToken);
+    }
+  }
+
+  /** GAP-012: tenant onboarding — creates owner + organization, then logs in. */
+  async register(input: {
+    organizationName: string;
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || 'ثبت‌نام ناموفق بود');
+    }
+    const data = await res.json();
+    this.setToken(data.accessToken);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('crm.accessToken', data.accessToken);
+      window.localStorage.setItem('crm.refreshToken', data.refreshToken);
+    }
   }
 
   public setToken(token: string): void {
@@ -1402,7 +1451,7 @@ export class ApiClient {
     return this.baseUrl;
   }
 
-  private isOfflineOrNetworkError(err: unknown): boolean {
+  public isOfflineOrNetworkError(err: unknown): boolean {
     if (!err) return false;
 
     // Security Gate RA-006 / F-04:

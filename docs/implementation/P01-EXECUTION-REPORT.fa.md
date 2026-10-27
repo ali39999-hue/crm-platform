@@ -372,6 +372,22 @@
 ## نتیجه‌گیری جلسه
 ۲۲ commit، ۱۴ گام مستندشده با شواهد، ۹ migration — و دو گپ ساختاری که فقط با merge+push و اجرای واقعی بسته می‌شوند: GAP-008 (migrationهای CI) و GAP-012 (web↔API auth).
 
+## فاز P02 — گام پانزدهم: GAP-012 گام اول — ورود واقعی پورتال
+
+- **api-client**: متدهای `login` و `register` به endpointهای واقعی (auth/login، auth/register) + ذخیره token pair در localStorage + بازیابی توکن ذخیره‌شده در سازنده (اولویت: توکن واقعی > fixture identity)
+- **portal sign-in**: ابتدا API واقعی امتحان می‌شود؛ پاسخ 401 → خطا به کاربر نمایش داده می‌شود؛ **قطعی شبکه → fallback به جریان mock فعلی** تا dev/E2E سبز بمانند
+- `isOfflineOrNetworkError` public شد برای استفاده صفحات
+- MFA آماده: login متد mfaCode اختیاری می‌پذیرد (فیلد UI در گام بعد با wiring کامل)
+- E2E سبز ماند — تایید اینکه مسیر fallback سالم است
+
+### شواهد گام پانزدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
