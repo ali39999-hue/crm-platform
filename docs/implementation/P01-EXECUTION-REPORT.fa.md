@@ -254,6 +254,21 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام ششم: دایرکتوری اعضای durable
+
+- **`OrganizationDirectoryService`**: getMembers/updateMemberRole/revokeMember از جدول Membership (join User) در DB-mode؛ نقش‌ها unified هستند و مستقیم می‌نویسند
+- گاردها: عضو غایب 404، عضو غیرفعال 403، تغییر نقش یا لغو SystemOwner 403؛ رویدادهای audit `MEMBER_ROLE_CHANGED` و `MEMBER_REVOKED` با previousRole
+- کنترلر روی USE_DATABASE شاخه می‌زند (سه مسیر)؛ fixture mode برای dev/E2E دست‌نخورده
+- بدهی UI همچنان باز: نمایش PENDING invitations در فرانت اعضا
+
+### شواهد گام ششم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۳۳/۶۳۳** (+۴ تست directory)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

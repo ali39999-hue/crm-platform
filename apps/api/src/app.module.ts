@@ -25,6 +25,7 @@ import { PrismaDocumentRepository } from './modules/documents/prisma-document.re
 import { OrganizationController } from './modules/organization/organization.controller.js';
 import { OrganizationService } from './modules/organization/organization.service.js';
 import { InvitationService } from './modules/organization/invitation.service.js';
+import { OrganizationDirectoryService } from './modules/organization/organization-directory.service.js';
 import { CustomFieldController } from './modules/custom-fields/custom-field.controller.js';
 import { CustomFieldService } from './modules/custom-fields/custom-field.service.js';
 import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-field.repository.js';
@@ -287,6 +288,7 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     DocumentsService,
     OrganizationService,
     InvitationService,
+    OrganizationDirectoryService,
     // These were previously registered only in `exports`, which does NOT
     // register a provider — AppModule could never actually bootstrap (latent
     // runtime crash, invisible to unit tests that never compile the module).

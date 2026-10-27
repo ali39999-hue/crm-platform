@@ -15,6 +15,7 @@ import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { OrganizationService } from './organization.service.js';
 import { InvitationService } from './invitation.service.js';
+import { OrganizationDirectoryService } from './organization-directory.service.js';
 import type {
   OrganizationMemberDto,
   OrganizationSettingsDto,
@@ -38,6 +39,7 @@ export class OrganizationController {
   constructor(
     private readonly orgService: OrganizationService,
     private readonly invitationService: InvitationService,
+    private readonly directoryService: OrganizationDirectoryService,
   ) {}
 
   @Get('settings')
@@ -66,6 +68,9 @@ export class OrganizationController {
   async getMembers(
     @CurrentUser() user: UserContext,
   ): Promise<OrganizationMemberDto[]> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.directoryService.getMembers(user.activeOrganization.id);
+    }
     return this.orgService.getMembers(user.activeOrganization.id);
   }
 
@@ -127,6 +132,14 @@ export class OrganizationController {
     @Param('id') id: string,
     @Body() dto: UpdateMemberRoleDto,
   ): Promise<OrganizationMemberDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.directoryService.updateMemberRole(
+        user.activeOrganization.id,
+        user.id,
+        id,
+        dto.role,
+      );
+    }
     return this.orgService.updateMemberRole(
       user.activeOrganization.id,
       user.id,
@@ -141,6 +154,13 @@ export class OrganizationController {
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.directoryService.revokeMember(
+        user.activeOrganization.id,
+        user.id,
+        id,
+      );
+    }
     return this.orgService.revokeMember(
       user.activeOrganization.id,
       user.id,

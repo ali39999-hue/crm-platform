@@ -47,7 +47,11 @@ describe('inviteMember DB-mode delegation (P02 step 5)', () => {
         return { id: 'mem-1' } as any;
       },
     } as unknown as OrganizationService;
-    controller = new OrganizationController(orgService, invitationService as any);
+    controller = new OrganizationController(
+      orgService,
+      invitationService as any,
+      { getMembers: async () => [], updateMemberRole: async () => ({}) as any, revokeMember: async () => ({ success: true }) } as any,
+    );
   });
 
   it('delegates to InvitationService in database mode', async () => {
