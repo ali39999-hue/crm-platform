@@ -17,7 +17,7 @@ describe('LettersService (Mizito Office Automation & Secretariat)', () => {
       'org-1',
       'user-1',
       'مدیر عامل',
-      'ADMIN',
+      'OrganizationAdmin',
       {
         letterType: 'OUTGOING',
         subject: 'قرارداد همکاری تجاری',
@@ -90,7 +90,7 @@ describe('LettersService (Mizito Office Automation & Secretariat)', () => {
       'org-1',
       'admin-1',
       'مدیر سیستم',
-      'ADMIN',
+      'OrganizationAdmin',
       {
         letterType: 'INTERNAL',
         subject: 'اطلاعیه تغییر ساعت',
@@ -103,7 +103,7 @@ describe('LettersService (Mizito Office Automation & Secretariat)', () => {
     await service.getLetterById('org-1', 'user-2', letter.id);
 
     // Admin can delete their own letter even after being read
-    const result = await service.deleteLetter('org-1', 'admin-1', 'ADMIN', letter.id);
+    const result = await service.deleteLetter('org-1', 'admin-1', 'OrganizationAdmin', letter.id);
     expect(result.success).toBe(true);
   });
 
