@@ -15,12 +15,14 @@ import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { AuthService } from '../../common/auth/auth.service.js';
 import { TokenService, type TokenPayload } from '../../common/auth/token.service.js';
+import { MfaService } from '../../common/auth/mfa.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { InvitationService } from '../organization/invitation.service.js';
 import type { CurrentUserDto, WorkspaceDto } from '@crm/contracts';
 import {
   AcceptInvitationDto,
   AuthResponseDto,
+  EnableMfaDto,
   LoginRequestDto,
   LogoutRequestDto,
   RefreshTokenRequestDto,
@@ -36,6 +38,7 @@ export class AuthController {
     private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
     private readonly invitationService: InvitationService,
+    private readonly mfaService: MfaService,
   ) {}
 
   /**
@@ -101,11 +104,49 @@ export class AuthController {
     });
   }
 
+  /**
+   * MFA setup (P02 / CRM-AUTH): returns a fresh secret + otpauth URI. The
+   * secret stays pending until /auth/mfa/enable verifies one live code.
+   */
+  @Post('auth/mfa/setup')
+  async setupMfa(@CurrentUser() user: UserContext): Promise<{ secret: string; otpauthUri: string }> {
+    const secret = this.mfaService.generateSecret();
+    await this.authService.setMfaSecret(user.id, secret);
+    return { secret, otpauthUri: this.mfaService.provisioningUri(user.email, secret) };
+  }
+
+  /** Verifies one live code against the pending secret and activates MFA. */
+  @Post('auth/mfa/enable')
+  async enableMfa(
+    @CurrentUser() user: UserContext,
+    @Body() dto: EnableMfaDto,
+  ): Promise<{ enabled: boolean }> {
+    const record = await this.authService.findUserByEmail(user.email);
+    const secret = record?.mfaSecret;
+    if (!secret || record?.mfaEnabled) {
+      throw new ForbiddenException('MFA setup is not pending for this account');
+    }
+    if (!this.mfaService.verify(secret, dto.code)) {
+      throw new UnauthorizedException('کد MFA نامعتبر است');
+    }
+    await this.authService.setMfaEnabled(user.id, true);
+    return { enabled: true };
+  }
+
   @Public()
   @Post(['login', 'auth/login'])
   async login(@Body() dto: LoginRequestDto): Promise<AuthResponseDto> {
     try {
       const userRecord = await this.authService.validateCredentials(dto.email, dto.password);
+
+      // MFA enforcement (P02): accounts with an enabled authenticator must
+      // present a valid TOTP code in the same login request.
+      if (userRecord.mfaEnabled) {
+        if (!dto.mfaCode || !this.mfaService.verify(userRecord.mfaSecret ?? '', dto.mfaCode)) {
+          throw new UnauthorizedException('MFA code required or invalid');
+        }
+      }
+
       const userContext = await this.authService.resolveUser(userRecord.id);
 
       const tokenPair = this.tokenService.generateTokenPair({

@@ -120,6 +120,8 @@ model User {
   email             String        @unique
   displayName       String
   passwordHash      String?
+  mfaSecret         String?
+  mfaEnabled        Boolean       @default(false)
   status            String        @default("ACTIVE")
   createdAt         DateTime      @default(now()) @db.Timestamptz(6)
   updatedAt         DateTime      @updatedAt @db.Timestamptz(6)

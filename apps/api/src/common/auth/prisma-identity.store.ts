@@ -39,6 +39,8 @@ export class PrismaIdentityStore implements IIdentityStore {
       id: u.id,
       email: u.email,
       passwordHash: u.passwordHash ?? undefined,
+      mfaSecret: u.mfaSecret ?? undefined,
+      mfaEnabled: u.mfaEnabled ?? false,
       displayName: u.displayName,
       memberships: (u.memberships ?? [])
         .filter((m: any) => m.active)
@@ -107,5 +109,19 @@ export class PrismaIdentityStore implements IIdentityStore {
     const user = await this.findByEmail(email);
     if (!user) throw new ConflictException('Registration could not be completed');
     return user;
+  }
+
+  async setMfaSecret(userId: string, secret: string): Promise<void> {
+    await (this.prisma.tenantClient as any).user.update({
+      where: { id: userId },
+      data: { mfaSecret: secret },
+    });
+  }
+
+  async setMfaEnabled(userId: string, enabled: boolean): Promise<void> {
+    await (this.prisma.tenantClient as any).user.update({
+      where: { id: userId },
+      data: { mfaEnabled: enabled },
+    });
   }
 }

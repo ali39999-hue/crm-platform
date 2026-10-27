@@ -140,6 +140,15 @@ export class AuthService {
     };
   }
 
+  /** MFA lifecycle passthroughs (P02) — controller never touches the store directly. */
+  async setMfaSecret(userId: string, secret: string): Promise<void> {
+    await this.identityStore.setMfaSecret(userId, secret);
+  }
+
+  async setMfaEnabled(userId: string, enabled: boolean): Promise<void> {
+    await this.identityStore.setMfaEnabled(userId, enabled);
+  }
+
   async getWorkspaces(userId: string, currentOrgId?: string) {
     const user = await this.identityStore.findByIdOrEmail(userId);
     if (!user) {

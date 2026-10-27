@@ -17,6 +17,8 @@ export type MockUserRecord = {
   email: string;
   password?: string;
   passwordHash?: string;
+  mfaSecret?: string | undefined;
+  mfaEnabled?: boolean | undefined;
   displayName: string;
   memberships: Array<{
     organizationId: string;
@@ -40,6 +42,9 @@ export interface IIdentityStore {
   createUserWithOrganization(
     input: CreateUserWithOrganizationInput,
   ): Promise<MockUserRecord>;
+  /** MFA lifecycle (P02): secret is stored pending until enable flips the flag. */
+  setMfaSecret(userId: string, secret: string): Promise<void>;
+  setMfaEnabled(userId: string, enabled: boolean): Promise<void>;
 }
 
 @Injectable()
@@ -201,5 +206,15 @@ export class InMemoryIdentityStore implements IIdentityStore {
     this.users.set(user.id, user);
     this.users.set(user.email, user);
     return user;
+  }
+
+  async setMfaSecret(userId: string, secret: string): Promise<void> {
+    const user = await this.findByIdOrEmail(userId);
+    if (user) user.mfaSecret = secret;
+  }
+
+  async setMfaEnabled(userId: string, enabled: boolean): Promise<void> {
+    const user = await this.findByIdOrEmail(userId);
+    if (user) user.mfaEnabled = enabled;
   }
 }

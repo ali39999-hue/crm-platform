@@ -73,6 +73,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         tokenService,
         auditService,
         { acceptInvitation: async () => ({}) } as any,
+        { generateSecret: () => 'JBSWY3DPEHPK3PXP', provisioningUri: () => 'otpauth://test', verify: () => true } as any,
       );
     reflector = new Reflector();
     authGuard = new AuthGuard(reflector, authService, tokenService);
@@ -610,6 +611,43 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
           displayName: 'تکراری',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('MFA flow: setup → enable → login requires valid code', async () => {
+      const actor = {
+        id: '11111111-1111-1111-1111-111111111111',
+        email: 'admin@org-alpha.com',
+        displayName: 'مدیر',
+        activeOrganization: {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          name: 'آلفا',
+          slug: 'alpha',
+          role: 'SystemOwner' as const,
+        },
+        memberships: [],
+      };
+      const setup = await authController.setupMfa(actor);
+      expect(setup.secret).toBeTruthy();
+      expect(setup.otpauthUri).toContain('otpauth://');
+
+      const { MfaService } = await import('../../common/auth/mfa.service.js');
+      const mfa = new MfaService();
+      const enabled = await authController.enableMfa(actor, {
+        code: mfa.codeAt(setup.secret),
+      });
+      expect(enabled.enabled).toBe(true);
+
+      // after enable, login without a code is rejected
+      await expect(
+        authController.login({ email: 'admin@org-alpha.com', password: validPassword }),
+      ).rejects.toThrow(/MFA/);
+
+      const res = await authController.login({
+        email: 'admin@org-alpha.com',
+        password: validPassword,
+        mfaCode: mfa.codeAt(setup.secret),
+      });
+      expect(res.accessToken).toBeTruthy();
     });
 
     it('PRODUCTION GATE: rejects the dev fixture credential in production', async () => {

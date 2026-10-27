@@ -49,6 +49,7 @@ import { InMemoryApiKeyRepository } from './modules/integrations/api-key.reposit
 import { PrismaApiKeyRepository } from './modules/integrations/prisma-api-key.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
+import { MfaService } from './common/auth/mfa.service.js';
 import { InMemoryIdentityStore } from './common/auth/identity-store.js';
 import { PrismaIdentityStore } from './common/auth/prisma-identity.store.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -186,6 +187,7 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     PrismaIdentityStore,
     AuthService,
     TokenService,
+    MfaService,
     AuthGuard,
     PermissionsGuard,
     RateLimiterGuard,

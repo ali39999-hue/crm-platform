@@ -16,6 +16,17 @@ export class LoginRequestDto implements LoginRequest {
   @IsString({ message: 'Password must be a string' })
   @IsNotEmpty({ message: 'Password cannot be empty' })
   password!: string;
+
+  /** Required only when the account has MFA enabled (P02). */
+  @IsOptional()
+  @IsString({ message: 'MFA code must be a string' })
+  mfaCode?: string;
+}
+
+export class EnableMfaDto {
+  @IsString({ message: 'MFA code must be a string' })
+  @IsNotEmpty({ message: 'MFA code is required' })
+  code!: string;
 }
 
 export class RefreshTokenRequestDto implements RefreshTokenRequest {
