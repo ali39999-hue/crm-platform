@@ -239,6 +239,21 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام پنجم: مهاجرت مسیر قدیمی دعوت عضو
+
+- `POST /organization/members/invite` در **DB-mode** به `InvitationService` delegate می‌شود (token یک‌بارمصرف به‌جای عضو فوری با userId جعلی — که در DB واقعی روی FK کاربر کرش می‌کرد)؛ در fixture mode رفتار قدیمی برای dev/E2E حفظ شده و E2E سبز ماند
+- شاخه شرطی در کنترلر + spec اختصاصی دو حالته (delegation.spec)
+- **بدهی UI مستند:** فرانت‌اند members هنوز وضعیت PENDING invitations را نمایش نمی‌دهد و `getMembers` در DB-mode از جدول Membership نمی‌خواند — گام بعدی P02
+- یافته قبلی مizito.ts (مقایسه نقش‌های ناموجود) همچنان برای بازبینی باز است
+
+### شواهد گام پنجم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۲۹/۶۲۹** (+۲ تست delegation)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

@@ -74,7 +74,19 @@ export class OrganizationController {
   async inviteMember(
     @CurrentUser() user: UserContext,
     @Body() dto: InviteMemberDto,
-  ): Promise<OrganizationMemberDto> {
+  ): Promise<OrganizationMemberDto | { invitation: InvitationDto; token: string }> {
+    // P02 migration step: in database mode the legacy instant-member invite is
+    // replaced by the one-time-token InvitationService flow (no fabricated
+    // user ids, consent + password required). The fixture mode keeps the
+    // legacy behavior for dev/E2E until the members UI learns pending states.
+    if (process.env.USE_DATABASE === 'true') {
+      const result = await this.invitationService.createInvitation(
+        user.activeOrganization.id,
+        user.id,
+        dto,
+      );
+      return { invitation: result, token: result.token };
+    }
     return this.orgService.inviteMember(
       user.activeOrganization.id,
       user.id,
