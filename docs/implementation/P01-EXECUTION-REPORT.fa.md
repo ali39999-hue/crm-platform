@@ -359,6 +359,19 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام چهاردهم: یافته بحرانی جدید — GAP-012
+
+**بررسی واقعیت وب↔API نتیجه‌ای بزرگ داد:** وب هیچ احراز هویت واقعی به API ندارد.
+- `api-client` روی هر درخواست `Bearer 22222222-...` (هویت fixture هاردکد) می‌فرستد؛ `setToken` هیچ‌جا صدا زده نشده
+- هیچ متد login/register/mfa در api-client وجود ندارد؛ صفحه ورود portal کاملاً state محلی است
+- همه viewها در قطع API به mock fixtureها fallback می‌کنند → **E2E فقط UI موقی را آزمایش می‌کند** (فقط web server بالا می‌آید)
+- نتیجه: کل stack احراز هویت API (JWT، RBAC، MFA، دعوت‌نامه‌ها) فعلاً فقط با unit tests پوشش دارد؛ هیچ ترافیک واقعی web→API auth وجود ندارد
+
+این به‌عنوان **GAP-012 (P0)** در رجیستر ثبت شد و بزرگ‌ترین گپ باز پروژه است. مسیر رفع: slice یکپارچه‌سازی web-auth (فرم‌های login/register متصل به api-client، ذخیره توکن + setToken، هندل 401، فیلد MFA) و سپس E2E علیه API+postgres واقعی — که باز هم به merge+push وابسته است.
+
+## نتیجه‌گیری جلسه
+۲۲ commit، ۱۴ گام مستندشده با شواهد، ۹ migration — و دو گپ ساختاری که فقط با merge+push و اجرای واقعی بسته می‌شوند: GAP-008 (migrationهای CI) و GAP-012 (web↔API auth).
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
