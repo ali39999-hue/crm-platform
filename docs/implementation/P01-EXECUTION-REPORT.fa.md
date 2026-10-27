@@ -162,7 +162,7 @@
 ### باقی‌مانده صادقانه GAP-001
 سه Map درون repoهای پرisma موجود: products/invoices در `PrismaCrmRepository` و macros/orgCounter در `PrismaSupportRepository` — داده ثانویه داخل دامنه‌های durable؛ مدل ProductCatalog/ProformaInvoice/SupportMacro لازم است. به‌علاوه تست منفی DB-level روی postgres واقعی (اولین run CI).
 
-## ۱۲. اجرای مرحله هفتم (نهایی) — آخرین Map ها هم durable شدند
+## ۱۱. اجرای مرحله هفتم (نهایی) — آخرین Map ها هم durable شدند
 
 - مدل‌های جدید: **`ProductCatalogItem`** (unique SKU per org، unitPriceMinor با BigInt، taxRate با Decimal)، **`ProformaInvoice`** (unique شماره per org، اقلام Json)، **`SupportMacro`** و **`SupportSequence`**
 - **کشف مهم:** Map پنجمی هم وجود داشت — `dealExtensions` در `PrismaCrmRepository` که lossReason/lostAt/nextAction/stageUpdatedAt/products را در حافظه نگه می‌داشت؛ ستون‌های متناظر به مدل Deal اضافه شدند
@@ -177,7 +177,7 @@
 | `pnpm audit:persistence:strict` | **exit 0** |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
-## ۱۴. فاز P02 — گام اول: هویت durable (commit بعدی)
+## ۱۲. فاز P02 — گام اول: هویت durable (commit بعدی)
 
 - ستون `passwordHash` روی User + migration `20261028_identity_password`
 - **`IIdentityStore`** جدید: `InMemoryIdentityStore` (همان fixtureهای dev/test، غیرفعال در production) و **`PrismaIdentityStore`** که از جدول‌های User/Membership با tenantClient می‌خواند؛ نگاشت نقش‌های Prisma (OWNER/ADMIN/MANAGER/MEMBER/CUSTOMER/AUDITOR) به نقش‌های ماتریس domain (SystemOwner/.../Employee/...) مستند و تست‌شده
@@ -194,7 +194,20 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
-## ۱۸. فاز P02 — گام سوم: دعوت‌نامه durable اعضا
+## ۱۳. فاز P02 — گام دوم: ثبت‌نام سازمان (tenant onboarding)
+
+- `POST /api/v1/auth/register` عمومی (تحت rate-limit مسیر حساس auth): ایجاد **مالک + سازمان در یک گام**؛ رمز با PBKDF2 هش می‌شود و plaintext هرگز به store نمی‌رسد
+- `IIdentityStore.createUserWithOrganization` در هر دو پیاده‌سازی: Prisma (ساخت Organization + User + Membership OWNER، catch P2002 → 409) و InMemory (برای dev/test)
+- DTO با اعتبارسنجی class-validator؛ پاسخ مثل login شامل memberships؛ audit event `AUTH_REGISTER`
+- تست‌ها: ثبت‌نام موفق → نقش SystemOwner → login با همان رمز؛ رد ایمیل تکراری با 409
+
+### شواهد گام دوم
+| دستور | نتیجه |
+|---|---|
+| `pnpm test` | API: **۶۲۱/۶۲۱** (+۲ تست register) |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
+## ۱۴. فاز P02 — گام سوم: دعوت‌نامه durable اعضا
 
 - مدل **`Invitation`** (tokenHash یکتا با SHA-256، انقضای ۷ روزه، وضعیت PENDING/ACCEPTED/REVOKED، invitedBy، acceptedUserId) + migration هفتم
 - یافته امنیتی: جریان قبلی `inviteMember` بلافاصله عضو فعال با userId جعلی می‌ساخت — بدون token، بدون رضایت، بدون رمز؛ مسیر legacy دست‌نخورده ماند (مستند برای مهاجرت در ادامه P02) و مسیر جدید جایگزین آن خواهد شد
@@ -210,7 +223,7 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
-## ۱۹. Rollback
+## ۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.
