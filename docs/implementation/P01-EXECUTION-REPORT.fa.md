@@ -223,7 +223,23 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
-## ۱۵. Rollback
+## فاز P02 — گام چهارم: یکسان‌سازی enum نقش‌ها
+
+- enum `MembershipRole` در schema حالا **دقیقاً نقش‌های ماتریس domain** است (SystemOwner تا IntegrationAccount)؛ مقادیر قدیمی (OWNER/ADMIN/...) فقط برای سازگاری در type باقی مانده‌اند و دیگر نوشته نمی‌شوند
+- migration `20261028_membership_role_unification`: ALTER TYPE ADD VALUE ×۹ + **data migration** نگاشت ردیف‌های قدیمی (OWNER→SystemOwner و ...)
+- جدول‌های نگاشت `PRISMA_ROLE_TO_DOMAIN` و `toPrismaRole` حذف شدند؛ نقش‌ها از DB به domain بدون ترجمه جریان دارند
+- تصمیم امنیتی: نقش ناشناخته passthrough می‌شود تا ماتریس دسترسی آن را کامل رد کند (fail-closed)، نه سقوط صامت به Employee
+- یافته جانبی (ثبت‌شده، خارج از scope این slice): `packages/domain/src/mizito.ts` با مقادیر 'ADMIN'/'OWNER' مقایسه می‌کند که نقش‌های domain نیستند — منطق KPI میزیتو برای بازبینی
+
+### شواهد گام چهارم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۲۷/۶۲۷**؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
+## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

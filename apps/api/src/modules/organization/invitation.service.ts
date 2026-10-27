@@ -159,7 +159,7 @@ export class InvitationService {
       data: {
         organizationId: invitation.organizationId,
         userId: user.id,
-        role: this.toPrismaRole(invitation.role),
+        role: invitation.role,
         active: true,
       },
     });
@@ -175,21 +175,4 @@ export class InvitationService {
       email,
     };
   }
-
-  private toPrismaRole(domainRole: string): string {
-    // Inverse of the identity-store mapping (P02): domain role -> Prisma enum.
-    const map: Record<string, string> = {
-      SystemOwner: 'OWNER',
-      OrganizationAdmin: 'ADMIN',
-      Manager: 'MANAGER',
-      Employee: 'MEMBER',
-      Sales: 'MEMBER',
-      SupportAgent: 'MEMBER',
-      CustomerPortalUser: 'CUSTOMER',
-      Auditor: 'AUDITOR',
-      IntegrationAccount: 'MEMBER',
-    };
-    return map[domainRole] ?? 'MEMBER';
-  }
-
 }

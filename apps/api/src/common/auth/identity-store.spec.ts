@@ -42,7 +42,7 @@ describe('PrismaIdentityStore role mapping (P02 / CRM-AUTH)', () => {
     };
   }
 
-  it('maps coarse Prisma roles onto domain matrix roles', async () => {
+  it('passes unified domain roles through unchanged', async () => {
     const mock = makeMockPrisma([
       {
         id: adminId,
@@ -53,13 +53,13 @@ describe('PrismaIdentityStore role mapping (P02 / CRM-AUTH)', () => {
           {
             organizationId: orgAlpha,
             active: true,
-            role: 'OWNER',
+            role: 'SystemOwner',
             organization: { name: 'شرکت الف', slug: 'alpha' },
           },
           {
             organizationId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
             active: false,
-            role: 'MEMBER',
+            role: 'Manager',
             organization: { name: 'بتا', slug: 'beta' },
           },
         ],
@@ -76,7 +76,7 @@ describe('PrismaIdentityStore role mapping (P02 / CRM-AUTH)', () => {
     expect(user?.memberships).toHaveLength(1);
   });
 
-  it('falls back to Employee for unknown database roles and resolves by email', async () => {
+  it('maps legacy coarse roles defensively and resolves by email', async () => {
     const mock = makeMockPrisma([
       {
         id: '22222222-2222-2222-2222-222222222222',
@@ -92,7 +92,10 @@ describe('PrismaIdentityStore role mapping (P02 / CRM-AUTH)', () => {
     const store = new PrismaIdentityStore(mock as any);
 
     const user = await store.findByEmail('weird@org.com');
-    expect(user?.memberships[0]!.role).toBe('Employee');
+    // Unknown roles pass through as-is: the permission matrix then denies
+    // every action for them (fail-closed) instead of silently granting the
+    // Employee baseline.
+    expect(user?.memberships[0]!.role).toBe('SOMETHING_NEW');
     expect(user?.passwordHash).toBeUndefined();
   });
 });

@@ -9,15 +9,8 @@ import type {
 } from './identity-store.js';
 import type { MembershipRole } from '@crm/domain';
 
-/**
- * Durable identity store (P02 / CRM-AUTH): reads users and their organization
- * memberships from the User/Membership tables via the tenant-scoped client.
- *
- * Role mapping: the Prisma enum (OWNER/ADMIN/MANAGER/MEMBER/CUSTOMER/AUDITOR)
- * is coarser than the domain permission matrix roles; mapping below preserves
- * the semantics of each database role. Unifying the two enums is a follow-up
- * schema decision (see P02 backlog).
- */
+// Legacy coarse values that may still exist in rows written before the
+// unification migration; everything else passes through as-is.
 const PRISMA_ROLE_TO_DOMAIN: Record<string, MembershipRole> = {
   OWNER: 'SystemOwner',
   ADMIN: 'OrganizationAdmin',
@@ -26,6 +19,14 @@ const PRISMA_ROLE_TO_DOMAIN: Record<string, MembershipRole> = {
   CUSTOMER: 'CustomerPortalUser',
   AUDITOR: 'Auditor',
 };
+
+/**
+ * Durable identity store (P02 / CRM-AUTH): reads users and their organization
+ * memberships from the User/Membership tables via the tenant-scoped client.
+ * Membership.role is now the unified domain role (see migration
+ * 20261028_membership_role_unification); unknown legacy values fall back to
+ * Employee defensively.
+ */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,7 +46,7 @@ export class PrismaIdentityStore implements IIdentityStore {
           organizationId: m.organizationId,
           organizationName: m.organization?.name ?? '',
           organizationSlug: m.organization?.slug ?? '',
-          role: PRISMA_ROLE_TO_DOMAIN[m.role] ?? 'Employee',
+          role: (PRISMA_ROLE_TO_DOMAIN[m.role] ?? m.role ?? 'Employee') as MembershipRole,
           active: m.active,
         })),
     };
@@ -93,7 +94,7 @@ export class PrismaIdentityStore implements IIdentityStore {
           passwordHash: input.passwordHash,
           displayName: input.displayName,
           memberships: {
-            create: { organizationId: organization.id, role: 'OWNER', active: true },
+            create: { organizationId: organization.id, role: 'SystemOwner', active: true },
           },
         },
       });

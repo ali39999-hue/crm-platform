@@ -7,7 +7,19 @@ datasource db {
   provider = "postgresql"
 }
 
+// Unified with the domain permission-matrix roles (P02). Legacy coarse values
+// (OWNER/ADMIN/...) remain in the Postgres type for compatibility but are no
+// longer written; the data migration maps them to the values below.
 enum MembershipRole {
+  SystemOwner
+  OrganizationAdmin
+  Manager
+  Employee
+  Sales
+  SupportAgent
+  CustomerPortalUser
+  Auditor
+  IntegrationAccount
   OWNER
   ADMIN
   MANAGER
