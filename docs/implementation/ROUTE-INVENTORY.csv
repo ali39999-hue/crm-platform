@@ -1,0 +1,121 @@
+﻿route,title,domain,kind,roles,priority,notes
+/app,Workspace overview,PLAT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/app/activity,Recent activity,PLAT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/app/favorites,Favorites,PLAT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/app/shortcuts,Shortcuts,PLAT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/login,Login,AUTH,auth,Anonymous,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/forgot-password,Forgot password,AUTH,auth,Anonymous,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/reset-password,Reset password,AUTH,auth,Anonymous,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/verify,Verify identity,AUTH,auth,Anonymous,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/mfa,MFA challenge,AUTH,auth,Anonymous,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/logout,Logout callback,AUTH,system,Authenticated,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/auth/sessions,Active sessions,AUTH,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/organization,Organization profile,TEN,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/organization/members,Organization members,TEN,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/organization/security,Tenant security,TEN,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/organization/data-retention,Data retention,TEN,page,"Owner, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/roles,Roles list,RBAC,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/roles/new,Create role,RBAC,form,"Owner, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/roles/[roleId],Role detail,RBAC,detail,"Owner, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/permissions,Permission matrix,RBAC,page,"Owner, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/users,User directory,USER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/users/invitations,Invitations,USER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/teams,Teams,USER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/departments,Departments,USER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/profile,My profile,USER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/preferences,Preferences,I18N,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/accounts,Accounts list,ACCT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/accounts/new,Create account,ACCT,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/accounts/[accountId],Account detail,ACCT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/accounts/[accountId]/timeline,Account timeline,ACCT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/accounts/duplicates,Duplicate review,ACCT,page,"CRM Admin, Manager",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/contacts,Contacts list,CONTACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/contacts/new,Create contact,CONTACT,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/contacts/[contactId],Contact detail,CONTACT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/contacts/import,Import contacts,CONTACT,wizard,CRM Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads,Leads inbox,LEAD,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads/new,Create lead,LEAD,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads/[leadId],Lead detail,LEAD,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads/forms,Lead capture forms,LEAD,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads/scoring,Lead scoring rules,LEAD,page,CRM Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/leads/convert/[leadId],Convert lead,LEAD,wizard,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/opportunities,Opportunities list,DEAL,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/pipeline,Pipeline board,DEAL,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/pipelines,Pipeline settings,DEAL,page,CRM Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/opportunities/new,Create opportunity,DEAL,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/opportunities/[opportunityId],Opportunity detail,DEAL,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/forecast,Sales forecast,DEAL,page,"Sales Manager, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/loss-reasons,Loss reasons,DEAL,page,CRM Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/products,Product catalog,PRODUCT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/products/new,Create product,PRODUCT,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/products/[productId],Product detail,PRODUCT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/quotes,Quotes list,PRODUCT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/quotes/new,Create quote,PRODUCT,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/quotes/[quoteId],Quote detail,PRODUCT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/price-books,Price books,PRODUCT,page,CRM Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities,Activities list,ACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities/calendar,Calendar,ACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities/calls,Calls,ACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities/meetings,Activity meetings,ACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities/reminders,Reminders,ACT,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/activities/[activityId],Activity detail,ACT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/tasks,Tasks list,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/my-tasks,My tasks,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/boards,Boards index,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/boards/[boardId],Board view,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/backlog,Backlog,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/sprints,Sprint planning,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/tasks/[taskId],Task detail,TASK,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/tasks/[taskId]/activity,Task activity,TASK,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/workflows,Task workflows,TASK,page,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects,Projects list,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/new,Create project,PROJ,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId],Project overview,PROJ,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId]/plan,Project WBS,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId]/milestones,Milestones,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId]/risks,Risks and blockers,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/portfolio,Project portfolio,PROJ,page,"Executive, PMO",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/time,Time tracker,TIME,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/timesheets,Timesheets,TIME,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/time/approvals,Time approvals,TIME,page,"Manager, Finance",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/tickets,Ticket queue,SUP,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/tickets/new,Create ticket,SUP,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/tickets/[ticketId],Ticket detail,SUP,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/queues,Queues,SUP,page,Support Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/sla,SLA policies,SUP,page,Support Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/macros,Response macros,SUP,page,Support Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/knowledge,Knowledge base admin,SUP,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal,Customer portal home,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/requests,My requests,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/requests/[requestId],Customer request detail,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/knowledge,Help center,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/satisfaction/[ticketId],CSAT survey,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/profile,Portal profile,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/custom-fields,Custom fields,CUSTOM,page,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/forms,Form builder,CUSTOM,page,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/documents,Document spaces,DOC,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/documents/folders/[folderId],Folder contents,DOC,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/documents/[documentId],Document detail,DOC,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/documents/[documentId]/versions,Document versions,DOC,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/letters,Letters register,LETTER,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/letters/new,Create letter,LETTER,form,"Office Staff, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/letters/[letterId],Letter detail,LETTER,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/letters/[letterId]/refer,Refer letter,LETTER,modal,"Office Staff, Manager",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/meetings,Meeting list,MEET,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/meetings/new,Schedule meeting,MEET,form,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/meetings/[meetingId],Meeting detail,MEET,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/meetings/[meetingId]/minutes,Meeting minutes,MEET,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/office/approvals,Approval inbox,MEET,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/automation/workflows,Workflow list,AUTO,page,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/audit-log/[eventId],Audit event detail,AUDIT,detail,"Security Admin, Auditor",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/integrations/[integrationId],Integration detail,INTEG,detail,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/api-keys/new,Create API key,INTEG,form,Workspace Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/admin/jobs/[jobId],Background job detail,OBS,detail,"SRE, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/admin/backups/[backupId],Backup detail,BACKUP,detail,"SRE, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/reports/scheduled,Scheduled reports,REPORT,page,"Analyst, Admin",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/crm/customer-360/[customerId],Customer 360,ACCT,detail,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId]/timeline,Project timeline,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/work/projects/[projectId]/team,Project team,PROJ,page,"Admin, Manager, Member",P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/support/reports,Support analytics,SUP,page,Support Manager,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/portal/notifications,Customer portal notifications,PORTAL,portal,Portal User,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.
+/settings/retention,Retention rules,AUDIT,page,Privacy Admin,P1,route واقعی با direct URL، refresh، back/forward، loading/error/empty، permission و responsive test.

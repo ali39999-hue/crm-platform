@@ -1,0 +1,11 @@
+controller,http_method,path,action,role_scope_rationale,status
+activity.controller.ts,POST/PUT/DELETE,internal activity endpoints,view_internal_tasks,Activities are internal collaboration records,PROTECTED
+document.controller.ts,POST/PUT/DELETE,documents,create_or_edit_tasks,Documents are internal collaboration records,PROTECTED
+files.controller.ts,POST/DELETE,file upload/delete,create_or_edit_tasks,File mutations treated as content edits; signed download remains public,PROTECTED
+letters.controller.ts,GET/POST/DELETE,letters + referrals + paraffs,view_internal_tasks / create_or_edit_tasks,Office automation is internal,PROTECTED
+meetings.controller.ts,POST/PUT/DELETE,meetings,view_internal_tasks / create_or_edit_tasks,Meeting minutes are internal,PROTECTED
+notifications.controller.ts,GET/POST/DELETE,notifications,view_internal_tasks,Notifications are recipient-scoped in service,PROTECTED
+support.controller.ts,POST/PATCH,tickets + messages + macros,reply_to_customer,Support actions require reply permission; macros already guarded,PROTECTED
+auth.controller.ts,POST,login/refresh/logout/otp,N/A,Authentication entry points are intentionally public,ALLOWLISTED
+web-form.controller.ts,POST,public submit,N/A,Public form embed endpoint,ALLOWLISTED
+files.controller.ts,GET,signed download,N/A,Signed-token based public download,ALLOWLISTED

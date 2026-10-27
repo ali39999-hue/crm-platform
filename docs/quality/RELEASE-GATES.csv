@@ -1,0 +1,16 @@
+﻿gate_id,category,criterion,status,evidence_url,owner,blocking
+GATE-001,Security,هیچ credential نمونه یا secret پیش‌فرض در مسیر Production پذیرفته نشود.,TODO,,,YES
+GATE-002,Tenant isolation,تست negative برای read/write/search/export/file attachments همه سبز باشند.,TODO,,,YES
+GATE-003,Persistence,تمام production-critical repositoryها از database/object storage durable استفاده کنند.,TODO,,,YES
+GATE-004,Migration,migration از نسخه قبلی روی snapshot synthetic/approved بدون data loss اجرا شده باشد.,TODO,,,YES
+GATE-005,CI,lint/typecheck/unit/contract/integration/e2e/security/license/build همه اجرا و fail-closed باشند.,TODO,,,YES
+GATE-006,UX routes,تمام P0 routes deep-link، refresh، browser history، permissions و mobile viewport را می‌گذرانند.,TODO,,,YES
+GATE-007,No fake success,هیچ UI موفقیت را پیش از server acknowledgment نمایش نمی‌دهد مگر optimistic UI با rollback واضح.,TODO,,,YES
+GATE-008,Observability,درخواست و job مهم correlation ID، metric و alert دارد.,TODO,,,YES
+GATE-009,Backup,restore drill موفق و RPO/RTO ثبت‌شده است.,TODO,,,YES
+GATE-010,Privacy,PII classification، retention، data deletion/export و log minimization مشخص‌اند.,TODO,,,YES
+GATE-011,Accessibility,جریان‌های حیاتی هدف WCAG 2.2 AA را می‌گذرانند یا exception risk-accepted دارند.,TODO,,,YES
+GATE-012,Performance,load test در حجم هدف p95/p99 و error budgets مورد توافق را پاس می‌کند.,TODO,,,YES
+GATE-013,Mobile sync,تکرار mutation و offline conflict testها بدون data loss می‌گذرند.,TODO,,,YES
+GATE-014,Release artifact,SHA immutable، changelog، migration notes، rollback steps و human approver ثبت شده است.,TODO,,,YES
+GATE-015,Evidence truthfulness,manifest از همان commit/CI تولید و ادعاهای stale قبلی حذف یا archived شده‌اند.,TODO,,,YES

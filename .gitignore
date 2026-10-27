@@ -16,3 +16,5 @@ apps/api/prisma/generated/
 playwright-report/
 test-results/
 .turbo/
+.mimosa/
+.playwright-mcp/

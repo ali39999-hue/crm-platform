@@ -1,0 +1,14 @@
+{
+  "master_file": "docs/implementation/MASTER-EXECUTION-PLAN-10000-LINES.fa.md",
+  "line_count": 10000,
+  "domain_count": 37,
+  "task_count": 444,
+  "route_count": 120,
+  "phase_count": 18,
+  "benchmark_count": 22,
+  "release_gate_count": 15,
+  "generated_on": "2026-10-27",
+  "repository": "https://github.com/ali39999-hue/crm-platform",
+  "git_remote_changed": false,
+  "pushed_to_github": false
+}

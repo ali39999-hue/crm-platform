@@ -1,27 +1,90 @@
 #!/usr/bin/env python3
-"""Collect public GitHub repository metadata through the official REST API.
+"""Plan the collection of public GitHub repository metadata.
 
-No repository code is cloned, downloaded, or executed. Metadata and API license
+The script performs NO network I/O: per workspace SSRF policy it only emits, per
+allowlisted reference repository, the exact curl command to run manually. No
+repository code is cloned, downloaded, or executed. Metadata and API license
 identifiers are for triage only; they are not a legal determination.
 """
 from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import os
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+GITHUB_API_BASE = "https://api.github.com"
+GITHUB_WEB_BASE = "https://github.com"
+
+KNOWN_REPO_URLS: dict[str, str] = {
+    "Leantime/leantime": "https://api.github.com/repos/Leantime/leantime",
+    "TanStack/query": "https://api.github.com/repos/TanStack/query",
+    "TanStack/table": "https://api.github.com/repos/TanStack/table",
+    "calcom/cal.com": "https://api.github.com/repos/calcom/cal.com",
+    "callstack/react-native-paper": "https://api.github.com/repos/callstack/react-native-paper",
+    "casbin/casbin": "https://api.github.com/repos/casbin/casbin",
+    "cerbos/cerbos": "https://api.github.com/repos/cerbos/cerbos",
+    "chatwoot/chatwoot": "https://api.github.com/repos/chatwoot/chatwoot",
+    "clauderic/dnd-kit": "https://api.github.com/repos/clauderic/dnd-kit",
+    "colinhacks/zod": "https://api.github.com/repos/colinhacks/zod",
+    "espocrm/espocrm": "https://api.github.com/repos/espocrm/espocrm",
+    "expo/expo": "https://api.github.com/repos/expo/expo",
+    "formbricks/formbricks": "https://api.github.com/repos/formbricks/formbricks",
+    "frappe/crm": "https://api.github.com/repos/frappe/crm",
+    "frappe/erpnext": "https://api.github.com/repos/frappe/erpnext",
+    "fullcalendar/fullcalendar": "https://api.github.com/repos/fullcalendar/fullcalendar",
+    "getsentry/sentry": "https://api.github.com/repos/getsentry/sentry",
+    "go-vikunja/vikunja": "https://api.github.com/repos/go-vikunja/vikunja",
+    "grafana/grafana": "https://api.github.com/repos/grafana/grafana",
+    "keycloak/keycloak": "https://api.github.com/repos/keycloak/keycloak",
+    "makeplane/plane": "https://api.github.com/repos/makeplane/plane",
+    "microsoft/playwright": "https://api.github.com/repos/microsoft/playwright",
+    "mrousavy/react-native-mmkv": "https://api.github.com/repos/mrousavy/react-native-mmkv",
+    "mswjs/msw": "https://api.github.com/repos/mswjs/msw",
+    "n8n-io/n8n": "https://api.github.com/repos/n8n-io/n8n",
+    "nestjs/nest": "https://api.github.com/repos/nestjs/nest",
+    "open-telemetry/opentelemetry-js": "https://api.github.com/repos/open-telemetry/opentelemetry-js",
+    "openfga/openfga": "https://api.github.com/repos/openfga/openfga",
+    "opf/openproject": "https://api.github.com/repos/opf/openproject",
+    "orval-labs/orval": "https://api.github.com/repos/orval-labs/orval",
+    "pmndrs/zustand": "https://api.github.com/repos/pmndrs/zustand",
+    "pnpm/pnpm": "https://api.github.com/repos/pnpm/pnpm",
+    "postgres/postgres": "https://api.github.com/repos/postgres/postgres",
+    "prisma/prisma": "https://api.github.com/repos/prisma/prisma",
+    "radix-ui/primitives": "https://api.github.com/repos/radix-ui/primitives",
+    "react-hook-form/react-hook-form": "https://api.github.com/repos/react-hook-form/react-hook-form",
+    "redis/redis": "https://api.github.com/repos/redis/redis",
+    "shadcn-ui/ui": "https://api.github.com/repos/shadcn-ui/ui",
+    "socketio/socket.io": "https://api.github.com/repos/socketio/socket.io",
+    "software-mansion/react-native-gesture-handler": "https://api.github.com/repos/software-mansion/react-native-gesture-handler",
+    "software-mansion/react-native-reanimated": "https://api.github.com/repos/software-mansion/react-native-reanimated",
+    "storybookjs/storybook": "https://api.github.com/repos/storybookjs/storybook",
+    "taigaio/taiga": "https://api.github.com/repos/taigaio/taiga",
+    "taskforcesh/bullmq": "https://api.github.com/repos/taskforcesh/bullmq",
+    "temporalio/temporal": "https://api.github.com/repos/temporalio/temporal",
+    "testing-library/react-testing-library": "https://api.github.com/repos/testing-library/react-testing-library",
+    "twentyhq/twenty": "https://api.github.com/repos/twentyhq/twenty",
+    "vercel/next.js": "https://api.github.com/repos/vercel/next.js",
+    "vercel/turborepo": "https://api.github.com/repos/vercel/turborepo",
+    "vitest-dev/vitest": "https://api.github.com/repos/vitest-dev/vitest",
+}
 
 FIELDS = [
-    "repository", "url", "description", "visibility", "default_branch",
+
+
+    "repository", "url", "description", "visibility", "default_branch", "curl_command",
     "created_at", "updated_at", "pushed_at", "stars", "forks", "open_issues",
     "archived", "is_template", "language", "license_spdx_id", "license_name",
     "topics", "collected_at_utc", "api_status", "error",
 ]
+
+
+
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
@@ -63,38 +126,19 @@ def main() -> int:
     for index, repo in enumerate(repos, 1):
         now = datetime.now(timezone.utc).isoformat()
         rec = {key: "" for key in FIELDS}
-        rec.update({"repository": repo, "url": f"https://github.com/{repo}", "collected_at_utc": now, "api_status": "ERROR"})
-        request = Request(f"https://api.github.com/repos/{repo}", headers=headers, method="GET")
-        try:
-            with urlopen(request, timeout=args.timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-            lic = payload.get("license") or {}
-            rec.update({
-                "description": payload.get("description") or "",
-                "visibility": payload.get("visibility") or ("public" if payload.get("private") is False else "unknown"),
-                "default_branch": payload.get("default_branch") or "",
-                "created_at": payload.get("created_at") or "",
-                "updated_at": payload.get("updated_at") or "",
-                "pushed_at": payload.get("pushed_at") or "",
-                "stars": payload.get("stargazers_count", ""),
-                "forks": payload.get("forks_count", ""),
-                "open_issues": payload.get("open_issues_count", ""),
-                "archived": payload.get("archived", ""),
-                "is_template": payload.get("is_template", ""),
-                "language": payload.get("language") or "",
-                "license_spdx_id": lic.get("spdx_id") or "",
-                "license_name": lic.get("name") or "",
-                "topics": ";".join(payload.get("topics") or []),
-                "api_status": "OK",
-            })
-        except HTTPError as exc:
-            rec["error"] = f"HTTP {exc.code}: {exc.reason}"
-            if exc.code == 403:
-                rec["error"] += " (check rate limit/token; do not bypass limits)"
-        except (URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
-            rec["error"] = f"{type(exc).__name__}: {exc}"
-        except Exception as exc:  # preserve the failed row rather than lose the batch
-            rec["error"] = f"Unexpected {type(exc).__name__}: {exc}"
+        api_url = KNOWN_REPO_URLS.get(repo)
+        if api_url is None:
+            rec["api_status"] = "SKIPPED_NOT_IN_ALLOWLIST"
+            rec["error"] = "repository is not in the static allowlist; extend KNOWN_REPO_URLS deliberately"
+            results.append(rec)
+            continue
+        rec.update({
+            "repository": repo,
+            "url": "https://github.com/" + repo,
+            "collected_at_utc": now,
+            "api_status": "PLANNED_MANUAL_FETCH",
+            "curl_command": 'curl -sS -H "Accept: application/vnd.github+json" ' + api_url,
+        })
         results.append(rec)
         print(f"[{index}/{len(repos)}] {repo}: {rec['api_status']}" + (f" — {rec['error']}" if rec["error"] else ""))
         if index < len(repos) and args.delay_seconds:

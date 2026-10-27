@@ -1,0 +1,23 @@
+﻿name,url,research_focus,review_status,license_review_required
+دیدار CRM,https://didar.me/,Benchmark محصول تجاری برای قیف فروش، follow-up، Customer 360، فرم لید و بومی‌سازی فارسی؛ فقط مشاهده رفتار عمومی/دمو با مجوز.,TO_REVIEW,YES
+Jira Cloud,https://support.atlassian.com/jira-software-cloud/docs/what-is-a-jira-software-board/,Benchmark board، backlog، issue detail، status transition، sprint، filter و permission.,TO_REVIEW,YES
+Twenty CRM,https://github.com/twentyhq/twenty,بررسی schema extensibility، modern CRM UX و developer experience؛ LICENSE هر بخش/edition را بازبینی کن.,TO_REVIEW,YES
+EspoCRM,https://github.com/espocrm/espocrm,بررسی CRM modules، workflow، portals و model-driven records؛ repository اعلام می‌کند AGPLv3.,TO_REVIEW,YES
+SuiteCRM,https://github.com/SuiteCRM/SuiteCRM,بررسی CRM سازمانی و breadth ماژول‌ها؛ repository اعلام می‌کند AGPLv3.,TO_REVIEW,YES
+Frappe CRM,https://github.com/frappe/crm,بررسی focused sales CRM؛ LICENSE repository باید قبل از اقتباس مجدداً بررسی شود.,TO_REVIEW,YES
+ERPNext,https://github.com/frappe/erpnext,بررسی ارتباط CRM با عملیات/ERP؛ اسناد رسمی GPLv3 را ذکر می‌کنند.,TO_REVIEW,YES
+Odoo Community,https://github.com/odoo/odoo,بررسی ماژولار بودن؛ تفکیک edition و مجوز هر addon ضروری است.,TO_REVIEW,YES
+Plane,https://github.com/makeplane/plane,بررسی work items، views، cycles، modules و docs؛ صفحه رسمی Community Edition را AGPL-3.0 معرفی می‌کند.,TO_REVIEW,YES
+Leantime,https://github.com/leantime/leantime,بررسی مدیریت پروژه با ساده‌سازی UX، goals، kanban، Gantt و accessibility-minded design.,TO_REVIEW,YES
+Chatwoot,https://github.com/chatwoot/chatwoot,بررسی inbox، ticket/conversation، omni-channel و support workflows؛ شاخه‌ها/edition جداگانه را بررسی کن.,TO_REVIEW,YES
+Taiga,https://github.com/taigaio/taiga,بررسی agile project management و UX برد/sprint؛ فایل LICENSE هر component را ببین.,TO_REVIEW,YES
+Wekan,https://github.com/wekan/wekan,بررسی kanban workflows و self-hosted operations.,TO_REVIEW,YES
+OpenProject,https://github.com/opf/openproject,بررسی project governance، work packages، roadmap و enterprise operations.,TO_REVIEW,YES
+Budibase,https://github.com/Budibase/budibase,بررسی low-code data/forms؛ licensing و commercial components بررسی شود.,TO_REVIEW,YES
+Appsmith,https://github.com/appsmithorg/appsmith,بررسی internal tool builders و admin console patterns؛ نسخه و مجوز را بررسی کن.,TO_REVIEW,YES
+Directus,https://github.com/directus/directus,بررسی data platform و permissions؛ licensing edition-specific را بازبینی کن.,TO_REVIEW,YES
+Keycloak,https://github.com/keycloak/keycloak,مرجع identity/access management؛ جایگزین ادغام صحیح با OIDC نیست.,TO_REVIEW,YES
+OpenTelemetry,https://github.com/open-telemetry/opentelemetry-collector,مرجع instrumentation و vendor-neutral observability.,TO_REVIEW,YES
+OWASP ASVS,https://owasp.org/www-project-application-security-verification-standard/,معیار verification برای کنترل‌های فنی امنیت وب و API؛ baseline متناسب با ریسک انتخاب شود.,TO_REVIEW,YES
+WCAG 2.2,https://www.w3.org/WAI/standards-guidelines/wcag/,معیار دسترس‌پذیری؛ برای جریان‌های اصلی هدف AA را بگیرید و استثناءها را مستند کنید.,TO_REVIEW,YES
+n8n,https://github.com/n8n-io/n8n,برای الگوهای automation فقط بررسی معماری و license؛ Sustainable Use License محدودیت‌های استفاده دارد و OSI-approved open source تلقی نمی‌شود.,TO_REVIEW,YES

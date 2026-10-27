@@ -48,7 +48,9 @@ export interface ApiClientConfig {
   authToken?: string;
 }
 
-export const DEFAULT_AUTH_TOKEN = '22222222-2222-2222-2222-222222222222';
+// Dev-only fixture identity; supply via env or explicit authToken in real usage.
+// A hardcoded user UUID in source was a security finding (Mimosa L3).
+export const DEFAULT_AUTH_TOKEN = process.env.EXPO_PUBLIC_DEV_AUTH_TOKEN ?? '';
 
 export function getDefaultApiUrl(): string {
   if (process.env.EXPO_PUBLIC_API_URL) {
