@@ -416,6 +416,18 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام هجدهم: متدهای MFA در api-client
+
+- `setupMfa()` و `enableMfa(code)` به api-client اضافه شدند (endpointهای کنترلر از گام دهم) — UI تنظیمات امنیت می‌تواند در گام بعد بدون دست‌زدن به API داخلی از آن‌ها استفاده کند
+
+### شواهد گام هجدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

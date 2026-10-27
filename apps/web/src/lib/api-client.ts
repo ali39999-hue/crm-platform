@@ -3342,6 +3342,20 @@ export class ApiClient {
    * of an instant member. The caller MUST surface the token to the inviter —
    * it is never retrievable again.
    */
+  /** MFA lifecycle (P02): request a pending secret, then verify one live code. */
+  async setupMfa(): Promise<{ secret: string; otpauthUri: string }> {
+    return this.request<{ secret: string; otpauthUri: string }>('/auth/mfa/setup', {
+      method: 'POST',
+    });
+  }
+
+  async enableMfa(code: string): Promise<{ enabled: boolean }> {
+    return this.request<{ enabled: boolean }>('/auth/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
   async listOrganizationInvitations(): Promise<OrganizationInvitationDto[]> {
     try {
       return await this.request<OrganizationInvitationDto[]>('/organization/invitations');
