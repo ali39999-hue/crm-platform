@@ -460,6 +460,43 @@ export type SubmitWebFormResponse = {
   leadId: string;
 };
 
+/* Didar CRM-Inspired: Leeda Exhibition Lead Management (مدیریت نمایشگاه لیدا) */
+
+export type LeadTemperature = 'HOT' | 'WARM' | 'COLD';
+
+export type ExhibitionLeadIntakeDto = {
+  id: string;
+  organizationId: string;
+  exhibitionName: string;
+  boothNumber?: string | null | undefined;
+  visitorName: string;
+  companyName?: string | null | undefined;
+  mobilePhone: string;
+  jobTitle?: string | null | undefined;
+  interestProducts: string[];
+  temperature: LeadTemperature;
+  notes?: string | null | undefined;
+  welcomeSmsSent: boolean;
+  leadId?: string | null | undefined;
+  dealId?: string | null | undefined;
+  capturedById: string;
+  capturedByName: string;
+  createdAt: string;
+};
+
+export type CreateExhibitionLeadRequest = {
+  exhibitionName: string;
+  boothNumber?: string | undefined;
+  visitorName: string;
+  companyName?: string | undefined;
+  mobilePhone: string;
+  jobTitle?: string | undefined;
+  interestProducts?: string[] | undefined;
+  temperature: LeadTemperature;
+  notes?: string | undefined;
+  sendWelcomeSms?: boolean | undefined;
+};
+
 export type DealLossReasonType =
   | 'PRICE_TOO_HIGH'
   | 'COMPETITOR_WON'

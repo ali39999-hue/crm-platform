@@ -92,6 +92,8 @@ import { CardsPipelineController } from './modules/crm/cards/cards-pipeline.cont
 import { CardsPipelineService } from './modules/crm/cards/cards-pipeline.service.js';
 import { WebFormController } from './modules/crm/forms/web-form.controller.js';
 import { WebFormService } from './modules/crm/forms/web-form.service.js';
+import { ExhibitionController } from './modules/crm/exhibition/exhibition.controller.js';
+import { ExhibitionService } from './modules/crm/exhibition/exhibition.service.js';
 
 @Module({
   imports: [PrismaModule],
@@ -125,12 +127,14 @@ import { WebFormService } from './modules/crm/forms/web-form.service.js';
     InstallmentsController,
     CardsPipelineController,
     WebFormController,
+    ExhibitionController,
   ],
   providers: [
     VoipService,
     InstallmentsService,
     CardsPipelineService,
     WebFormService,
+    ExhibitionService,
     AuthService,
     TokenService,
     AuthGuard,

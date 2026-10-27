@@ -33,3 +33,4 @@ export * from './ConversionSpeedModal';
 export * from './CardsPipelineView';
 export * from './WebFormBuilderView';
 export * from './JalaliActivityCalendarView';
+export * from './ExhibitionLeadIntakeModal';

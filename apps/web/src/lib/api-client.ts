@@ -102,6 +102,9 @@ import type {
   SubmitWebFormRequest,
   SubmitWebFormResponse,
   WebFormDto,
+  CreateExhibitionLeadRequest,
+  ExhibitionLeadIntakeDto,
+  LeadTemperature,
   CreateCustomFieldRequest,
   CustomFieldDefinitionDto,
   CustomFieldEntityType,
@@ -4243,6 +4246,97 @@ export class ApiClient {
     } catch (err) {
       if (this.isOfflineOrNetworkError(err)) {
         return [];
+      }
+      throw err;
+    }
+  }
+
+  /* ---------------- Didar Leeda Exhibition Lead Intake ---------------- */
+
+  async captureExhibitionLead(
+    dto: CreateExhibitionLeadRequest,
+  ): Promise<ExhibitionLeadIntakeDto> {
+    try {
+      return await this.request<ExhibitionLeadIntakeDto>('/crm/exhibitions/leads', {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          id: `exh-${Date.now()}`,
+          organizationId: DEFAULT_ORG_ID,
+          exhibitionName: dto.exhibitionName,
+          boothNumber: dto.boothNumber,
+          visitorName: dto.visitorName,
+          companyName: dto.companyName,
+          mobilePhone: dto.mobilePhone,
+          jobTitle: dto.jobTitle,
+          interestProducts: dto.interestProducts || [],
+          temperature: dto.temperature,
+          notes: dto.notes,
+          welcomeSmsSent: dto.sendWelcomeSms !== false,
+          leadId: `lead-exh-${Date.now()}`,
+          dealId: dto.temperature === 'HOT' ? `deal-exh-${Date.now()}` : undefined,
+          capturedById: DEFAULT_EMPLOYEE_ID,
+          capturedByName: 'کارشناس غرفه',
+          createdAt: new Date().toISOString(),
+        };
+      }
+      throw err;
+    }
+  }
+
+  async getExhibitionLeads(exhibitionName?: string): Promise<ExhibitionLeadIntakeDto[]> {
+    try {
+      const q = exhibitionName ? `?exhibitionName=${encodeURIComponent(exhibitionName)}` : '';
+      return await this.request<ExhibitionLeadIntakeDto[]>(`/crm/exhibitions/leads${q}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return [
+          {
+            id: 'exh-1',
+            organizationId: DEFAULT_ORG_ID,
+            exhibitionName: 'نمایشگاه بین‌المللی نفت و گاز ۱۴۰۵',
+            boothNumber: 'سالن ۶ - غرفه ۱۲',
+            visitorName: 'دکتر فرشید کاظمی',
+            companyName: 'پتروپارس سازه',
+            mobilePhone: '09123334455',
+            jobTitle: 'مدیر مهندسی و خرید',
+            interestProducts: ['لایسنس سازمانی', 'استقرار سفارشی'],
+            temperature: 'HOT',
+            notes: 'درخواست جلسه دمو در هفته آینده',
+            welcomeSmsSent: true,
+            leadId: 'lead-exh-1',
+            dealId: 'deal-exh-1',
+            capturedById: DEFAULT_EMPLOYEE_ID,
+            capturedByName: 'سارا احمدی',
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+      throw err;
+    }
+  }
+
+  async getExhibitionStats(exhibitionName: string): Promise<{
+    exhibitionName: string;
+    totalCaptured: number;
+    temperatureBreakdown: Record<LeadTemperature, number>;
+  }> {
+    try {
+      return await this.request(`/crm/exhibitions/stats?exhibitionName=${encodeURIComponent(exhibitionName)}`);
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          exhibitionName,
+          totalCaptured: 1,
+          temperatureBreakdown: {
+            HOT: 1,
+            WARM: 0,
+            COLD: 0,
+          },
+        };
       }
       throw err;
     }

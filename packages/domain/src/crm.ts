@@ -352,3 +352,29 @@ export function getJalaliMonthName(monthNumber: number): string {
   return JALALI_MONTH_NAMES[monthNumber - 1] || '';
 }
 
+/**
+ * Translates exhibition lead temperature to Persian descriptive label
+ */
+export function getLeadTemperatureLabel(temperature: string): string {
+  switch (temperature) {
+    case 'HOT':
+      return '🔥 داغ (خرید فوری / نیازمند اقدام امروز)';
+    case 'WARM':
+      return '🌤️ گرم (علاقه‌مند / پیگیری در این هفته)';
+    case 'COLD':
+    default:
+      return '❄️ سرد (معمولی / دریافت بروشور و کاتالوگ)';
+  }
+}
+
+/**
+ * Generates automated exhibition booth welcome and thanks SMS
+ */
+export function generateExhibitionWelcomeSms(
+  visitorName: string,
+  companyName: string,
+  exhibitionName: string,
+): string {
+  return `جناب/سرکار ${visitorName} گرامی، از حضور ارزشمند شما در غرفه ${companyName} در ${exhibitionName} سپاسگزاریم. کاتالوگ و پروپوزال تکمیلی به زودی برای شما ارسال خواهد شد.`;
+}
+

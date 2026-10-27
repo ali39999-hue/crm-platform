@@ -53,6 +53,7 @@ import {
   CardsPipelineView,
   WebFormBuilderView,
   JalaliActivityCalendarView,
+  ExhibitionLeadIntakeModal,
 } from '../components';
 
 type AuditItem = {
@@ -131,6 +132,7 @@ export default function WorkspaceApp() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [activeSavedView, setActiveSavedView] = useState<SavedViewDto | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExhibitionModalOpen, setIsExhibitionModalOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -767,16 +769,34 @@ export default function WorkspaceApp() {
                 </p>
               </div>
 
-              {/* CRM Sub-tabs Switcher */}
-              <div
-                style={{
-                  display: 'flex',
-                  background: 'var(--soft)',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--line)',
-                }}
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsExhibitionModalOpen(true)}
+                  data-testid="open-exhibition-intake-btn"
+                  className="secondary-button"
+                  style={{
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    borderColor: '#f59e0b',
+                    color: '#f59e0b',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    fontWeight: 700,
+                  }}
+                >
+                  🎪 ثبت سرنخ نمایشگاه (لیدا)
+                </button>
+
+                {/* CRM Sub-tabs Switcher */}
+                <div
+                  style={{
+                    display: 'flex',
+                    background: 'var(--soft)',
+                    padding: '3px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--line)',
+                  }}
+                >
                 <button
                   type="button"
                   onClick={() => setCrmSubTab('accounts')}
@@ -864,6 +884,7 @@ export default function WorkspaceApp() {
                 </button>
               </div>
             </div>
+          </div>
 
             {/* Sub-tab 1: Accounts List */}
             {crmSubTab === 'accounts' && (
@@ -1299,6 +1320,13 @@ export default function WorkspaceApp() {
         onClose={() => setIsModalOpen(false)}
         onCreateTask={handleCreateTask}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Didar Leeda Exhibition Lead Intake Modal */}
+      <ExhibitionLeadIntakeModal
+        isOpen={isExhibitionModalOpen}
+        onClose={() => setIsExhibitionModalOpen(false)}
+        onNotify={(msg) => showToast(msg)}
       />
 
       {/* Customer 360 Drawer */}

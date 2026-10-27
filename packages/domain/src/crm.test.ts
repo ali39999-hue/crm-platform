@@ -7,7 +7,9 @@ import {
   canConvertLead,
   formatMoney,
   generateBirthdaySmsMessage,
+  generateExhibitionWelcomeSms,
   getJalaliMonthName,
+  getLeadTemperatureLabel,
   getLossReasonLabel,
   gregorianToJalali,
   isBirthdayToday,
@@ -201,6 +203,23 @@ describe('CRM domain business rules', () => {
       expect(getJalaliMonthName(7)).toBe('مهر');
       expect(getJalaliMonthName(8)).toBe('آبان');
       expect(getJalaliMonthName(12)).toBe('اسفند');
+    });
+
+    it('translates exhibition lead temperatures to Persian labels', () => {
+      expect(getLeadTemperatureLabel('HOT')).toContain('داغ');
+      expect(getLeadTemperatureLabel('WARM')).toContain('گرم');
+      expect(getLeadTemperatureLabel('COLD')).toContain('سرد');
+    });
+
+    it('generates personalized exhibition booth welcome SMS', () => {
+      const sms = generateExhibitionWelcomeSms(
+        'مهندس علوی',
+        'فولاد گستر',
+        'نمایشگاه صنعت تهران',
+      );
+      expect(sms).toContain('مهندس علوی');
+      expect(sms).toContain('فولاد گستر');
+      expect(sms).toContain('نمایشگاه صنعت تهران');
     });
   });
 });
