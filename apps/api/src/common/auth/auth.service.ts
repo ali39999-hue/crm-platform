@@ -1,33 +1,25 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import crypto from 'crypto';
 import type { UserContext } from './auth.types.js';
 import type { MembershipRole } from '@crm/domain';
+import {
+  InMemoryIdentityStore,
+  type IIdentityStore,
+  type MockUserRecord,
+} from './identity-store.js';
 
-export type MockUserRecord = {
-  id: string;
-  email: string;
-  password?: string;
-  passwordHash?: string;
-  displayName: string;
-  memberships: Array<{
-    organizationId: string;
-    organizationName: string;
-    organizationSlug: string;
-    role: MembershipRole;
-    active: boolean;
-  }>;
-};
+export type { MockUserRecord };
 
 export function hashPassword(password: string, salt = 'crm_static_salt_v1'): string {
   return crypto.pbkdf2Sync(password, salt, 1000, 32, 'sha256').toString('hex');
 }
 
 /**
- * Dev/test fixture credential for the in-memory user store (GATE-001): no
+ * Dev/test fixture credential for the in-memory identity store (GATE-001): no
  * plaintext fixture credential is hardcoded in this file — the value is
  * overridable via DEV_FIXTURE_CREDENTIAL. Seed accounts are disabled in
- * production entirely (see seedDefaultUsers) and the credential is rejected
- * at the login gate below. Real identity storage is a P02 deliverable.
+ * production entirely and the credential is rejected at the login gate below.
+ * Database-backed users authenticate against User.passwordHash (PBKDF2).
  */
 export const DEV_FIXTURE_CREDENTIAL =
   process.env.DEV_FIXTURE_CREDENTIAL ?? 'dev-fixture-credential-v1';
@@ -42,135 +34,26 @@ export function verifyPassword(provided: string, expectedHashOrPlain: string, sa
   }
 }
 
+/**
+ * Identity resolution, credential verification and workspace listing.
+ * User data comes from the injected IIdentityStore: the in-memory fixture
+ * store for dev/test, the Prisma-backed store (User/Membership tables) when
+ * USE_DATABASE=true.
+ */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private users: Map<string, MockUserRecord> = new Map();
 
-  constructor() {
-    this.seedDefaultUsers();
+  constructor(
+    @Inject('IDENTITY_STORE')
+    private readonly identityStore: IIdentityStore = new InMemoryIdentityStore(),
+  ) {}
+
+  async findUserByEmail(email: string): Promise<MockUserRecord | undefined> {
+    return (await this.identityStore.findByEmail(email)) ?? undefined;
   }
 
-  private seedDefaultUsers() {
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd) {
-      this.logger.log(
-        '[SECURITY] Running in production mode. Mock seed accounts are strictly disabled in production.',
-      );
-      return;
-    }
-    const users: MockUserRecord[] = [
-      {
-        id: '11111111-1111-1111-1111-111111111111',
-        email: 'admin@org-alpha.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'مدیر سیستم',
-        memberships: [
-          {
-            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            organizationName: 'شرکت آلفا',
-            organizationSlug: 'alpha',
-            role: 'SystemOwner',
-            active: true,
-          },
-        ],
-      },
-      {
-        id: '22222222-2222-2222-2222-222222222222',
-        email: 'employee@org-alpha.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'کارمند عملیات',
-        memberships: [
-          {
-            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            organizationName: 'شرکت آلفا',
-            organizationSlug: 'alpha',
-            role: 'Employee',
-            active: true,
-          },
-        ],
-      },
-      {
-        id: '33333333-3333-3333-3333-333333333333',
-        email: 'customer@client.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'کاربر پورتال مشتری',
-        memberships: [
-          {
-            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            organizationName: 'شرکت آلفا',
-            organizationSlug: 'alpha',
-            role: 'CustomerPortalUser',
-            active: true,
-          },
-        ],
-      },
-      {
-        id: '44444444-4444-4444-4444-444444444444',
-        email: 'other-org@beta.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'کارمند سازمان بتا',
-        memberships: [
-          {
-            organizationId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-            organizationName: 'سازمان بتا',
-            organizationSlug: 'beta',
-            role: 'Employee',
-            active: true,
-          },
-        ],
-      },
-      {
-        id: '55555555-5555-5555-5555-555555555555',
-        email: 'support@org-alpha.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'کارشناس پشتیبانی',
-        memberships: [
-          {
-            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            organizationName: 'شرکت آلفا',
-            organizationSlug: 'alpha',
-            role: 'SupportAgent',
-            active: true,
-          },
-        ],
-      },
-      {
-        id: '66666666-6666-6666-6666-666666666666',
-        email: 'multiorg@example.com',
-        password: DEV_FIXTURE_CREDENTIAL,
-        displayName: 'کاربر چندسازمانی',
-        memberships: [
-          {
-            organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            organizationName: 'شرکت آلفا',
-            organizationSlug: 'alpha',
-            role: 'Employee',
-            active: true,
-          },
-          {
-            organizationId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-            organizationName: 'سازمان بتا',
-            organizationSlug: 'beta',
-            role: 'Employee',
-            active: true,
-          },
-        ],
-      },
-    ];
-
-    for (const u of users) {
-      this.users.set(u.id, u);
-      this.users.set(u.email, u);
-      this.users.set(u.email.toLowerCase(), u);
-    }
-  }
-
-  findUserByEmail(email: string): MockUserRecord | undefined {
-    return this.users.get(email) || this.users.get(email.toLowerCase().trim());
-  }
-
-  validateCredentials(email: string, password?: string): MockUserRecord {
+  async validateCredentials(email: string, password?: string): Promise<MockUserRecord> {
     if (!password) {
       throw new UnauthorizedException('Password is required');
     }
@@ -182,21 +65,20 @@ export class AuthService {
       );
     }
 
-    const user = this.findUserByEmail(email);
+    const user = await this.identityStore.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const expected = user.passwordHash || user.password;
-    if (expected && !verifyPassword(password, expected)) {
+    const expected = user.passwordHash ?? user.password;
+    if (!expected || !verifyPassword(password, expected)) {
       throw new UnauthorizedException('Invalid email or password');
     }
-
     return user;
   }
 
-  resolveUser(userIdOrEmail: string, preferredOrgId?: string): UserContext {
-    const user = this.users.get(userIdOrEmail) || this.users.get(userIdOrEmail.toLowerCase().trim());
+  async resolveUser(userIdOrEmail: string, preferredOrgId?: string): Promise<UserContext> {
+    const user = await this.identityStore.findByIdOrEmail(userIdOrEmail);
     if (!user) {
       throw new UnauthorizedException('User not found or session invalid');
     }
@@ -207,7 +89,7 @@ export class AuthService {
     }
 
     // Resolve active org strictly from user's valid memberships
-    let activeMembership = activeMemberships[0];
+    let activeMembership = activeMemberships[0]!;
     if (preferredOrgId) {
       const matched = activeMemberships.find((m) => m.organizationId === preferredOrgId);
       if (matched) {
@@ -238,8 +120,8 @@ export class AuthService {
     };
   }
 
-  getWorkspaces(userId: string, currentOrgId?: string) {
-    const user = this.users.get(userId) || this.users.get(userId.toLowerCase().trim());
+  async getWorkspaces(userId: string, currentOrgId?: string) {
+    const user = await this.identityStore.findByIdOrEmail(userId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }

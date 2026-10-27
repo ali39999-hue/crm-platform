@@ -91,7 +91,7 @@ describe('Support & Ticketing Module with Strict Note Privacy', () => {
     });
 
     it('rejects CustomerPortalUser from adding internal notes with 403 Forbidden', async () => {
-      const customer = authService.resolveUser(customerId);
+      const customer = await authService.resolveUser(customerId);
 
       await expect(
         supportService.addMessage(orgAlphaId, customer, ticketAlphaId, {
@@ -102,7 +102,7 @@ describe('Support & Ticketing Module with Strict Note Privacy', () => {
     });
 
     it('allows SupportAgent to add customer reply and internal note', async () => {
-      const agent = authService.resolveUser(supportAgentId);
+      const agent = await authService.resolveUser(supportAgentId);
 
       const added = await supportService.addMessage(orgAlphaId, agent, ticketAlphaId, {
         body: 'یادداشت داخلی جدید جهت هماهنگی با تیم زیرساخت',

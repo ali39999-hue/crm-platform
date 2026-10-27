@@ -38,8 +38,8 @@ export class AuthController {
   @Post(['login', 'auth/login'])
   async login(@Body() dto: LoginRequestDto): Promise<AuthResponseDto> {
     try {
-      const userRecord = this.authService.validateCredentials(dto.email, dto.password);
-      const userContext = this.authService.resolveUser(userRecord.id);
+      const userRecord = await this.authService.validateCredentials(dto.email, dto.password);
+      const userContext = await this.authService.resolveUser(userRecord.id);
 
       const tokenPair = this.tokenService.generateTokenPair({
         userId: userContext.id,
@@ -103,7 +103,7 @@ export class AuthController {
     this.tokenService.revokeToken(payload.jti, payload.exp);
 
     // Resolve user context
-    const userContext = this.authService.resolveUser(payload.sub, payload.orgId);
+    const userContext = await this.authService.resolveUser(payload.sub, payload.orgId);
 
     // Issue new token pair preserving the session
     const tokenPair = this.tokenService.generateTokenPair({
@@ -191,7 +191,7 @@ export class AuthController {
       );
     }
 
-    const newUserContext = this.authService.resolveUser(user.id, dto.organizationId);
+    const newUserContext = await this.authService.resolveUser(user.id, dto.organizationId);
     const tokenPayload = (req as any).tokenPayload as TokenPayload | undefined;
 
     const tokenPair = this.tokenService.generateTokenPair({
@@ -247,7 +247,7 @@ export class AuthController {
   }
 
   @Get(['workspaces', 'auth/workspaces'])
-  getWorkspaces(@CurrentUser() user: UserContext): WorkspaceDto[] {
+  async getWorkspaces(@CurrentUser() user: UserContext): Promise<WorkspaceDto[]> {
     return this.authService.getWorkspaces(user.id, user.activeOrganization.id);
   }
 }

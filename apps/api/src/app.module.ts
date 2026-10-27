@@ -46,6 +46,8 @@ import { InMemoryApiKeyRepository } from './modules/integrations/api-key.reposit
 import { PrismaApiKeyRepository } from './modules/integrations/prisma-api-key.repository.js';
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
+import { InMemoryIdentityStore } from './common/auth/identity-store.js';
+import { PrismaIdentityStore } from './common/auth/prisma-identity.store.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
 import { PermissionsGuard } from './common/auth/permissions.guard.js';
 import { RateLimiterGuard } from './common/security/rate-limiter.guard.js';
@@ -171,6 +173,14 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     ExhibitionService,
     LettersService,
     MeetingsService,
+    {
+      // P02 / CRM-AUTH: real identity lives in User/Membership tables when
+      // USE_DATABASE=true; dev and unit tests keep the fixture store.
+      provide: 'IDENTITY_STORE',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaIdentityStore : InMemoryIdentityStore,
+    },
+    InMemoryIdentityStore,
+    PrismaIdentityStore,
     AuthService,
     TokenService,
     AuthGuard,

@@ -177,7 +177,24 @@
 | `pnpm audit:persistence:strict` | **exit 0** |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
-## ۱۳. Rollback
+## ۱۴. فاز P02 — گام اول: هویت durable (commit بعدی)
+
+- ستون `passwordHash` روی User + migration `20261028_identity_password`
+- **`IIdentityStore`** جدید: `InMemoryIdentityStore` (همان fixtureهای dev/test، غیرفعال در production) و **`PrismaIdentityStore`** که از جدول‌های User/Membership با tenantClient می‌خواند؛ نگاشت نقش‌های Prisma (OWNER/ADMIN/MANAGER/MEMBER/CUSTOMER/AUDITOR) به نقش‌های ماتریس domain (SystemOwner/.../Employee/...) مستند و تست‌شده
+- `AuthService` حالا store تزریق‌شده دارد و متدهایش async شدند (`IDENTITY_STORE` conditional با USE_DATABASE)؛ `AuthGuard` async شد؛ verify در DB-mode با PBKDF2 روی `User.passwordHash`
+- ناسازگاری قدیمی دو enum نقش مستند شد — یکسان‌سازی schema تصمیم آینده P02 است
+- در DB-mode کاربران باید در جدول User با passwordHash provision شوند (ثبت‌نام/دعوت‌نامه = تسک بعدی P02)
+- ۳۱ نقطه فراخوانی (گارد/کنترلر/۵ spec) به async مهاجرت کردند
+
+### شواهد فاز P02 گام اول
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۱۹/۶۱۹** (+۵ تست identity store)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
+## ۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

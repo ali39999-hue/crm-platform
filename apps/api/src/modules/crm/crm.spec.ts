@@ -168,8 +168,8 @@ describe('CRM Module, Deduplication, and Idempotent Conversion', () => {
   });
 
   describe('5. CRM Permission Negative Test', () => {
-    it('CustomerPortalUser is forbidden from editing CRM records', () => {
-      const customer = authService.resolveUser(customerId);
+    it('CustomerPortalUser is forbidden from editing CRM records', async () => {
+      const customer = await authService.resolveUser(customerId);
       const mockContext: any = {
         getHandler: () => ({}),
         getClass: () => ({}),

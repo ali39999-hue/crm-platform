@@ -192,7 +192,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       expect(() => tokenService.verifyToken(tampered)).toThrow(UnauthorizedException);
     });
 
-    it('rejects expired token', () => {
+    it('rejects expired token', async () => {
       // Create service with -10s TTL and same secret
       const expiredService = new TokenService('test-secret-key-at-least-32-chars-long-12345', -10, -10);
       const pair = expiredService.generateTokenPair({
@@ -206,7 +206,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       expect(() => expiredService.verifyToken(pair.accessToken)).toThrow(/expired/i);
     });
 
-    it('rejects when token type does not match expected type', () => {
+    it('rejects when token type does not match expected type', async () => {
       const pair = tokenService.generateTokenPair({
         userId: '11111111-1111-1111-1111-111111111111',
         email: adminEmail,
@@ -293,7 +293,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         password: validPassword,
       });
 
-      const userContext = authService.resolveUser(loginRes.user.id);
+      const userContext = await authService.resolveUser(loginRes.user.id);
       const tokenPayload = tokenService.verifyToken(loginRes.accessToken, 'access');
 
       const mockReq: any = {
@@ -319,7 +319,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         password: validPassword,
       });
 
-      const userContext = authService.resolveUser(loginRes.user.id);
+      const userContext = await authService.resolveUser(loginRes.user.id);
       const tokenPayload = tokenService.verifyToken(loginRes.accessToken, 'access');
 
       await authController.logout(
@@ -340,7 +340,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         password: validPassword,
       });
 
-      const userContext = authService.resolveUser(loginRes.user.id);
+      const userContext = await authService.resolveUser(loginRes.user.id);
       const tokenPayload = tokenService.verifyToken(loginRes.accessToken, 'access');
 
       // Logout
@@ -355,12 +355,12 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         authorization: `Bearer ${loginRes.accessToken}`,
       });
 
-      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
-      expect(() => authGuard.canActivate(context)).toThrow(/revoked/i);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(/revoked/i);
     });
 
     it('supports revoking all tokens for a user (session invalidation on admin action)', async () => {
-      const user = authService.resolveUser('11111111-1111-1111-1111-111111111111');
+      const user = await authService.resolveUser('11111111-1111-1111-1111-111111111111');
       const token1 = tokenService.generateTokenPair({
         userId: user.id,
         email: user.email,
@@ -376,7 +376,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       expect(() => tokenService.verifyToken(token1.accessToken)).toThrow(/revoked/i);
     });
 
-    it('cleans up expired records in revocation store', () => {
+    it('cleans up expired records in revocation store', async () => {
       // Add a token that has already expired
       tokenService.revokeToken('expired-jti-123', Math.floor(Date.now() / 1000) - 100);
       tokenService.revokeSession('expired-session-123', Math.floor(Date.now() / 1000) - 100);
@@ -395,7 +395,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   describe('5. Switch Workspace & Tenant Validation', () => {
     it('switches workspace successfully for user belonging to multiple organizations', async () => {
       // User multiorg belongs to both Org Alpha and Org Beta
-      const userContextAlpha = authService.resolveUser(multiOrgEmail, orgAlphaId);
+      const userContextAlpha = await authService.resolveUser(multiOrgEmail, orgAlphaId);
       expect(userContextAlpha.activeOrganization.id).toBe(orgAlphaId);
 
       const loginRes = await authController.login({
@@ -431,7 +431,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
 
     it('rejects switching workspace if user is not a member of the target organization', async () => {
       // Employee belongs only to Org Alpha
-      const employeeContext = authService.resolveUser(employeeEmail, orgAlphaId);
+      const employeeContext = await authService.resolveUser(employeeEmail, orgAlphaId);
 
       const mockReq: any = {
         token: 'mock-token',
@@ -446,7 +446,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
     });
 
     it('rejects switching to non-existent organization with ForbiddenException', async () => {
-      const employeeContext = authService.resolveUser(employeeEmail, orgAlphaId);
+      const employeeContext = await authService.resolveUser(employeeEmail, orgAlphaId);
 
       await expect(
         authController.switchWorkspace({} as any, employeeContext, {
@@ -459,14 +459,14 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   /* ---------------- 6. AuthGuard End-to-End Behavior ---------------- */
 
   describe('6. AuthGuard Enforcement', () => {
-    it('allows public endpoints without authentication header', () => {
+    it('allows public endpoints without authentication header', async () => {
       const { context } = createMockContext({ isPublic: true });
-      expect(authGuard.canActivate(context)).toBe(true);
+      expect(await authGuard.canActivate(context)).toBe(true);
     });
 
-    it('rejects protected endpoints when no credentials are provided', () => {
+    it('rejects protected endpoints when no credentials are provided', async () => {
       const { context } = createMockContext({});
-      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
     });
 
     it('accepts protected endpoints with valid Bearer JWT', async () => {
@@ -479,7 +479,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         authorization: `Bearer ${loginRes.accessToken}`,
       });
 
-      expect(authGuard.canActivate(context)).toBe(true);
+      expect(await authGuard.canActivate(context)).toBe(true);
       expect(req.user).toBeDefined();
       expect(req.user.email).toBe(employeeEmail);
       expect(req.token).toBe(loginRes.accessToken);
@@ -497,17 +497,17 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         authorization: `Bearer ${loginRes.accessToken}`,
       });
 
-      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
-      expect(() => authGuard.canActivate(context)).toThrow(/revoked/i);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(/revoked/i);
     });
 
-    it('supports backward-compatible x-user-id header in test environment', () => {
+    it('supports backward-compatible x-user-id header in test environment', async () => {
       const userId = '22222222-2222-2222-2222-222222222222';
       const { context, req } = createMockContext({
         userId,
       });
 
-      expect(authGuard.canActivate(context)).toBe(true);
+      expect(await authGuard.canActivate(context)).toBe(true);
       expect(req.user.id).toBe(userId);
     });
   });
@@ -515,8 +515,8 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   /* ---------------- 7. Me and Workspaces Endpoints ---------------- */
 
   describe('7. Profile & Workspaces', () => {
-    it('returns profile via getMe', () => {
-      const user = authService.resolveUser(adminEmail);
+    it('returns profile via getMe', async () => {
+      const user = await authService.resolveUser(adminEmail);
       const profile = authController.getMe(user);
 
       expect(profile.id).toBe(user.id);
@@ -525,9 +525,9 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       expect(profile.activeOrganization.id).toBe(orgAlphaId);
     });
 
-    it('returns workspace list via getWorkspaces marking active org as current', () => {
-      const user = authService.resolveUser(multiOrgEmail, orgBetaId);
-      const workspaces = authController.getWorkspaces(user);
+    it('returns workspace list via getWorkspaces marking active org as current', async () => {
+      const user = await authService.resolveUser(multiOrgEmail, orgBetaId);
+      const workspaces = await authController.getWorkspaces(user);
 
       expect(workspaces.length).toBe(2);
       const current = workspaces.find((w) => w.isCurrent);
@@ -540,41 +540,41 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   describe('8. Production Security Gates & Insecure Auth Rejection', () => {
     const originalEnv = process.env.NODE_ENV;
 
-    it('PRODUCTION GATE: strictly rejects x-user-id header in production', () => {
+    it('PRODUCTION GATE: strictly rejects x-user-id header in production', async () => {
       process.env.NODE_ENV = 'production';
       try {
         const { context } = createMockContext({
           userId: '22222222-2222-2222-2222-222222222222',
         });
-        expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
-        expect(() => authGuard.canActivate(context)).toThrow(/strictly forbidden in production/i);
+        await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+        await expect(authGuard.canActivate(context)).rejects.toThrow(/strictly forbidden in production/i);
       } finally {
         process.env.NODE_ENV = originalEnv;
       }
     });
 
-    it('PRODUCTION GATE: strictly rejects raw userId or email as Bearer token in production', () => {
+    it('PRODUCTION GATE: strictly rejects raw userId or email as Bearer token in production', async () => {
       process.env.NODE_ENV = 'production';
       try {
         const { context } = createMockContext({
           authorization: 'Bearer 22222222-2222-2222-2222-222222222222',
         });
-        expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
-        expect(() => authGuard.canActivate(context)).toThrow(/forbidden in production/i);
+        await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+        await expect(authGuard.canActivate(context)).rejects.toThrow(/forbidden in production/i);
       } finally {
         process.env.NODE_ENV = originalEnv;
       }
     });
 
-    it('PRODUCTION GATE: rejects the dev fixture credential in production', () => {
+    it('PRODUCTION GATE: rejects the dev fixture credential in production', async () => {
       process.env.NODE_ENV = 'production';
       try {
-        expect(() =>
+        await expect(
           authService.validateCredentials(adminEmail, DEV_FIXTURE_CREDENTIAL),
-        ).toThrow(UnauthorizedException);
-        expect(() =>
+        ).rejects.toThrow(UnauthorizedException);
+        await expect(
           authService.validateCredentials(adminEmail, DEV_FIXTURE_CREDENTIAL),
-        ).toThrow(/fixture credential/i);
+        ).rejects.toThrow(/fixture credential/i);
       } finally {
         process.env.NODE_ENV = originalEnv;
       }
@@ -592,8 +592,8 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
         orgId: orgBetaId,
       });
 
-      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedException);
-      expect(() => authGuard.canActivate(context)).toThrow(/not an active member/i);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(authGuard.canActivate(context)).rejects.toThrow(/not an active member/i);
     });
   });
 });

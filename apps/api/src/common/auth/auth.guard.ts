@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
     private readonly tokenService: TokenService = new TokenService(),
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -68,7 +68,7 @@ export class AuthGuard implements CanActivate {
       const payload = this.tokenService.verifyToken(rawToken, 'access');
       const targetOrgId = headerOrgId || payload.orgId;
 
-      userContext = this.authService.resolveUser(payload.sub, targetOrgId);
+      userContext = await this.authService.resolveUser(payload.sub, targetOrgId);
 
       // Security Gate: Ensure target organization matches user's valid membership (anti-IDOR)
       if (headerOrgId && userContext.activeOrganization.id !== headerOrgId) {
@@ -87,7 +87,7 @@ export class AuthGuard implements CanActivate {
         );
       }
       // Fallback for non-production environments with explicit flag enabled
-      userContext = this.authService.resolveUser(rawToken, headerOrgId);
+      userContext = await this.authService.resolveUser(rawToken, headerOrgId);
       request.token = rawToken;
     }
 

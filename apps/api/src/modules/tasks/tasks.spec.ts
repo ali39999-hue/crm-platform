@@ -43,15 +43,15 @@ describe('Tasks & Security Vertical Slice', () => {
   });
 
   describe('1. Authentication and Workspace resolution', () => {
-    it('authenticates valid employee and resolves active organization scope', () => {
-      const user = authService.resolveUser(employeeAlphaId);
+    it('authenticates valid employee and resolves active organization scope', async () => {
+      const user = await authService.resolveUser(employeeAlphaId);
       expect(user.id).toBe(employeeAlphaId);
       expect(user.activeOrganization.id).toBe(orgAlphaId);
       expect(user.activeOrganization.role).toBe('Employee');
     });
 
-    it('rejects unknown user with 401 Unauthorized', () => {
-      expect(() => authService.resolveUser('unknown-user-id')).toThrow(UnauthorizedException);
+    it('rejects unknown user with 401 Unauthorized', async () => {
+      await expect(authService.resolveUser('unknown-user-id')).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -141,8 +141,8 @@ describe('Tasks & Security Vertical Slice', () => {
   });
 
   describe('4. Security Negative Tests: Authorization and Cross-Org IDOR', () => {
-    it('CustomerPortalUser is forbidden from viewing internal tasks', () => {
-      const customer = authService.resolveUser(customerId);
+    it('CustomerPortalUser is forbidden from viewing internal tasks', async () => {
+      const customer = await authService.resolveUser(customerId);
       const mockContext: any = {
         getHandler: () => ({}),
         getClass: () => ({}),

@@ -389,7 +389,7 @@ describe('CSV Import/Export Engine (Task F5-06)', () => {
 
   describe('6. Controller & Permission Matrix Enforcement', () => {
     it('invokes controller preview and execute endpoints', async () => {
-      const adminUser = authService.resolveUser(adminAlphaId);
+      const adminUser = await authService.resolveUser(adminAlphaId);
 
       const previewRes = await importExportController.previewLeadImport(adminUser, {
         csv: 'displayName,email\nتست کنترلر,test.ctrl@org.com',
@@ -405,9 +405,9 @@ describe('CSV Import/Export Engine (Task F5-06)', () => {
       expect(leadsCsv).toContain('test.ctrl@org.com');
     });
 
-    it('enforces export_data permission: Employee is forbidden from exporting data', () => {
+    it('enforces export_data permission: Employee is forbidden from exporting data', async () => {
       // Employee role has export_data: 'no'
-      const employee = authService.resolveUser(employeeAlphaId);
+      const employee = await authService.resolveUser(employeeAlphaId);
       const mockContext: any = {
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -423,9 +423,9 @@ describe('CSV Import/Export Engine (Task F5-06)', () => {
       expect(() => exportGuard.canActivate(mockContext)).toThrow(ForbiddenException);
     });
 
-    it('allows SystemOwner to export data', () => {
+    it('allows SystemOwner to export data', async () => {
       // SystemOwner has export_data: 'yes'
-      const admin = authService.resolveUser(adminAlphaId);
+      const admin = await authService.resolveUser(adminAlphaId);
       const mockContext: any = {
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -441,9 +441,9 @@ describe('CSV Import/Export Engine (Task F5-06)', () => {
       expect(exportGuard.canActivate(mockContext)).toBe(true);
     });
 
-    it('enforces edit_crm permission: CustomerPortalUser is forbidden from importing data', () => {
+    it('enforces edit_crm permission: CustomerPortalUser is forbidden from importing data', async () => {
       // CustomerPortalUser has edit_crm: 'no'
-      const customer = authService.resolveUser(customerId);
+      const customer = await authService.resolveUser(customerId);
       const mockContext: any = {
         getHandler: () => ({}),
         getClass: () => ({}),
