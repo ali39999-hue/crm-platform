@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import crypto, { randomUUID } from 'crypto';
 
 export type TokenType = 'access' | 'refresh';
@@ -31,8 +31,15 @@ export interface TokenPair {
   sessionId: string;
 }
 
+export type TokenRevocationPersistenceEntry = { key: string; kind: string; expiresAt: number };
+export type TokenRevocationPersistence = {
+  restore(): Promise<TokenRevocationPersistenceEntry[]>;
+  persist(entry: TokenRevocationPersistenceEntry): Promise<void>;
+  purgeExpired(now?: number): Promise<number>;
+};
+
 @Injectable()
-export class TokenService {
+export class TokenService implements OnModuleInit {
   private readonly secret: string;
   private readonly accessTokenTtl: number; // in seconds (default: 900 = 15m)
   private readonly refreshTokenTtl: number; // in seconds (default: 604800 = 7d)
@@ -45,17 +52,50 @@ export class TokenService {
   // Any token for this user issued at or before revokedAt is considered revoked
   private readonly userRevocations: Map<string, number> = new Map();
 
+  private revocationPersistence: TokenRevocationPersistence | undefined;
+
   constructor(
     secret?: string,
     accessTokenTtl = 900, // 15 minutes
     refreshTokenTtl = 604800, // 7 days
+    revocationPersistence?: TokenRevocationPersistence,
   ) {
+    this.revocationPersistence = revocationPersistence;
     this.secret =
       secret ||
       process.env.JWT_SECRET ||
       'crm-platform-secure-jwt-hmac-sha256-secret-key-32-chars-minimum';
     this.accessTokenTtl = accessTokenTtl;
     this.refreshTokenTtl = refreshTokenTtl;
+  }
+
+  /**
+   * Session-lifecycle durability (P02): in database mode, revocation entries
+   * are restored from the durable store at boot and every revocation is
+   * written through, so a restart cannot resurrect logged-out tokens.
+   * Reads stay in-memory/synchronous for guard performance; multi-instance
+   * deployments move to a shared store in P13.
+   */
+  async onModuleInit(): Promise<void> {
+    if (!this.revocationPersistence || process.env.USE_DATABASE !== 'true') return;
+    try {
+      await this.revocationPersistence.purgeExpired();
+      const entries = await this.revocationPersistence.restore();
+      for (const e of entries) {
+        if (e.kind === 'session') this.revokedSessions.set(e.key, e.expiresAt);
+        else if (e.kind === 'user') this.userRevocations.set(e.key, Math.floor(e.expiresAt / 1000));
+        else this.revokedTokens.set(e.key, e.expiresAt);
+      }
+    } catch (err: any) {
+      // Restoration must never prevent startup; the fail-closed production
+      // gates handle persistence completeness separately.
+      console.warn('[TokenService] revocation restore failed:', err?.message);
+    }
+  }
+
+  private persist(entry: TokenRevocationPersistenceEntry): void {
+    if (process.env.USE_DATABASE !== 'true') return; // fixture mode: memory only
+    this.revocationPersistence?.persist(entry).catch(() => undefined);
   }
 
   /**
@@ -194,8 +234,10 @@ export class TokenService {
     const defaultExp = Math.floor(Date.now() / 1000) + this.refreshTokenTtl;
     const expiry = exp ?? defaultExp;
     this.revokedTokens.set(jti, expiry);
+    this.persist({ key: jti, kind: 'token', expiresAt: expiry * 1000 });
     if (jti !== jtiOrToken) {
       this.revokedTokens.set(jtiOrToken, expiry);
+      this.persist({ key: jtiOrToken, kind: 'token', expiresAt: expiry * 1000 });
     }
   }
 
@@ -205,7 +247,9 @@ export class TokenService {
   revokeSession(sessionId: string, expiresAt?: number | undefined): void {
     this.cleanupExpired();
     const defaultExp = Math.floor(Date.now() / 1000) + this.refreshTokenTtl;
-    this.revokedSessions.set(sessionId, expiresAt ?? defaultExp);
+    const sessionExp = expiresAt ?? defaultExp;
+    this.revokedSessions.set(sessionId, sessionExp);
+    this.persist({ key: sessionId, kind: 'session', expiresAt: sessionExp * 1000 });
   }
 
   /**
@@ -214,6 +258,8 @@ export class TokenService {
   revokeAllForUser(userId: string): void {
     const now = Math.floor(Date.now() / 1000);
     this.userRevocations.set(userId, now);
+    // user-wide revocation has no natural expiry; keep for 30 days (max refresh lifetime margin)
+    this.persist({ key: userId, kind: 'user', expiresAt: (now + 2_592_000) * 1000 });
   }
 
   /**

@@ -314,6 +314,22 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام یازدهم: durability لیست سیاه session
+
+- یافته امنیتی: `revokedTokens/revokedSessions/userRevocations` در TokenService همه Map حافظه بودند — با restart، توکن‌های logoutشده **دوباره معتبر** می‌شدند
+- جدول **`RevokedCredential`** (key یکتا، kind=token/session/user، expiresAt برای purge) + migration یازدهم
+- الگوی write-through + restore هنگام boot فقط در DB-mode (persist در fixture mode no-op تا رفتار dev/E2E عوض نشود)؛ خواندن‌ها sync و درون‌حافظه می‌مانند تا گارد سریع بماند — استقرار multi-instance به shared store در P13 موکول است
+- provider توکن به useFactory با store شرطی تبدیل شد؛ spec رگرسیون DI هم `provide: SomeClass` (توکن کلاسی) را می‌پوشاند
+- purge تنبلِ ورودی‌های منقضی در خواندن و purge کامل هنگام boot
+
+### شواهد گام یازدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۴۹/۶۴۹** (+۳ تست persistence)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

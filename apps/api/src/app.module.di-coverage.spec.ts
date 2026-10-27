@@ -35,6 +35,10 @@ function entries(block: string): Set<string> {
   for (const m of block.matchAll(/provide:\s*'([^']+)'/g)) {
     found.add(`token:${m[1]}`);
   }
+  // class-token providers: { provide: SomeExportedClass, useFactory/useClass }
+  for (const m of block.matchAll(/provide:\s*([A-Z][A-Za-z0-9_]*)[,\s]/g)) {
+    found.add(`class:${m[1]}`);
+  }
   for (const line of block.split('\n')) {
     const t = line.trim().replace(/,$/, '');
     if (/^[A-Z][A-Za-z0-9_]*$/.test(t)) {

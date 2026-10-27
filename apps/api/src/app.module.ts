@@ -50,6 +50,7 @@ import { PrismaApiKeyRepository } from './modules/integrations/prisma-api-key.re
 import { AuthService } from './common/auth/auth.service.js';
 import { TokenService } from './common/auth/token.service.js';
 import { MfaService } from './common/auth/mfa.service.js';
+import { PrismaTokenRevocationStore } from './common/auth/prisma-token-revocation.store.js';
 import { InMemoryIdentityStore } from './common/auth/identity-store.js';
 import { PrismaIdentityStore } from './common/auth/prisma-identity.store.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
@@ -186,7 +187,19 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryIdentityStore,
     PrismaIdentityStore,
     AuthService,
-    TokenService,
+    {
+      provide: TokenService,
+      useFactory: (prisma: PrismaService) =>
+        new TokenService(
+          undefined,
+          undefined,
+          undefined,
+          process.env.USE_DATABASE === 'true'
+            ? new PrismaTokenRevocationStore(prisma)
+            : undefined,
+        ),
+      inject: [PrismaService],
+    },
     MfaService,
     AuthGuard,
     PermissionsGuard,

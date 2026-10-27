@@ -865,6 +865,14 @@ model SupportSequence {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
+model RevokedCredential {
+  key       String   @id
+  kind      String
+  revokedAt DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime @db.Timestamptz(6)
+  @@index([expiresAt])
+}
+
 model Invitation {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @db.Uuid
