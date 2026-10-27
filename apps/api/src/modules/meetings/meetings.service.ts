@@ -67,7 +67,7 @@ export class MeetingsService {
       meetingUrl: dto.meetingUrl,
       startsAt: dto.startsAt,
       endsAt: dto.endsAt,
-      status: 'COMPLETED',
+      status: 'SCHEDULED',
       attendees,
       resolutions,
       notes: dto.notes,
@@ -126,6 +126,12 @@ export class MeetingsService {
 
     attendee.signatureStatus = status;
     attendee.signedAt = new Date().toISOString();
+
+    // If all attendees have signed, transition meeting status to COMPLETED
+    if (meeting.attendees.every((a) => a.signatureStatus === 'SIGNED')) {
+      meeting.status = 'COMPLETED';
+    }
+
     meeting.updatedAt = new Date().toISOString();
 
     this.auditService.record({

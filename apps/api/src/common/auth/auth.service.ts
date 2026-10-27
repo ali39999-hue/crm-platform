@@ -44,9 +44,10 @@ export class AuthService {
   private seedDefaultUsers() {
     const isProd = process.env.NODE_ENV === 'production';
     if (isProd) {
-      this.logger.warn(
-        '[SECURITY] Running in production mode. Mock seed accounts must not be used for production operations.',
+      this.logger.log(
+        '[SECURITY] Running in production mode. Mock seed accounts are strictly disabled in production.',
       );
+      return;
     }
     const users: MockUserRecord[] = [
       {

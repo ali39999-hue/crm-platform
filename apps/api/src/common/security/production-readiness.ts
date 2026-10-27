@@ -10,10 +10,16 @@ export function assertProductionReadiness(env: Record<string, string | undefined
 
   const errors: string[] = [];
 
-  // 1. Persistence Gate (RA-005): Must not use in-memory database in production
+  // 1. Persistence Gate (AUDIT-2026-001 / RA-005): Must not use in-memory database in production
   if (env.USE_DATABASE !== 'true') {
     errors.push(
       'USE_DATABASE=true is required in production. Running with InMemory repositories in production is strictly forbidden.',
+    );
+  }
+
+  if (env.ALLOW_IN_MEMORY_REPOSITORIES === 'true') {
+    errors.push(
+      'ALLOW_IN_MEMORY_REPOSITORIES must not be enabled in production. All enterprise domains require database-backed persistence.',
     );
   }
 

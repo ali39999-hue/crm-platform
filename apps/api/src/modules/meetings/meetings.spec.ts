@@ -39,6 +39,7 @@ describe('MeetingsService (Mizito Digital Meeting Minutes & Resolutions)', () =>
     });
 
     expect(meeting.id).toBeDefined();
+    expect(meeting.status).toBe('SCHEDULED'); // AUDIT-2026-006: newly created meeting starts as SCHEDULED
     expect(meeting.attendees).toHaveLength(3);
     expect(meeting.attendees[0]!.signatureStatus).toBe('PENDING');
     expect(meeting.resolutions).toHaveLength(1);
@@ -70,6 +71,16 @@ describe('MeetingsService (Mizito Digital Meeting Minutes & Resolutions)', () =>
     const signedAttendee = updated.attendees.find((a) => a.userId === 'user-2');
     expect(signedAttendee?.signatureStatus).toBe('SIGNED');
     expect(signedAttendee?.signedAt).toBeDefined();
+    expect(updated.status).toBe('SCHEDULED'); // Still scheduled because user-1 hasn't signed yet
+
+    // When the remaining attendee signs:
+    const allSigned = await service.signMeeting(
+      'org-1',
+      'user-1',
+      meeting.id,
+      'SIGNED',
+    );
+    expect(allSigned.status).toBe('COMPLETED'); // Transitions to COMPLETED once all have signed
   });
 
   it('converts resolution into CRM task with automated delegation', async () => {

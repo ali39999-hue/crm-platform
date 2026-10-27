@@ -48,6 +48,17 @@ describe('Production Readiness & Fail-Fast Gates (RA-005)', () => {
     }).toThrow(/ALLOW_INSECURE_DEV_AUTH must not be enabled in production/);
   });
 
+  it('fails fast if ALLOW_IN_MEMORY_REPOSITORIES is true in production (AUDIT-2026-001)', () => {
+    expect(() => {
+      assertProductionReadiness({
+        NODE_ENV: 'production',
+        USE_DATABASE: 'true',
+        JWT_SECRET: 'production-custom-secret-key-at-least-32-chars-long-12345',
+        ALLOW_IN_MEMORY_REPOSITORIES: 'true',
+      });
+    }).toThrow(/ALLOW_IN_MEMORY_REPOSITORIES must not be enabled in production/);
+  });
+
   it('passes verification when all production gates are satisfied', () => {
     expect(() => {
       assertProductionReadiness({

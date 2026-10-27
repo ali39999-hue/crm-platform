@@ -2,8 +2,8 @@
   "snapshot_date": "2026-10-27",
   "repository": "https://github.com/ali39999-hue/crm-platform",
   "branch": "main",
-  "latest_commit_observed": "64fac647e3a96860ce394c86e0c6575775772223",
-  "latest_ci_run_observed": "https://github.com/ali39999-hue/crm-platform/actions/runs/40456597749",
+  "latest_commit_observed": "720ce238e55e8888e285a73e6ba113e1c66847a9",
+  "latest_ci_run_observed": "https://github.com/ali39999-hue/crm-platform/actions/runs/40464754309",
   "evidence_urls": {
     "readme": "https://github.com/ali39999-hue/crm-platform/blob/main/README.fa.md",
     "routes": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/enterprise-ux/ux/01-page-route-inventory.csv",
@@ -16,10 +16,12 @@
     "prisma_schema": "https://github.com/ali39999-hue/crm-platform/blob/main/apps/api/prisma/schema.prisma",
     "ci_workflow": "https://github.com/ali39999-hue/crm-platform/blob/main/.github/workflows/ci.yml",
     "didar_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/didar-scrape/00-didar-complete-module-matrix.fa.md",
-    "mizito_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/mizito-scrape/00-mizito-complete-module-matrix.fa.md"
+    "mizito_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/mizito-scrape/00-mizito-complete-module-matrix.fa.md",
+    "provider_persistence_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/audits/2026-10-27/provider-persistence-matrix.csv",
+    "audit_findings_oct27": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/audits/2026-10-27/current-findings.csv"
   },
   "audit_status": {
-    "total_tests_passing": 593,
+    "total_tests_passing": 597,
     "security_audit_passing": true,
     "typecheck_passing": true,
     "build_passing": true,
@@ -28,7 +30,7 @@
     "didar_crm_compliance": "100%",
     "mizito_compliance": "100%"
   },
-  "findings_count": 15,
+  "findings_count": 26,
   "resolved_findings": [
     "RA-001",
     "RA-002",
@@ -44,6 +46,17 @@
     "RA-012",
     "RA-013",
     "RA-014",
-    "RA-015"
+    "RA-015",
+    "AUDIT-2026-001",
+    "AUDIT-2026-002",
+    "AUDIT-2026-003",
+    "AUDIT-2026-004",
+    "AUDIT-2026-005",
+    "AUDIT-2026-006",
+    "AUDIT-2026-007",
+    "AUDIT-2026-008",
+    "AUDIT-2026-009",
+    "AUDIT-2026-010",
+    "AUDIT-2026-011"
   ]
 }
