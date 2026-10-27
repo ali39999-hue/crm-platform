@@ -402,6 +402,20 @@
 | `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
 | `pnpm test:e2e` | ۶۷/۶۷ |
 
+## فاز P02 — گام هفدهم: باگ واقعی مizito.ts رفع شد
+
+- `canDeleteLetter` و `canDeleteParaff` با 'ADMIN'/'OWNER' مقایسه می‌کردند که در MEMBERSHIP_ROLES وجود ندارند — یعنی **مجوز حذف نامه/پاراف برای ادمین‌های واقعی هرگز فعال نمی‌شد** (منفی‌سازی بی‌دلیل؛ نه بازشدن درِ امنیتی)
+- مقایسه به 'OrganizationAdmin'/'SystemOwner' اصلاح شد
+- **۴ تست که رفتار غلط را قفل کرده بودند** (fixture با role: 'ADMIN') به نقش‌های واقعی domain به‌روزرسانی شدند — الگوی «تستِ تأییدکننده باگ» که طرح مادر صراحتاً می‌کاورد
+- ۵ reference دیگر role: 'MEMBER' در spec به 'Employee' اصلاح شد (سازگاری)
+
+### شواهد گام هفدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm test` | domain: **۸۸/۸۸** (۴ تست اصلاح‌شده سبز)؛ API: ۶۴۹/۶۴۹ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

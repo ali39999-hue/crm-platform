@@ -36,7 +36,9 @@ export function canDeleteLetter(actor: ActorContext, letter: LetterContext): boo
   if (actor.id !== letter.senderId) {
     return false;
   }
-  const isAdmin = actor.role === 'ADMIN' || actor.role === 'OWNER';
+  // Domain roles (P02 step 4): the legacy 'ADMIN'/'OWNER' values do not exist
+  // in MEMBERSHIP_ROLES, so this check never fired for real admins.
+  const isAdmin = actor.role === 'OrganizationAdmin' || actor.role === 'SystemOwner';
   if (isAdmin) {
     return true;
   }
@@ -56,7 +58,9 @@ export function canDeleteParaff(actor: ActorContext, paraff: ParaffContext): boo
   if (actor.id !== paraff.authorId) {
     return false;
   }
-  const isAdmin = actor.role === 'ADMIN' || actor.role === 'OWNER';
+  // Domain roles (P02 step 4): the legacy 'ADMIN'/'OWNER' values do not exist
+  // in MEMBERSHIP_ROLES, so this check never fired for real admins.
+  const isAdmin = actor.role === 'OrganizationAdmin' || actor.role === 'SystemOwner';
   if (isAdmin) {
     return true;
   }

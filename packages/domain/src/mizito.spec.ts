@@ -28,7 +28,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
   describe('Letter Deletion Authorization', () => {
     it('allows sender to delete unread letter', () => {
       const allowed = canDeleteLetter(
-        { id: 'user-1', role: 'MEMBER' },
+        { id: 'user-1', role: 'Employee' },
         { senderId: 'user-1', isRead: false },
       );
       expect(allowed).toBe(true);
@@ -36,7 +36,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
 
     it('rejects regular sender from deleting a letter once it is read', () => {
       const allowed = canDeleteLetter(
-        { id: 'user-1', role: 'MEMBER' },
+        { id: 'user-1', role: 'Employee' },
         { senderId: 'user-1', isRead: true },
       );
       expect(allowed).toBe(false);
@@ -44,7 +44,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
 
     it('allows workspace admin to delete their own letter even after it is read', () => {
       const allowed = canDeleteLetter(
-        { id: 'admin-1', role: 'ADMIN' },
+        { id: 'admin-1', role: 'OrganizationAdmin' },
         { senderId: 'admin-1', isRead: true },
       );
       expect(allowed).toBe(true);
@@ -52,7 +52,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
 
     it('rejects non-sender from deleting another users letter', () => {
       const allowed = canDeleteLetter(
-        { id: 'user-2', role: 'MEMBER' },
+        { id: 'user-2', role: 'Employee' },
         { senderId: 'user-1', isRead: false },
       );
       expect(allowed).toBe(false);
@@ -62,7 +62,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
   describe('Paraff Deletion Authorization', () => {
     it('allows author to delete unread paraff', () => {
       const allowed = canDeleteParaff(
-        { id: 'user-1', role: 'MEMBER' },
+        { id: 'user-1', role: 'Employee' },
         { authorId: 'user-1', isRead: false },
       );
       expect(allowed).toBe(true);
@@ -70,7 +70,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
 
     it('rejects author from deleting read paraff unless workspace admin', () => {
       const allowed = canDeleteParaff(
-        { id: 'user-1', role: 'MEMBER' },
+        { id: 'user-1', role: 'Employee' },
         { authorId: 'user-1', isRead: true },
       );
       expect(allowed).toBe(false);
@@ -78,7 +78,7 @@ describe('Mizito Office Automation & Letter Domain Rules', () => {
 
     it('allows workspace admin to delete their own paraff even if read', () => {
       const allowed = canDeleteParaff(
-        { id: 'admin-1', role: 'ADMIN' },
+        { id: 'admin-1', role: 'OrganizationAdmin' },
         { authorId: 'admin-1', isRead: true },
       );
       expect(allowed).toBe(true);
