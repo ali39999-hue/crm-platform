@@ -99,6 +99,7 @@ model Organization {
   proformaInvoices ProformaInvoice[]
   supportMacros SupportMacro[]
   supportSequences SupportSequence[]
+  invitations Invitation[]
 }
 
 model User {
@@ -844,4 +845,22 @@ model SupportSequence {
   organizationId String @id @db.Uuid
   lastValue      Int
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Invitation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  email          String
+  displayName    String
+  role           String
+  tokenHash      String   @unique
+  invitedBy      String   @db.Uuid
+  status         String   @default("PENDING")
+  expiresAt      DateTime @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  acceptedAt     DateTime? @db.Timestamptz(6)
+  acceptedUserId String?  @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status])
+  @@index([email])
 }

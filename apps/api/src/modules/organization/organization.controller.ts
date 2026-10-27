@@ -14,6 +14,7 @@ import { RequirePermission } from '../../common/auth/require-permission.decorato
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { OrganizationService } from './organization.service.js';
+import { InvitationService } from './invitation.service.js';
 import type {
   OrganizationMemberDto,
   OrganizationSettingsDto,
@@ -29,11 +30,15 @@ import {
   CreateTeamDto,
   UpdateTeamDto,
 } from './dto/team.dto.js';
+import type { InvitationDto } from './invitation.service.js';
 
 @Controller('organization')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class OrganizationController {
-  constructor(private readonly orgService: OrganizationService) {}
+  constructor(
+    private readonly orgService: OrganizationService,
+    private readonly invitationService: InvitationService,
+  ) {}
 
   @Get('settings')
   @RequirePermission('organization_settings')
@@ -78,6 +83,32 @@ export class OrganizationController {
   }
 
   @Patch('members/:id/role')
+  @Post('invitations')
+  @RequirePermission('manage_members')
+  async createInvitation(
+    @CurrentUser() user: UserContext,
+    @Body() dto: InviteMemberDto,
+  ): Promise<{ invitation: InvitationDto; token: string }> {
+    const result = await this.invitationService.createInvitation(
+      user.activeOrganization.id,
+      user.id,
+      dto,
+    );
+    return { invitation: result, token: result.token };
+  }
+
+  @Get('invitations')
+  @RequirePermission('manage_members')
+  async listInvitations(@CurrentUser() user: UserContext): Promise<InvitationDto[]> {
+    return this.invitationService.listInvitations(user.activeOrganization.id);
+  }
+
+  @Post('invitations/:id/revoke')
+  @RequirePermission('manage_members')
+  async revokeInvitation(@CurrentUser() user: UserContext, @Param('id') id: string): Promise<InvitationDto> {
+    return this.invitationService.revokeInvitation(user.activeOrganization.id, id);
+  }
+
   @RequirePermission('manage_members')
   async updateMemberRole(
     @CurrentUser() user: UserContext,

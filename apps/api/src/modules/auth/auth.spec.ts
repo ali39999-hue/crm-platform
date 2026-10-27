@@ -68,7 +68,12 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
     authService = new AuthService();
     tokenService = new TokenService('test-secret-key-at-least-32-chars-long-12345', 900, 604800);
     auditService = new AuditService();
-    authController = new AuthController(authService, tokenService, auditService);
+    authController = new AuthController(
+        authService,
+        tokenService,
+        auditService,
+        { acceptInvitation: async () => ({}) } as any,
+      );
     reflector = new Reflector();
     authGuard = new AuthGuard(reflector, authService, tokenService);
   });

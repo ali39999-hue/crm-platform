@@ -194,7 +194,23 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
-## ۱۵. Rollback
+## ۱۸. فاز P02 — گام سوم: دعوت‌نامه durable اعضا
+
+- مدل **`Invitation`** (tokenHash یکتا با SHA-256، انقضای ۷ روزه، وضعیت PENDING/ACCEPTED/REVOKED، invitedBy، acceptedUserId) + migration هفتم
+- یافته امنیتی: جریان قبلی `inviteMember` بلافاصله عضو فعال با userId جعلی می‌ساخت — بدون token، بدون رضایت، بدون رمز؛ مسیر legacy دست‌نخورده ماند (مستند برای مهاجرت در ادامه P02) و مسیر جدید جایگزین آن خواهد شد
+- `InvitationService`: ایجاد دعوت‌نامه (manage_members) با **token یک‌بارمصرف که فقط یک بار plaintext برگردانده می‌شود** (فقط hash ذخیره می‌شود)؛ پذیرش عمومی `POST /auth/invitations/accept` (کاربر جدید = تعیین رمز PBKDF2؛ کاربر موجود = عضویت با هویت فعلی)؛ لغو و فهرست با مجوز manage_members
+- Invitation عمداً tenant-scoped نیست (endpoint پذیرش عمومی است؛ token خودِ اعتبار است) — فیلتر دستی، مستند در سرویس
+- ضد دعوت تکراری: PENDING تکراری، عضو فعال بودن، پذیرش دوباره — همه تست شده
+
+### شواهد گام سوم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۲۷/۶۲۷** (+۶ تست invitation)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
+## ۱۹. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

@@ -16,8 +16,10 @@ import type { UserContext } from '../../common/auth/auth.types.js';
 import { AuthService } from '../../common/auth/auth.service.js';
 import { TokenService, type TokenPayload } from '../../common/auth/token.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { InvitationService } from '../organization/invitation.service.js';
 import type { CurrentUserDto, WorkspaceDto } from '@crm/contracts';
 import {
+  AcceptInvitationDto,
   AuthResponseDto,
   LoginRequestDto,
   LogoutRequestDto,
@@ -33,6 +35,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
+    private readonly invitationService: InvitationService,
   ) {}
 
   /**
@@ -80,6 +83,22 @@ export class AuthController {
         memberships: userContext.memberships,
       },
     };
+  }
+
+  /**
+   * Redeems a member invitation with its one-time token. New invitees set
+   * their password here; existing users join with their current identity.
+   */
+  @Public()
+  @Post('auth/invitations/accept')
+  async acceptInvitation(
+    @Body() dto: AcceptInvitationDto,
+  ): Promise<{ organizationId: string; organizationName: string; role: string; email: string }> {
+    return this.invitationService.acceptInvitation({
+      token: dto.token,
+      password: dto.password,
+      displayName: dto.displayName,
+    });
   }
 
   @Public()

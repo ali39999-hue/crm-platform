@@ -64,3 +64,18 @@ export class RegisterRequestDto {
   @MaxLength(80, { message: 'Display name must be at most 80 characters' })
   displayName!: string;
 }
+
+export class AcceptInvitationDto {
+  @IsString({ message: 'Token must be a string' })
+  @IsNotEmpty({ message: 'Token is required' })
+  token!: string;
+
+  @IsString()
+  @IsOptional()
+  password?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  displayName?: string;
+}
