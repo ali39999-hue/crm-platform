@@ -13,6 +13,11 @@ export default function CustomerPortalSignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+  // GAP-012 step 2: MFA + register states (real-API mode only)
+  const [needsMfa, setNeedsMfa] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [orgName, setOrgName] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,17 +42,52 @@ export default function CustomerPortalSignInPage() {
         return;
       }
 
-      // GAP-012 step 1: try the real API first. When the API is unreachable
+      // GAP-012: try the real API first. When the API is unreachable
       // (dev without API server / E2E), fall back to the legacy mock flow so
       // existing behavior and tests stay green.
+      if (mode === 'register') {
+        if (!orgName.trim() || password.length < 8) {
+          setError('نام سازمان و رمز عبور حداقل ۸ کاراکتری الزامی است');
+          setLoading(false);
+          return;
+        }
+        try {
+          await apiClient.register({
+            organizationName: orgName.trim(),
+            email: email.trim(),
+            password,
+            displayName: email.split('@')[0] || email,
+          });
+          router.push('/portal');
+          return;
+        } catch (apiErr: any) {
+          if (!apiClient.isOfflineOrNetworkError(apiErr)) {
+            setError(apiErr?.message || 'ثبت‌نام ناموفق بود');
+            setLoading(false);
+            return;
+          }
+          // API unreachable in register mode: no legacy equivalent exists.
+          setError('سرویس ثبت‌نام در دسترس نیست؛ بعداً تلاش کنید');
+          setLoading(false);
+          return;
+        }
+      }
+
       try {
-        await apiClient.login(email, password);
+        await apiClient.login(email, password, needsMfa ? mfaCode : undefined);
+        setNeedsMfa(false);
         router.push('/portal');
         return;
       } catch (apiErr: any) {
         // Real API answered and rejected the credentials — surface the error.
         if (!apiClient.isOfflineOrNetworkError(apiErr)) {
-          setError(apiErr?.message || 'ایمیل یا رمز عبور نادرست است');
+          const msg = apiErr?.message || 'ایمیل یا رمز عبور نادرست است';
+          if (/MFA/i.test(msg)) {
+            setNeedsMfa(true);
+            setError('کد تأیید دومرحله‌ای (MFA) الزامی است');
+          } else {
+            setError(msg);
+          }
           setLoading(false);
           return;
         }
@@ -180,7 +220,46 @@ export default function CustomerPortalSignInPage() {
                 required
               />
             </div>
-          ) : otpSent ? (
+          ) : null}
+
+          {needsMfa && (
+            <div>
+              <label className="block text-xs font-medium text-sky-400 mb-1">
+                کد تأیید دومرحله‌ای (MFA) *
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                placeholder="۶ رقم"
+                maxLength={6}
+                autoFocus
+                data-testid="customer-mfa-input"
+                className="w-full px-3 py-2.5 bg-slate-800 border border-sky-700 rounded-xl text-slate-100 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                required
+              />
+            </div>
+          )}
+
+          {mode === 'register' && (
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">
+                نام سازمان *
+              </label>
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="شرکت نمونه"
+                data-testid="customer-org-input"
+                className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                required
+              />
+            </div>
+          )}
+
+          {authMode === 'otp' && otpSent && (
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
                 کد تایید پیامک/ایمیل‌شده *
@@ -195,7 +274,7 @@ export default function CustomerPortalSignInPage() {
                 required
               />
             </div>
-          ) : null}
+          )}
 
           <button
             type="submit"

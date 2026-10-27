@@ -388,6 +388,20 @@
 | `pnpm test:e2e` | ۶۷/۶۷ |
 | `pnpm audit:persistence:strict` | exit 0 |
 
+## فاز P02 — گام شانزدهم: GAP-012 گام دوم — فیلد MFA و ثبت‌نام در ورود پورتال
+
+- ورود پورتال حالا جریان کامل دارد: پاسخ «MFA الزامی» از API → فیلد کد MFA (testid `customer-mfa-input`) ظاهر و با همان فرم ارسال می‌شود
+- toggle **ثبت‌نام سازمانی** (mode register): نام سازمان + رمز ≥۸ → `apiClient.register`؛ قطعی API پیام مشخص می‌دهد (معادل legacy ندارد)
+- ترمیم ساختاری: ternary سه‌شاخه‌ای قبلی به conditionalهای مستقل تبدیل شد (password / otpSent / needsMfa / register)
+- E2E سبز — مسیرهای fixture و otp دست‌نخورده
+
+### شواهد گام شانزدهم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: ۶۴۹/۶۴۹؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
