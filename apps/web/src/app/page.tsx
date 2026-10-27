@@ -21,6 +21,7 @@ import type {
   LetterDto,
   MeetingMinuteDto,
   ExecutiveMonitoringDto,
+  GanttProjectScheduleDto,
 } from '@crm/contracts';
 import { canTransitionTask } from '@crm/domain';
 import { apiClient } from '../lib/api-client';
@@ -60,6 +61,7 @@ import {
   OfficeLettersView,
   MeetingMinutesView,
   ExecutiveMonitoringView,
+  GanttChartView,
 } from '../components';
 
 type AuditItem = {
@@ -109,7 +111,8 @@ export default function WorkspaceApp() {
     | 'audit'
     | 'settings'
   >('my-work');
-  const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'calendar' | 'gantt'>('kanban');
+  const [ganttSchedule, setGanttSchedule] = useState<GanttProjectScheduleDto | null>(null);
   const [crmSubTab, setCrmSubTab] = useState<
     'accounts' | 'pipeline' | 'duplicates' | 'cards' | 'forms'
   >('accounts');
@@ -778,6 +781,14 @@ export default function WorkspaceApp() {
                   >
                     <span>📅</span> تقویم
                   </button>
+                  <button
+                    type="button"
+                    className={`view-btn ${viewMode === 'gantt' ? 'active' : ''}`}
+                    onClick={() => setViewMode('gantt')}
+                    data-testid="view-btn-gantt"
+                  >
+                    <span>📈</span> گانت‌چارت (CPM)
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -829,6 +840,40 @@ export default function WorkspaceApp() {
                 tasks={tasks}
                 onTransition={handleTransition}
                 onSelectTask={(task) => showToast(`انتخاب تسک: ${task.key} - ${task.title}`)}
+              />
+            ) : viewMode === 'gantt' ? (
+              <GanttChartView
+                schedule={
+                  ganttSchedule || {
+                    hasCycle: false,
+                    totalDurationDays: 14,
+                    projectStartDate: '2026-11-01',
+                    projectFinishDate: '2026-11-15',
+                    criticalPathIds: ['task-1', 'task-2'],
+                    tasks: tasks.map((t, i) => ({
+                      id: t.id,
+                      title: t.title,
+                      durationDays: 3 + (i % 4),
+                      startOffsetDays: i * 2,
+                      finishOffsetDays: i * 2 + 3 + (i % 4),
+                      startDateIso: '2026-11-01',
+                      finishDateIso: '2026-11-04',
+                      slackDays: i === 0 ? 0 : 2,
+                      isCritical: i === 0 || i === 1,
+                      isMilestone: false,
+                      weight: t.weight || 1,
+                      progressPercent:
+                        t.status === 'DONE' ? 100 : t.status === 'IN_PROGRESS' ? 50 : 0,
+                      predecessorIds: i > 0 ? [tasks[i - 1]!.id] : [],
+                    })),
+                  }
+                }
+                onRefresh={async () => {
+                  const g = await apiClient.getProjectGanttSchedule('prj-001');
+                  setGanttSchedule(g);
+                  showToast('زمان‌بندی گانت‌چارت به‌روزرسانی شد');
+                }}
+                onSelectTask={(task) => showToast(`انتخاب تسک در گانت: ${task.title}`)}
               />
             ) : (
               <TaskList

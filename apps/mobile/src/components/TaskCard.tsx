@@ -63,6 +63,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               {priorityCfg.label}
             </Text>
           </View>
+          {task.weight && task.weight > 0 ? (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+              ]}
+            >
+              <Text style={[styles.badgeText, { color: '#4338CA' }]}>
+                وزن {task.weight}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <Text style={styles.taskKeyBadge}>{task.key}</Text>
       </View>

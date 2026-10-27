@@ -15,6 +15,7 @@ import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { ProjectService } from './project.service.js';
 import type {
+  GanttProjectScheduleDto,
   MilestoneDto,
   ProjectDetailDto,
   ProjectSummaryDto,
@@ -45,6 +46,18 @@ export class ProjectController {
     @Param('id') id: string,
   ): Promise<ProjectDetailDto> {
     return this.projectService.getProjectDetail(user.activeOrganization.id, id);
+  }
+
+  @Get(':id/gantt')
+  @RequirePermission('view_internal_tasks')
+  async getProjectGantt(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ): Promise<GanttProjectScheduleDto> {
+    return this.projectService.getProjectGanttSchedule(
+      user.activeOrganization.id,
+      id,
+    );
   }
 
   @Post()

@@ -37,3 +37,4 @@ export * from './ExhibitionLeadIntakeModal';
 export * from './OfficeLettersView';
 export * from './MeetingMinutesView';
 export * from './ExecutiveMonitoringView';
+export * from './GanttChartView';

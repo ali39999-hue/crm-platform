@@ -116,4 +116,44 @@ describe('Project Management & Milestones (R-040 & R-042)', () => {
       expect(audit).toBeDefined();
     });
   });
+
+  describe('Gantt Chart & Critical Path Scheduling', () => {
+    it('calculates project gantt schedule with task dependencies', async () => {
+      const t1 = await taskRepo.create({
+        organizationId: orgAlpha,
+        creatorId: actor.id,
+        assigneeId: actor.id,
+        projectId: 'prj-001',
+        parentId: null,
+        title: 'فاز نیازمندی‌ها',
+        description: null,
+        status: 'DONE',
+        priority: 'HIGH',
+        visibility: 'INTERNAL',
+        dueAt: '2026-11-05T00:00:00Z',
+      });
+
+      const t2 = await taskRepo.create({
+        organizationId: orgAlpha,
+        creatorId: actor.id,
+        assigneeId: actor.id,
+        projectId: 'prj-001',
+        parentId: null,
+        title: 'توسعه فنی',
+        description: null,
+        status: 'IN_PROGRESS',
+        priority: 'HIGH',
+        visibility: 'INTERNAL',
+        dueAt: '2026-11-12T00:00:00Z',
+      });
+
+      await taskRepo.addDependency(orgAlpha, t2.id, t1.id);
+
+      const schedule = await projectService.getProjectGanttSchedule(orgAlpha, 'prj-001');
+      expect(schedule.hasCycle).toBe(false);
+      expect(schedule.tasks.length).toBeGreaterThanOrEqual(2);
+      expect(schedule.totalDurationDays).toBeGreaterThan(0);
+      expect(schedule.criticalPathIds.length).toBeGreaterThan(0);
+    });
+  });
 });

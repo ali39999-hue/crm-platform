@@ -151,6 +151,8 @@ import type {
   SignatureStatus,
   ConvertResolutionToTaskRequest,
   ExecutiveMonitoringDto,
+  GanttProjectScheduleDto,
+  GanttTaskDto,
 } from '@crm/contracts';
 
 import {
@@ -5642,6 +5644,93 @@ export class ApiClient {
       throw err;
     }
   }
+  /* ---------------- Interactive Gantt Chart & Critical Path ---------------- */
+
+  async getProjectGanttSchedule(projectId: string): Promise<GanttProjectScheduleDto> {
+    try {
+      return await this.request<GanttProjectScheduleDto>(
+        `/projects/${encodeURIComponent(projectId)}/gantt`,
+      );
+    } catch (err) {
+      if (this.isOfflineOrNetworkError(err)) {
+        return {
+          hasCycle: false,
+          totalDurationDays: 14,
+          projectStartDate: '2026-11-01',
+          projectFinishDate: '2026-11-15',
+          criticalPathIds: ['t-arch', 't-backend', 't-deploy'],
+          tasks: [
+            {
+              id: 't-arch',
+              title: 'طراحی معماری سیستم و پایگاه داده',
+              durationDays: 3,
+              startOffsetDays: 0,
+              finishOffsetDays: 3,
+              startDateIso: '2026-11-01',
+              finishDateIso: '2026-11-04',
+              slackDays: 0,
+              isCritical: true,
+              isMilestone: false,
+              weight: 2,
+              progressPercent: 100,
+              predecessorIds: [],
+              color: '#4f46e5',
+            },
+            {
+              id: 't-backend',
+              title: 'پیاده‌سازی ماژول‌های CRM و کارتابل نامه‌ها',
+              durationDays: 7,
+              startOffsetDays: 3,
+              finishOffsetDays: 10,
+              startDateIso: '2026-11-04',
+              finishDateIso: '2026-11-11',
+              slackDays: 0,
+              isCritical: true,
+              isMilestone: false,
+              weight: 4,
+              progressPercent: 70,
+              predecessorIds: ['t-arch'],
+              color: '#06b6d4',
+            },
+            {
+              id: 't-ui',
+              title: 'طراحی بنرها و صفحات رابط کاربری',
+              durationDays: 4,
+              startOffsetDays: 3,
+              finishOffsetDays: 7,
+              startDateIso: '2026-11-04',
+              finishDateIso: '2026-11-08',
+              slackDays: 3,
+              isCritical: false,
+              isMilestone: false,
+              weight: 1,
+              progressPercent: 50,
+              predecessorIds: ['t-arch'],
+              color: '#8b5cf6',
+            },
+            {
+              id: 't-deploy',
+              title: 'استقرار آزمایشی و تست نفوذ',
+              durationDays: 4,
+              startOffsetDays: 10,
+              finishOffsetDays: 14,
+              startDateIso: '2026-11-11',
+              finishDateIso: '2026-11-15',
+              slackDays: 0,
+              isCritical: true,
+              isMilestone: false,
+              weight: 3,
+              progressPercent: 20,
+              predecessorIds: ['t-backend', 't-ui'],
+              color: '#10b981',
+            },
+          ],
+        };
+      }
+      throw err;
+    }
+  }
+
   /* ---------------- Audit Events ---------------- */
 
   async getAuditEvents(limit = 50): Promise<AuditRecordDto[]> {
@@ -5742,6 +5831,8 @@ export type {
   SignatureStatus,
   ConvertResolutionToTaskRequest,
   ExecutiveMonitoringDto,
+  GanttProjectScheduleDto,
+  GanttTaskDto,
 };
 export const DEFAULT_CUSTOMER_ID = '33333333-3333-3333-3333-333333333333';
 export const apiClient = new ApiClient();

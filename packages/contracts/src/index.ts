@@ -1700,6 +1700,42 @@ export type ExecutiveMonitoringDto = {
   generatedAt: string;
 };
 
+/* Interactive Gantt Chart & Critical Path DTOs */
+
+export type GanttTaskDto = {
+  id: string;
+  title: string;
+  durationDays: number;
+  startOffsetDays: number;
+  finishOffsetDays: number;
+  startDateIso: string;
+  finishDateIso: string;
+  slackDays: number;
+  isCritical: boolean;
+  isMilestone: boolean;
+  weight: number;
+  progressPercent: number;
+  predecessorIds: string[];
+  color?: string | undefined;
+};
+
+export type GanttProjectScheduleDto = {
+  hasCycle: boolean;
+  errorMessage?: string | undefined;
+  totalDurationDays: number;
+  projectStartDate: string;
+  projectFinishDate: string;
+  criticalPathIds: string[];
+  tasks: GanttTaskDto[];
+};
+
+export type UpdateTaskScheduleRequest = {
+  durationDays?: number | undefined;
+  predecessorIds?: string[] | undefined;
+  startDate?: string | undefined;
+};
+
+
 
 
 

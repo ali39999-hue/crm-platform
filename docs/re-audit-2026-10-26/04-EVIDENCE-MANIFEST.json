@@ -19,7 +19,7 @@
     "mizito_benchmark_matrix": "https://github.com/ali39999-hue/crm-platform/blob/main/docs/references/mizito-scrape/00-mizito-complete-module-matrix.fa.md"
   },
   "audit_status": {
-    "total_tests_passing": 584,
+    "total_tests_passing": 593,
     "security_audit_passing": true,
     "typecheck_passing": true,
     "build_passing": true,

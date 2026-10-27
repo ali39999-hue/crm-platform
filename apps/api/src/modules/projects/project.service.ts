@@ -9,11 +9,13 @@ import {
 import type {
   CreateMilestoneRequest,
   CreateProjectRequest,
+  GanttProjectScheduleDto,
   MilestoneDto,
   ProjectDetailDto,
   ProjectSummaryDto,
   UpdateProjectRequest,
 } from '@crm/contracts';
+import { calculateGanttSchedule, type GanttInputTask } from '@crm/domain';
 import {
   InMemoryProjectRepository,
   type MilestoneEntity,
@@ -207,6 +209,63 @@ export class ProjectService {
     });
 
     return this.mapMilestone(updated);
+  }
+
+  async getProjectGanttSchedule(
+    organizationId: string,
+    projectId: string,
+  ): Promise<GanttProjectScheduleDto> {
+    const project = await this.projectRepo.findById(organizationId, projectId);
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found in this organization`);
+    }
+
+    const tasks = await this.taskRepo.findAll(organizationId, { limit: 1000 });
+    const projectTasks = tasks.filter((t) => t.projectId === projectId);
+
+    const ganttInputTasks: GanttInputTask[] = [];
+
+    for (const t of projectTasks) {
+      const deps = await this.taskRepo.getDependencies(organizationId, t.id);
+      const predecessorIds = deps.map((d) => d.id);
+
+      // Duration estimate in days
+      let durationDays = 3;
+      if (t.dueAt) {
+        const diffMs = new Date(t.dueAt).getTime() - new Date(t.createdAt).getTime();
+        durationDays = Math.max(1, Math.round(diffMs / 86400000));
+      }
+
+      const progressPercent = t.status === 'DONE' ? 100 : t.status === 'IN_PROGRESS' ? 50 : 0;
+
+      ganttInputTasks.push({
+        id: t.id,
+        title: t.title,
+        durationDays,
+        predecessorIds,
+        weight: (t as any).weight || 1,
+        progressPercent,
+      });
+    }
+
+    const schedule = calculateGanttSchedule({
+      projectStartDate: project.startDate || project.createdAt.slice(0, 10),
+      tasks: ganttInputTasks,
+    });
+
+    const result: GanttProjectScheduleDto = {
+      hasCycle: schedule.hasCycle,
+      totalDurationDays: schedule.totalDurationDays,
+      projectStartDate: schedule.projectStartDate,
+      projectFinishDate: schedule.projectFinishDate,
+      criticalPathIds: schedule.criticalPathIds,
+      tasks: schedule.scheduledTasks,
+    };
+    if (schedule.errorMessage) {
+      result.errorMessage = schedule.errorMessage;
+    }
+
+    return result;
   }
 
   async deleteProject(
