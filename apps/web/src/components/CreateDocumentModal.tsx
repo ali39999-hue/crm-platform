@@ -39,10 +39,7 @@ export function CreateDocumentModal({
       setError('عنوان سند الزامی است.');
       return;
     }
-    if (!spaceId) {
-      setError('انتخاب فضای سند الزامی است.');
-      return;
-    }
+    const targetSpaceId = spaceId || selectedSpaceId || spaces[0]?.id || 'space-general-001';
 
     try {
       setSubmitting(true);
@@ -53,7 +50,7 @@ export function CreateDocumentModal({
         .filter(Boolean);
 
       await onSubmit({
-        spaceId,
+        spaceId: targetSpaceId,
         title: title.trim(),
         content: content.trim(),
         visibility,

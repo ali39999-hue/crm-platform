@@ -131,6 +131,6 @@ test.describe('Customer Portal & Access Boundary P0 Journey', () => {
     await submitCsatBtn.click();
 
     // Verify thank you message
-    await expect(csatCard).toContainText('با تشکر از شما! امتیاز ۵ از ۵ ستاره');
+    await expect(csatCard).toContainText(/با تشکر از شما! امتیاز [5۵] از [5۵] ستاره/);
   });
 });

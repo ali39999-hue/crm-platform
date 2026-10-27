@@ -13,7 +13,7 @@ test.describe('Calendar & Activity Scheduling P1 Journey (R-064)', () => {
     await myWorkNav.click();
 
     // 2. Switch to Calendar view mode
-    const calendarViewBtn = page.locator('button', { hasText: 'تقویم' });
+    const calendarViewBtn = page.locator('[data-testid="view-btn-calendar"]');
     await expect(calendarViewBtn).toBeVisible();
     await calendarViewBtn.click();
 
@@ -29,7 +29,7 @@ test.describe('Calendar & Activity Scheduling P1 Journey (R-064)', () => {
   test('should open Activity Composer modal and schedule a new meeting', async ({ page }) => {
     // Navigate to calendar view
     await page.locator('[data-testid="nav-my-work"]').click();
-    await page.locator('button', { hasText: 'تقویم' }).click();
+    await page.locator('[data-testid="view-btn-calendar"]').click();
 
     const activityTitle = `جلسه تست پلی‌رایت ${Date.now()}`;
 
@@ -59,7 +59,7 @@ test.describe('Calendar & Activity Scheduling P1 Journey (R-064)', () => {
 
   test('should mark an activity as completed', async ({ page }) => {
     await page.locator('[data-testid="nav-my-work"]').click();
-    await page.locator('button', { hasText: 'تقویم' }).click();
+    await page.locator('[data-testid="view-btn-calendar"]').click();
 
     const activitiesList = page.locator('[data-testid="activities-list"]');
     await expect(activitiesList).toBeVisible();

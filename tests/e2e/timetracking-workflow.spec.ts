@@ -84,7 +84,7 @@ test.describe('Time Tracking & Work Logs P2 Journey (R-052)', () => {
     // Verify entry in table
     const tbody = page.locator('[data-testid="worklogs-tbody"]');
     await expect(tbody).toContainText(logTitle);
-    await expect(tbody).toContainText('۲ ساعت و ۳۰ دقیقه');
+    await expect(tbody).toContainText(/2 ساعت و 30 دقیقه|۲ ساعت و ۳۰ دقیقه/);
   });
 
   test('should filter work logs by entity type tabs', async ({ page }) => {

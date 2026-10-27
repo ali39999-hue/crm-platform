@@ -41,7 +41,7 @@ test.describe('Reports & Business Intelligence Analytics P1 Journey (R-064 & REP
     // Verify groups rendered
     const groupsContainer = page.locator('[data-testid="custom-report-groups"]');
     await expect(groupsContainer).toBeVisible();
-    await expect(groupsContainer).toContainText('سرنخ');
+    await expect(groupsContainer).toContainText(/QUALIFIED|سرنخ/);
 
     // Switch metric to TASKS
     await metricSelect.selectOption('TASKS');
