@@ -12,8 +12,12 @@ describe('PrismaSupportRepository Multi-Tenant Integration Tests (RA-004)', () =
 
   let ticketsTable: any[] = [];
   let messagesTable: any[] = [];
+  let macroTable: any[] = [];
+  let seqTable: any[] = [];
 
   beforeEach(() => {
+    macroTable = [];
+    seqTable = [{ organizationId: orgAlphaId, lastValue: 1000 }];
     ticketsTable = [
       {
         id: 'tkt-1',
@@ -108,6 +112,45 @@ describe('PrismaSupportRepository Multi-Tenant Integration Tests (RA-004)', () =
     };
 
     // See prisma-crm.spec.ts note: alias the tenant-scoped client to the mock.
+    mockPrisma.supportSequence = {
+      updateMany: async ({ where }: any) => {
+        const row = seqTable.find((r) => r.organizationId === where.organizationId);
+        if (!row) return { count: 0 };
+        row.lastValue += 1;
+        return { count: 1 };
+      },
+      findUnique: async ({ where }: any) =>
+        seqTable.find((r) => r.organizationId === where.organizationId) ?? null,
+      create: async ({ data }: any) => {
+        const row = { ...data };
+        seqTable.push(row);
+        return row;
+      },
+    };
+    mockPrisma.supportMacro = {
+      findMany: async ({ where }: any) =>
+        macroTable.filter(
+          (m) => m.organizationId === where.organizationId && (!where.category || m.category === where.category),
+        ),
+      findFirst: async ({ where }: any) =>
+        macroTable.find((m) => m.organizationId === where.organizationId && m.id === where.id) ?? null,
+      create: async ({ data }: any) => {
+        const row = { ...data, id: 'macro-new', createdAt: new Date(), updatedAt: new Date() };
+        macroTable.push(row);
+        return row;
+      },
+      update: async ({ where, data }: any) => {
+        const row = macroTable.find((m) => m.id === where.id);
+        if (!row) throw new Error('P2025');
+        Object.assign(row, data);
+        return row;
+      },
+      delete: async ({ where }: any) => {
+        const idx = macroTable.findIndex((m) => m.id === where.id);
+        if (idx === -1) throw new Error('P2025');
+        macroTable.splice(idx, 1);
+      },
+    };
     mockPrisma.tenantClient = mockPrisma;
 
     repository = new PrismaSupportRepository(mockPrisma as any);

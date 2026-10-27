@@ -187,7 +187,7 @@ describe('PrismaWebhookRepository Persistence + Replay Nonces (GAP-001 slice 6)'
       statusCode: null,
       responseBody: null,
       error: null,
-      durationMs: null,
+      durationMs: undefined,
       headers: {},
       timestamp: new Date().toISOString(),
       nextRetryAt: null,

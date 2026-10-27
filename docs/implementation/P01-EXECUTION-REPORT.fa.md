@@ -162,7 +162,22 @@
 ### باقی‌مانده صادقانه GAP-001
 سه Map درون repoهای پرisma موجود: products/invoices در `PrismaCrmRepository` و macros/orgCounter در `PrismaSupportRepository` — داده ثانویه داخل دامنه‌های durable؛ مدل ProductCatalog/ProformaInvoice/SupportMacro لازم است. به‌علاوه تست منفی DB-level روی postgres واقعی (اولین run CI).
 
-## ۱۱. Rollback
+## ۱۲. اجرای مرحله هفتم (نهایی) — آخرین Map ها هم durable شدند
+
+- مدل‌های جدید: **`ProductCatalogItem`** (unique SKU per org، unitPriceMinor با BigInt، taxRate با Decimal)، **`ProformaInvoice`** (unique شماره per org، اقلام Json)، **`SupportMacro`** و **`SupportSequence`**
+- **کشف مهم:** Map پنجمی هم وجود داشت — `dealExtensions` در `PrismaCrmRepository` که lossReason/lostAt/nextAction/stageUpdatedAt/products را در حافظه نگه می‌داشت؛ ستون‌های متناظر به مدل Deal اضافه شدند
+- شماره تیکت (`TKT-1001...`) حالا با **sequence اتمیک per-org** تولید می‌شود (updateMany increment + unique constraint پشتیبان)
+- دیگر هیچ Map حافظه‌ای در هیچ Prisma repository وجود ندارد
+
+### شواهد مرحله هفتم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۱۴/۶۱۴**؛ domain: ۸۸/۸۸ |
+| `pnpm audit:persistence:strict` | **exit 0** |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+
+## ۱۳. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.
 - رفتار ریسک‌دارترین تغییر (گاردهای global) با حذف ۳ provider `APP_GUARD` در `app.module.ts` کامل برمی‌گردد.

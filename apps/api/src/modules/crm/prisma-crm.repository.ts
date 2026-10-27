@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type {
   AccountEntity,
@@ -13,10 +12,6 @@ import type { ProductCatalogItemDto, ProformaInvoiceDto } from '@crm/contracts';
 
 @Injectable()
 export class PrismaCrmRepository implements ICrmRepository {
-  private products: Map<string, ProductCatalogItemDto> = new Map();
-  private invoices: Map<string, ProformaInvoiceDto> = new Map();
-  private dealExtensions: Map<string, Partial<DealEntity>> = new Map();
-
   constructor(private readonly prisma: PrismaService) {}
 
   /* Accounts */
@@ -257,8 +252,14 @@ export class PrismaCrmRepository implements ICrmRepository {
   /* Deals */
 
   private mapDeal(d: any): DealEntity {
-    const ext = this.dealExtensions.get(d.id) || {};
     return {
+      lossReason: d.lossReason ?? null,
+      lossDescription: d.lossDescription ?? null,
+      lostAt: d.lostAt ? d.lostAt.toISOString() : null,
+      nextActionTitle: d.nextActionTitle ?? null,
+      nextActionDueAt: d.nextActionDueAt ? d.nextActionDueAt.toISOString() : null,
+      stageUpdatedAt: d.stageUpdatedAt ? d.stageUpdatedAt.toISOString() : null,
+      products: d.products ?? null,
       id: d.id,
       organizationId: d.organizationId,
       accountId: d.accountId ?? null,
@@ -269,13 +270,6 @@ export class PrismaCrmRepository implements ICrmRepository {
       currency: d.currency ?? null,
       probability: d.probability ?? null,
       targetCloseAt: d.targetCloseAt ? (d.targetCloseAt instanceof Date ? d.targetCloseAt.toISOString() : d.targetCloseAt) : null,
-      lossReason: ext.lossReason ?? null,
-      lossDescription: ext.lossDescription ?? null,
-      lostAt: ext.lostAt ?? null,
-      nextActionTitle: ext.nextActionTitle ?? null,
-      nextActionDueAt: ext.nextActionDueAt ?? null,
-      stageUpdatedAt: ext.stageUpdatedAt ?? null,
-      products: ext.products ?? null,
       createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : d.createdAt,
       updatedAt: d.updatedAt instanceof Date ? d.updatedAt.toISOString() : d.updatedAt,
     };
@@ -314,19 +308,15 @@ export class PrismaCrmRepository implements ICrmRepository {
         currency: data.currency,
         probability: data.probability,
         targetCloseAt: data.targetCloseAt ? new Date(data.targetCloseAt) : null,
-      },
-    });
-    if (data.lossReason || data.nextActionTitle || data.products || data.stageUpdatedAt) {
-      this.dealExtensions.set(created.id, {
         lossReason: data.lossReason,
         lossDescription: data.lossDescription,
-        lostAt: data.lostAt,
+        lostAt: data.lostAt ? new Date(data.lostAt) : null,
         nextActionTitle: data.nextActionTitle,
-        nextActionDueAt: data.nextActionDueAt,
-        stageUpdatedAt: data.stageUpdatedAt,
-        products: data.products,
-      });
-    }
+        nextActionDueAt: data.nextActionDueAt ? new Date(data.nextActionDueAt) : null,
+        stageUpdatedAt: data.stageUpdatedAt ? new Date(data.stageUpdatedAt) : null,
+        products: data.products ?? undefined,
+      },
+    });
     return this.mapDeal(created);
   }
 
@@ -342,16 +332,14 @@ export class PrismaCrmRepository implements ICrmRepository {
         targetCloseAt: deal.targetCloseAt ? new Date(deal.targetCloseAt) : null,
         accountId: deal.accountId,
         ownerId: deal.ownerId,
+        lossReason: deal.lossReason,
+        lossDescription: deal.lossDescription,
+        lostAt: deal.lostAt ? new Date(deal.lostAt) : null,
+        nextActionTitle: deal.nextActionTitle,
+        nextActionDueAt: deal.nextActionDueAt ? new Date(deal.nextActionDueAt) : null,
+        stageUpdatedAt: deal.stageUpdatedAt ? new Date(deal.stageUpdatedAt) : null,
+        products: deal.products ?? undefined,
       },
-    });
-    this.dealExtensions.set(deal.id, {
-      lossReason: deal.lossReason,
-      lossDescription: deal.lossDescription,
-      lostAt: deal.lostAt,
-      nextActionTitle: deal.nextActionTitle,
-      nextActionDueAt: deal.nextActionDueAt,
-      stageUpdatedAt: deal.stageUpdatedAt,
-      products: deal.products,
     });
     return this.mapDeal(updated);
   }
@@ -362,48 +350,103 @@ export class PrismaCrmRepository implements ICrmRepository {
     await (this.prisma.tenantClient as any).deal.delete({
       where: { id },
     });
-    this.dealExtensions.delete(id);
     return true;
+  }
+
+  private mapProduct(p: any): ProductCatalogItemDto {
+    return {
+      id: p.id,
+      organizationId: p.organizationId,
+      sku: p.sku,
+      name: p.name,
+      unit: p.unit,
+      unitPriceMinor: Number(p.unitPriceMinor),
+      currency: p.currency,
+      taxRatePercent: Number(p.taxRatePercent),
+      active: p.active,
+    };
+  }
+
+  private mapInvoice(inv: any): ProformaInvoiceDto {
+    return {
+      id: inv.id,
+      organizationId: inv.organizationId,
+      dealId: inv.dealId,
+      invoiceNumber: inv.invoiceNumber,
+      accountName: inv.accountName,
+      subtotalMinor: Number(inv.subtotalMinor),
+      discountTotalMinor: Number(inv.discountTotalMinor),
+      taxTotalMinor: Number(inv.taxTotalMinor),
+      finalTotalMinor: Number(inv.finalTotalMinor),
+      currency: inv.currency,
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+      items: inv.items ?? [],
+      status: inv.status,
+      createdAt: inv.createdAt.toISOString(),
+    };
   }
 
   /* Products */
   async findProducts(organizationId: string): Promise<ProductCatalogItemDto[]> {
-    return Array.from(this.products.values()).filter((p) => p.organizationId === organizationId);
+    const rows = await (this.prisma.tenantClient as any).productCatalogItem.findMany({
+      where: { organizationId },
+      orderBy: { name: 'asc' },
+    });
+    return rows.map((p: any) => this.mapProduct(p));
   }
 
   async createProduct(
     organizationId: string,
     data: Omit<ProductCatalogItemDto, 'id' | 'organizationId'>,
   ): Promise<ProductCatalogItemDto> {
-    const id = randomUUID();
-    const entity: ProductCatalogItemDto = {
-      ...data,
-      id,
-      organizationId,
-    };
-    this.products.set(id, entity);
-    return entity;
+    const created = await (this.prisma.tenantClient as any).productCatalogItem.create({
+      data: {
+        organizationId,
+        sku: data.sku,
+        name: data.name,
+        unit: data.unit,
+        unitPriceMinor: BigInt(data.unitPriceMinor),
+        currency: data.currency,
+        taxRatePercent: data.taxRatePercent,
+        active: data.active,
+      },
+    });
+    return this.mapProduct(created);
   }
 
   /* Invoices */
   async findInvoices(organizationId: string, dealId?: string): Promise<ProformaInvoiceDto[]> {
-    return Array.from(this.invoices.values()).filter(
-      (inv) => inv.organizationId === organizationId && (!dealId || inv.dealId === dealId),
-    );
+    const where: any = { organizationId };
+    if (dealId) where.dealId = dealId;
+    const rows = await (this.prisma.tenantClient as any).proformaInvoice.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((inv: any) => this.mapInvoice(inv));
   }
 
   async createInvoice(
     organizationId: string,
     data: Omit<ProformaInvoiceDto, 'id' | 'organizationId' | 'createdAt'>,
   ): Promise<ProformaInvoiceDto> {
-    const id = randomUUID();
-    const entity: ProformaInvoiceDto = {
-      ...data,
-      id,
-      organizationId,
-      createdAt: new Date().toISOString(),
-    };
-    this.invoices.set(id, entity);
-    return entity;
+    const created = await (this.prisma.tenantClient as any).proformaInvoice.create({
+      data: {
+        organizationId,
+        dealId: data.dealId,
+        invoiceNumber: data.invoiceNumber,
+        accountName: data.accountName,
+        subtotalMinor: BigInt(data.subtotalMinor),
+        discountTotalMinor: BigInt(data.discountTotalMinor),
+        taxTotalMinor: BigInt(data.taxTotalMinor),
+        finalTotalMinor: BigInt(data.finalTotalMinor),
+        currency: data.currency,
+        issueDate: data.issueDate,
+        dueDate: data.dueDate,
+        items: data.items ?? [],
+        status: data.status,
+      },
+    });
+    return this.mapInvoice(created);
   }
 }

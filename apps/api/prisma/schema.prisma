@@ -95,6 +95,10 @@ model Organization {
   documents Document[]
   webhookSubscriptions WebhookSubscription[]
   webhookDeliveries WebhookDelivery[]
+  productCatalogItems ProductCatalogItem[]
+  proformaInvoices ProformaInvoice[]
+  supportMacros SupportMacro[]
+  supportSequences SupportSequence[]
 }
 
 model User {
@@ -346,6 +350,13 @@ model Deal {
   currency       String?
   probability    Int?
   targetCloseAt  DateTime?    @db.Timestamptz(6)
+  lossReason     String?
+  lossDescription String?
+  lostAt         DateTime?    @db.Timestamptz(6)
+  nextActionTitle String?
+  nextActionDueAt DateTime?   @db.Timestamptz(6)
+  stageUpdatedAt DateTime?    @db.Timestamptz(6)
+  products       Json?
   createdAt      DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -776,4 +787,60 @@ model WebhookNonce {
   expiresAt DateTime @db.Timestamptz(6)
   @@id([scope, nonce])
   @@index([expiresAt])
+}
+
+model ProductCatalogItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  sku            String
+  name           String
+  unit           String
+  unitPriceMinor BigInt
+  currency       String
+  taxRatePercent Decimal @db.Decimal(5, 2)
+  active         Boolean @default(true)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, sku])
+  @@index([organizationId, active])
+}
+
+model ProformaInvoice {
+  id                 String   @id @default(uuid()) @db.Uuid
+  organizationId     String   @db.Uuid
+  dealId             String   @db.Uuid
+  invoiceNumber      String
+  accountName        String
+  subtotalMinor      BigInt
+  discountTotalMinor BigInt
+  taxTotalMinor      BigInt
+  finalTotalMinor    BigInt
+  currency           String
+  issueDate          String
+  dueDate            String
+  items              Json
+  status             String   @default("DRAFT")
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, dealId])
+}
+
+model SupportMacro {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  title          String
+  shortcut       String
+  category       String
+  content        String   @db.Text
+  tags           String[]
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, category])
+}
+
+model SupportSequence {
+  organizationId String @id @db.Uuid
+  lastValue      Int
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

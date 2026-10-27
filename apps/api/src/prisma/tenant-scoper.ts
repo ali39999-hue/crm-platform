@@ -29,6 +29,9 @@ export const TENANT_SCOPED_MODELS = [
   'DocumentRevision',
   'WebhookSubscription',
   'WebhookDelivery',
+  'ProductCatalogItem',
+  'ProformaInvoice',
+  'SupportMacro',
 ];
 
 /**

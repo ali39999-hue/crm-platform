@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type {
   ISupportRepository,
@@ -11,32 +10,8 @@ import type { RecordVisibility, TicketPriority, TicketStatus } from '@crm/contra
 
 @Injectable()
 export class PrismaSupportRepository implements ISupportRepository {
-  private macros: Map<string, SupportMacroEntity> = new Map();
-  private orgCounter: Map<string, number> = new Map();
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor(private readonly prisma: PrismaService) {
-    this.seedDefaultMacros();
-  }
-
-  private seedDefaultMacros() {
-    const orgAlpha = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-    const seeded: SupportMacroEntity[] = [
-      {
-        id: 'macro-001',
-        organizationId: orgAlpha,
-        title: 'پاسخ اولیه و اعلام بررسی فنی',
-        shortcut: 'ack',
-        category: 'عمومی',
-        content: 'با سلام و احترام،\nدرخواست شما دریافت شد و کارشناسان فنی ما در حال بررسی موضوع هستند.',
-        tags: ['پاسخ_اولیه', 'پشتیبانی'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-    for (const m of seeded) {
-      this.macros.set(m.id, m);
-    }
-  }
 
   private mapTicket(t: any): TicketEntity {
     return {
@@ -89,9 +64,7 @@ export class PrismaSupportRepository implements ISupportRepository {
   async createTicket(
     data: Omit<TicketEntity, 'id' | 'reference' | 'createdAt' | 'updatedAt'>,
   ): Promise<TicketEntity> {
-    const counter = (this.orgCounter.get(data.organizationId) ?? 1000) + 1;
-    this.orgCounter.set(data.organizationId, counter);
-    const reference = `TKT-${counter}`;
+    const reference = `TKT-${await this.nextTicketReference(data.organizationId)}`;
 
     const created = await (this.prisma.tenantClient as any).ticket.create({
       data: {
@@ -176,48 +149,96 @@ export class PrismaSupportRepository implements ISupportRepository {
     return 1;
   }
 
+  /**
+   * Atomic per-organization ticket sequence (TKT-1001, TKT-1002, ...).
+   * updateMany first so two concurrent creates never share a number; the
+   * Ticket table's @@unique([organizationId, reference]) is the backstop.
+   */
+  private async nextTicketReference(organizationId: string): Promise<number> {
+    const client = this.prisma.tenantClient as any;
+    const bumped = await client.supportSequence.updateMany({
+      where: { organizationId },
+      data: { lastValue: { increment: 1 } },
+    });
+    if (bumped?.count === 1) {
+      const row = await client.supportSequence.findUnique({ where: { organizationId } });
+      return row!.lastValue;
+    }
+    const created = await client.supportSequence
+      .create({ data: { organizationId, lastValue: 1001 } })
+      .catch(() => null);
+    if (created) return created.lastValue;
+    const row = await client.supportSequence.findUnique({ where: { organizationId } });
+    return row!.lastValue;
+  }
+
+  private mapMacro(m: any): SupportMacroEntity {
+    return {
+      id: m.id,
+      organizationId: m.organizationId,
+      title: m.title,
+      shortcut: m.shortcut,
+      category: m.category,
+      content: m.content,
+      tags: m.tags ?? [],
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    };
+  }
+
   /* Support Macros */
 
   async findMacros(organizationId: string, category?: string): Promise<SupportMacroEntity[]> {
-    return Array.from(this.macros.values()).filter(
-      (m) => m.organizationId === organizationId && (!category || m.category === category),
-    );
+    const where: any = { organizationId };
+    if (category) where.category = category;
+    const rows = await (this.prisma.tenantClient as any).supportMacro.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((m: any) => this.mapMacro(m));
   }
 
   async findMacroById(organizationId: string, id: string): Promise<SupportMacroEntity | null> {
-    const m = this.macros.get(id);
-    if (!m || m.organizationId !== organizationId) return null;
-    return m;
+    const row = await (this.prisma.tenantClient as any).supportMacro.findFirst({
+      where: { organizationId, id },
+    });
+    return row ? this.mapMacro(row) : null;
   }
 
   async createMacro(
     data: Omit<SupportMacroEntity, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<SupportMacroEntity> {
-    const id = randomUUID();
-    const now = new Date().toISOString();
-    const entity: SupportMacroEntity = {
-      ...data,
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.macros.set(id, entity);
-    return entity;
+    const created = await (this.prisma.tenantClient as any).supportMacro.create({
+      data: {
+        organizationId: data.organizationId,
+        title: data.title,
+        shortcut: data.shortcut,
+        category: data.category,
+        content: data.content,
+        tags: data.tags ?? [],
+      },
+    });
+    return this.mapMacro(created);
   }
 
   async updateMacro(macro: SupportMacroEntity): Promise<SupportMacroEntity> {
-    const updated: SupportMacroEntity = {
-      ...macro,
-      updatedAt: new Date().toISOString(),
-    };
-    this.macros.set(macro.id, updated);
-    return updated;
+    const updated = await (this.prisma.tenantClient as any).supportMacro.update({
+      where: { id: macro.id },
+      data: {
+        title: macro.title,
+        shortcut: macro.shortcut,
+        category: macro.category,
+        content: macro.content,
+        tags: macro.tags ?? [],
+      },
+    });
+    return this.mapMacro(updated);
   }
 
   async deleteMacro(organizationId: string, id: string): Promise<boolean> {
     const m = await this.findMacroById(organizationId, id);
     if (!m) return false;
-    this.macros.delete(id);
+    await (this.prisma.tenantClient as any).supportMacro.delete({ where: { id } });
     return true;
   }
 }
