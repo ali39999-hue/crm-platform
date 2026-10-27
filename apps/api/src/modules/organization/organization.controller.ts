@@ -16,6 +16,7 @@ import type { UserContext } from '../../common/auth/auth.types.js';
 import { OrganizationService } from './organization.service.js';
 import { InvitationService } from './invitation.service.js';
 import { OrganizationDirectoryService } from './organization-directory.service.js';
+import { OrganizationWorkspaceService } from './organization-workspace.service.js';
 import type {
   OrganizationMemberDto,
   OrganizationSettingsDto,
@@ -40,6 +41,7 @@ export class OrganizationController {
     private readonly orgService: OrganizationService,
     private readonly invitationService: InvitationService,
     private readonly directoryService: OrganizationDirectoryService,
+    private readonly workspaceService: OrganizationWorkspaceService,
   ) {}
 
   @Get('settings')
@@ -47,6 +49,9 @@ export class OrganizationController {
   async getSettings(
     @CurrentUser() user: UserContext,
   ): Promise<OrganizationSettingsDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.getSettings(user.activeOrganization.id);
+    }
     return this.orgService.getSettings(user.activeOrganization.id);
   }
 
@@ -56,6 +61,9 @@ export class OrganizationController {
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateOrganizationSettingsDto,
   ): Promise<OrganizationSettingsDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.updateSettings(user.activeOrganization.id, user.id, dto);
+    }
     return this.orgService.updateSettings(
       user.activeOrganization.id,
       user.id,
@@ -179,6 +187,9 @@ export class OrganizationController {
   @Get('teams')
   @RequirePermission('organization_settings')
   async getTeams(@CurrentUser() user: UserContext): Promise<TeamDto[]> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.getTeams(user.activeOrganization.id);
+    }
     return this.orgService.getTeams(user.activeOrganization.id);
   }
 
@@ -188,6 +199,9 @@ export class OrganizationController {
     @CurrentUser() user: UserContext,
     @Body() dto: CreateTeamDto,
   ): Promise<TeamDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.createTeam(user.activeOrganization.id, user.id, dto);
+    }
     return this.orgService.createTeam(
       user.activeOrganization.id,
       user.id,
@@ -202,6 +216,9 @@ export class OrganizationController {
     @Param('id') id: string,
     @Body() dto: UpdateTeamDto,
   ): Promise<TeamDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.updateTeam(user.activeOrganization.id, user.id, id, dto);
+    }
     return this.orgService.updateTeam(
       user.activeOrganization.id,
       user.id,
@@ -217,6 +234,9 @@ export class OrganizationController {
     @Param('id') id: string,
     @Body() dto: AddTeamMemberDto,
   ): Promise<TeamDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.addTeamMember(user.activeOrganization.id, user.id, id, dto.memberId);
+    }
     return this.orgService.addTeamMember(
       user.activeOrganization.id,
       user.id,
@@ -232,6 +252,14 @@ export class OrganizationController {
     @Param('id') id: string,
     @Param('memberId') memberId: string,
   ): Promise<TeamDto> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.removeTeamMember(
+        user.activeOrganization.id,
+        user.id,
+        id,
+        memberId,
+      );
+    }
     return this.orgService.removeTeamMember(
       user.activeOrganization.id,
       user.id,
@@ -246,6 +274,9 @@ export class OrganizationController {
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    if (process.env.USE_DATABASE === 'true') {
+      return this.workspaceService.deleteTeam(user.activeOrganization.id, user.id, id);
+    }
     return this.orgService.deleteTeam(
       user.activeOrganization.id,
       user.id,

@@ -285,6 +285,21 @@
 | `pnpm audit:persistence:strict` | exit 0 |
 | `pnpm security:audit` | exit 0 |
 
+## فاز P02 — گام هشتم: تنظیمات سازمان و تیم‌های durable
+
+- ستون **`settings` (Json)** روی Organization (timezone/locale/branding/retentionPolicy) + ستون‌های `slug`/`description`/`leadMemberId` روی Team + migration نهم (`20261028_org_settings_team_fields`)
+- **`OrganizationWorkspaceService`**: get/updateSettings با نگهداشت مقادیر پیش‌فرض (Asia/Tehran, fa-IR، retention 90/7)؛ هشت عملیات تیم (CRUD + add/remove member) روی Team/TeamMember واقعی؛ leadMemberName با join کاربر؛ audit برای همه تغییرات
+- کنترلر روی USE_DATABASE برای ۸ مسیر شاخه می‌زند؛ fixture mode برای dev/E2E دست‌نخورده
+- Teams فقط با userId کار می‌کند (TeamMember.userId) — memberIdهای legacy مسیر مهاجرت جدا دارند
+
+### شواهد گام هشتم
+| دستور | نتیجه |
+|---|---|
+| `pnpm typecheck` | ۷/۷ |
+| `pnpm test` | API: **۶۳۷/۶۳۷** (+۴ تست workspace)؛ domain: ۸۸/۸۸ |
+| `pnpm test:e2e` | ۶۷/۶۷ |
+| `pnpm audit:persistence:strict` | exit 0 |
+
 ## 16. Rollback۱۵. Rollback
 
 - تمام تغییرات در فایل‌های مشخص است؛ `git checkout -- <files>` یا حذف ۳ فایل جدید + revert چهار فایل app.module/prisma.service/auth.guard کافی است.

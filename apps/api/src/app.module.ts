@@ -26,6 +26,7 @@ import { OrganizationController } from './modules/organization/organization.cont
 import { OrganizationService } from './modules/organization/organization.service.js';
 import { InvitationService } from './modules/organization/invitation.service.js';
 import { OrganizationDirectoryService } from './modules/organization/organization-directory.service.js';
+import { OrganizationWorkspaceService } from './modules/organization/organization-workspace.service.js';
 import { CustomFieldController } from './modules/custom-fields/custom-field.controller.js';
 import { CustomFieldService } from './modules/custom-fields/custom-field.service.js';
 import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-field.repository.js';
@@ -289,6 +290,7 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     OrganizationService,
     InvitationService,
     OrganizationDirectoryService,
+    OrganizationWorkspaceService,
     // These were previously registered only in `exports`, which does NOT
     // register a provider — AppModule could never actually bootstrap (latent
     // runtime crash, invisible to unit tests that never compile the module).

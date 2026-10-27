@@ -51,6 +51,7 @@ describe('inviteMember DB-mode delegation (P02 step 5)', () => {
       orgService,
       invitationService as any,
       { getMembers: async () => [], updateMemberRole: async () => ({}) as any, revokeMember: async () => ({ success: true }) } as any,
+      { getSettings: async () => ({} as any), updateSettings: async () => ({} as any), getTeams: async () => [], createTeam: async () => ({} as any), updateTeam: async () => ({} as any), addTeamMember: async () => ({} as any), removeTeamMember: async () => ({} as any), deleteTeam: async () => ({ success: true }) } as any,
     );
   });
 
