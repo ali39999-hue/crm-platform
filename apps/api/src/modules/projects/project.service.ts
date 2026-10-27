@@ -16,10 +16,10 @@ import type {
   UpdateProjectRequest,
 } from '@crm/contracts';
 import { calculateGanttSchedule, type GanttInputTask } from '@crm/domain';
-import {
-  InMemoryProjectRepository,
-  type MilestoneEntity,
-  type ProjectEntity,
+import type {
+  MilestoneEntity,
+  ProjectEntity,
+  IProjectRepository,
 } from './project.repository.js';
 import type { ITaskRepository } from '../tasks/task.repository.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -29,7 +29,7 @@ export class ProjectService {
   private readonly logger = new Logger(ProjectService.name);
 
   constructor(
-    private readonly projectRepo: InMemoryProjectRepository,
+    @Inject('PROJECT_REPOSITORY') private readonly projectRepo: IProjectRepository,
     @Inject('TASK_REPOSITORY') private readonly taskRepo: ITaskRepository,
     private readonly auditService: AuditService,
   ) {}
@@ -40,7 +40,7 @@ export class ProjectService {
 
     const results: ProjectSummaryDto[] = [];
     for (const p of projects) {
-      const milestones = await this.projectRepo.findMilestones(p.id);
+      const milestones = await this.projectRepo.findMilestones(p.organizationId, p.id);
       const summary = this.mapSummary(p, tasks, milestones);
       results.push(summary);
     }
@@ -58,7 +58,7 @@ export class ProjectService {
     }
 
     const tasks = await this.taskRepo.findAll(organizationId, { limit: 1000 });
-    const milestones = await this.projectRepo.findMilestones(project.id);
+    const milestones = await this.projectRepo.findMilestones(organizationId, project.id);
     const summary = this.mapSummary(project, tasks, milestones);
 
     const detail: ProjectDetailDto = {
@@ -169,6 +169,7 @@ export class ProjectService {
     }
 
     const milestone = await this.projectRepo.createMilestone({
+      organizationId,
       projectId,
       title: dto.title.trim(),
       dueDate: dto.dueDate,
@@ -194,7 +195,7 @@ export class ProjectService {
     milestoneId: string,
     isCompleted: boolean,
   ): Promise<MilestoneDto> {
-    const updated = await this.projectRepo.toggleMilestone(projectId, milestoneId, isCompleted);
+    const updated = await this.projectRepo.toggleMilestone(organizationId, projectId, milestoneId, isCompleted);
     if (!updated) {
       throw new NotFoundException(`Milestone ${milestoneId} not found`);
     }

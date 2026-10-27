@@ -38,12 +38,14 @@ describe('PII Redactor and Data Retention (F4-06)', () => {
 
   describe('redactObject', () => {
     it('replaces password, secret, token, and api key properties with [REDACTED]', () => {
+      const piiCredential = 'sample-credential-for-redaction';
+      const secondPiiSample = 'key-redact-sample';
       const payload = {
         name: 'Normal Name',
-        password: 'myPassword123!',
+        password: piiCredential,
         userToken: 'secret_abc',
         clientSecret: 'shhh',
-        apiKey: 'key_12345',
+        apiKey: secondPiiSample,
         details: {
           nestedSecret: 'nested',
           publicInfo: 'visible',

@@ -11,6 +11,8 @@ import {
   Optional,
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
+import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
+import { RequirePermission } from '../../common/auth/require-permission.decorator.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { NotificationService } from './notification.service.js';
@@ -25,7 +27,7 @@ import type {
 } from '@crm/contracts';
 
 @Controller('notifications')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
@@ -43,6 +45,7 @@ export class NotificationController {
   }
 
   @Get()
+  @RequirePermission('view_internal_tasks')
   async getMyNotifications(
     @CurrentUser() user: UserContext,
     @Query('limit') limit?: number,
@@ -55,6 +58,7 @@ export class NotificationController {
   }
 
   @Get('dlq')
+  @RequirePermission('manage_integrations')
   async getDeadLetters(
     @CurrentUser() user: UserContext,
     @Query('limit') limit?: number,
@@ -73,6 +77,7 @@ export class NotificationController {
   }
 
   @Post('dlq/:id/retry')
+  @RequirePermission('manage_integrations')
   async retryDeadLetter(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -91,6 +96,7 @@ export class NotificationController {
   }
 
   @Post(':id/read')
+  @RequirePermission('view_internal_tasks')
   async markAsRead(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -103,6 +109,7 @@ export class NotificationController {
   }
 
   @Post('read-all')
+  @RequirePermission('view_internal_tasks')
   async markAllAsRead(@CurrentUser() user: UserContext): Promise<{ count: number }> {
     return this.notificationService.markAllAsRead(
       user.activeOrganization.id,
@@ -111,11 +118,13 @@ export class NotificationController {
   }
 
   @Get('preferences')
+  @RequirePermission('view_internal_tasks')
   async getPreferences(@CurrentUser() user: UserContext): Promise<NotificationPreferencesDto> {
     return this.notificationService.getPreferences(user.id);
   }
 
   @Put('preferences')
+  @RequirePermission('view_internal_tasks')
   async setPreferences(
     @CurrentUser() user: UserContext,
     @Body() prefs: NotificationPreferencesDto,

@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule, OnModuleInit } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { assertProductionReadiness } from './common/security/production-readiness.js';
 import { HealthController } from './health/health.controller.js';
 import { AuthController } from './modules/auth/auth.controller.js';
@@ -28,9 +29,11 @@ import { InMemoryCustomFieldRepository } from './modules/custom-fields/custom-fi
 import { ProjectController } from './modules/projects/project.controller.js';
 import { ProjectService } from './modules/projects/project.service.js';
 import { InMemoryProjectRepository } from './modules/projects/project.repository.js';
+import { PrismaProjectRepository } from './modules/projects/prisma-project.repository.js';
 import { TimeTrackingController } from './modules/timetracking/timetracking.controller.js';
 import { TimeTrackingService } from './modules/timetracking/timetracking.service.js';
 import { InMemoryTimeTrackingRepository } from './modules/timetracking/timetracking.repository.js';
+import { PrismaTimeTrackingRepository } from './modules/timetracking/prisma-timetracking.repository.js';
 import { MentionController } from './modules/mentions/mention.controller.js';
 import { MentionService } from './modules/mentions/mention.service.js';
 import { InMemoryMentionRepository } from './modules/mentions/mention.repository.js';
@@ -43,6 +46,7 @@ import { AuthGuard } from './common/auth/auth.guard.js';
 import { PermissionsGuard } from './common/auth/permissions.guard.js';
 import { RateLimiterGuard } from './common/security/rate-limiter.guard.js';
 import { SecurityHeadersMiddleware } from './common/security/security-headers.middleware.js';
+import { TenantContextMiddleware } from './common/auth/tenant-context.middleware.js';
 import { FilesService } from './modules/files/files.service.js';
 import { AuditService } from './modules/audit/audit.service.js';
 import { AuditController } from './modules/audit/audit.controller.js';
@@ -63,6 +67,7 @@ import { InMemorySupportRepository } from './modules/support/support.repository.
 import { PrismaSupportRepository } from './modules/support/prisma-support.repository.js';
 import { SupportService } from './modules/support/support.service.js';
 import { InMemoryNotificationRepository } from './modules/notifications/notification.repository.js';
+import { PrismaNotificationRepository } from './modules/notifications/prisma-notification.repository.js';
 import { InMemoryNotificationDlqRepository } from './modules/notifications/notification-dlq.repository.js';
 import { NotificationService } from './modules/notifications/notification.service.js';
 import { NotificationDispatcherService } from './modules/notifications/notification-dispatcher.service.js';
@@ -73,6 +78,7 @@ import { ReportingService } from './modules/reporting/reporting.service.js';
 import { InMemoryAutomationRepository } from './modules/automation/automation.repository.js';
 import { AutomationService } from './modules/automation/automation.service.js';
 import { InMemoryActivityRepository } from './modules/activity/activity.repository.js';
+import { PrismaActivityRepository } from './modules/activity/prisma-activity.repository.js';
 import { ActivityService } from './modules/activity/activity.service.js';
 import { ImportExportService } from './modules/crm/csv/import-export.service.js';
 import { SearchService } from './modules/search/search.service.js';
@@ -136,6 +142,19 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     MeetingsController,
   ],
   providers: [
+    // Global guard chain (GATE-002 structural fix): previously the guards were
+    // only plain providers, so a controller forgetting class-level
+    // @UseGuards(...) would ship completely unauthenticated. Registered order
+    // is execution order: authenticate -> authorize -> rate limit.
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: RateLimiterGuard },
+    {
+      // Production keeps the strict defaults (60/min general, 10/min
+      // sensitive). Local dev and E2E fire bursts from a single client.
+      provide: 'RATE_LIMITER_CONFIG',
+      useFactory: () => (process.env.NODE_ENV === 'production' ? {} : { generalLimit: 600 }),
+    },
     VoipService,
     InstallmentsService,
     CardsPipelineService,
@@ -179,9 +198,13 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     SupportService,
     {
       provide: 'NOTIFICATION_REPOSITORY',
-      useClass: InMemoryNotificationRepository,
+      useClass:
+        process.env.USE_DATABASE === 'true'
+          ? PrismaNotificationRepository
+          : InMemoryNotificationRepository,
     },
     InMemoryNotificationRepository,
+    PrismaNotificationRepository,
     {
       provide: 'NOTIFICATION_DLQ_REPOSITORY',
       useClass: InMemoryNotificationDlqRepository,
@@ -195,7 +218,12 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     ReportingService,
     InMemoryAutomationRepository,
     AutomationService,
+    {
+      provide: 'ACTIVITY_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaActivityRepository : InMemoryActivityRepository,
+    },
     InMemoryActivityRepository,
+    PrismaActivityRepository,
     ActivityService,
     SearchService,
     InMemoryWebhookRepository,
@@ -213,6 +241,32 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryDocumentRepository,
     DocumentsService,
     OrganizationService,
+    // These were previously registered only in `exports`, which does NOT
+    // register a provider — AppModule could never actually bootstrap (latent
+    // runtime crash, invisible to unit tests that never compile the module).
+    InMemoryCustomFieldRepository,
+    CustomFieldService,
+    InMemoryProjectRepository,
+    PrismaProjectRepository,
+    {
+      provide: 'PROJECT_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaProjectRepository : InMemoryProjectRepository,
+    },
+    ProjectService,
+    InMemoryTimeTrackingRepository,
+    PrismaTimeTrackingRepository,
+    {
+      provide: 'TIME_TRACKING_REPOSITORY',
+      useClass:
+        process.env.USE_DATABASE === 'true'
+          ? PrismaTimeTrackingRepository
+          : InMemoryTimeTrackingRepository,
+    },
+    TimeTrackingService,
+    InMemoryMentionRepository,
+    MentionService,
+    InMemoryApiKeyRepository,
+    ApiKeyService,
   ],
   exports: [
     AuthService,
@@ -244,8 +298,12 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryNotificationDlqRepository,
     NotificationDispatcherService,
     NotificationService,
+    PrismaNotificationRepository,
     ReportingService,
     AutomationService,
+    'ACTIVITY_REPOSITORY',
+    InMemoryActivityRepository,
+    PrismaActivityRepository,
     ActivityService,
     SearchService,
     WebhookService,
@@ -260,8 +318,21 @@ import { MeetingsService } from './modules/meetings/meetings.service.js';
     InMemoryCustomFieldRepository,
     CustomFieldService,
     InMemoryProjectRepository,
+    PrismaProjectRepository,
+    {
+      provide: 'PROJECT_REPOSITORY',
+      useClass: process.env.USE_DATABASE === 'true' ? PrismaProjectRepository : InMemoryProjectRepository,
+    },
     ProjectService,
     InMemoryTimeTrackingRepository,
+    PrismaTimeTrackingRepository,
+    {
+      provide: 'TIME_TRACKING_REPOSITORY',
+      useClass:
+        process.env.USE_DATABASE === 'true'
+          ? PrismaTimeTrackingRepository
+          : InMemoryTimeTrackingRepository,
+    },
     TimeTrackingService,
     InMemoryMentionRepository,
     MentionService,
@@ -275,7 +346,9 @@ export class AppModule implements NestModule, OnModuleInit {
   }
 
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
+    // Tenant context must wrap the whole chain (guards + handler), so it is
+    // applied before SecurityHeadersMiddleware.
+    consumer.apply(TenantContextMiddleware, SecurityHeadersMiddleware).forRoutes('*');
   }
 }
 

@@ -18,7 +18,7 @@
 
 ## پیش‌نیازها
 
-- Node.js نسخه Active LTS سازمان؛ این قالب برای Node 24 LTS طراحی شده است. قبل از شروع، وضعیت LTS را در [Node.js Release Schedule](https://github.com/nodejs/Release) کنترل کنید.
+- Node.js — سیاست نسخه (GAP-004): CI روی Node 24 طبق `.nvmrc` اجرا می‌شود؛ `engines` در `package.json` حداقل Node 22 را می‌پذیرد تا محیط‌های توسعه روی LTS فعلی (اندازه‌گیری‌شده: 22.23.3) کار کنند. توسعه محلی روی 22+ معتبر است، CI مرجع نسخه است.
 - pnpm با نسخه دقیق و مورد تأیید تیم، سپس commit کردن `pnpm-lock.yaml`
 - Docker Desktop یا Docker Engine + Compose
 - Git
@@ -68,11 +68,11 @@
 | حوزه و ماژول | قابلیت‌های کلیدی و الگوهای بومی | لایه ماندگاری (Persistence) | پوشش آزمون | وضعیت انتشار (Release) |
 |---|---|---|---|---|
 | **احراز هویت و مجوزها** | توکن JWT، بلک‌لیست امنیتی، ورود با رمز و ورود OTP پیامکی | حافظه + Blacklist با TTL | ۳۳ تست واحد و E2E | **Gated:** مسدودی `x-user-id` و رمزهای دمو در پروداکشن |
-| **ایزولاسیون چندمستأجری** | عایق‌بندی قطعی با اکستنشن `tenant-scoper` روی Prisma | PostgreSQL (Prisma Client) | ۱۰ تست منفی ایزولاسیون | تاییدشده در تست‌های امنیتی |
+| **ایزولاسیون چندمستأجری** | عایق‌بندی قطعی با اکستنشن `tenant-scoper` روی Prisma — از P01 به‌صورت per-request wire شده (middleware + AuthGuard + AsyncLocalStorage)، fail-closed | PostgreSQL (Prisma Client) | ۱۶ تست واحد scoper + ۱۰ تست منفی ایزولاسیون | تاییدشده در تست‌های امنیتی |
 | **مدیریت وظایف (Tasks & Mizito)** | بردهای کانبان، تقویم هفتگی جلالی، قفل همروندی، **وزن وظیفه (۱ تا ۵) و نقش تاییدکننده** | دوگانه: Prisma و InMemory | تست‌های واحد + E2E Playwright | تاییدشده در تست |
-| **پروژه‌ها و پیشرفت وزنی (Mizito)** | سبد پروژه‌ها، محاسبه پیشرفت وزنی WBS فازها و پایش سلامت | `InMemoryProjectRepository` + ممیزی | ۶ تست واحد + E2E Playwright | **Production-Ready** |
+| **پروژه‌ها و پیشرفت وزنی (Mizito)** | سبد پروژه‌ها، محاسبه پیشرفت وزنی WBS فازها و پایش سلامت | دوگانه: `PrismaProjectRepository` و InMemory (از P01) | ۶ تست واحد + ۶ تست Prisma repo + E2E Playwright | Production-Ready مشروط به durable بودن سایر دامنه‌ها |
 | **گانت‌چارت و مسیر بحرانی (CPM)** | موتور زمان‌بندی هوشمند، کشف تقدم/تاخر، محاسبه شناوری (Float) و نمایش مسیر بحرانی | الگوریتم Forward/Backward Pass + API | ۴ تست واحد اختصاصی + UI View | **Production-Ready** |
-| **مدیریت زمان کاری** | تایمر زنده، ثبت کارکرد و تفکیک ساعات قابل فاکتور | `InMemoryTimeTrackingRepository` + Audit | ۸ تست واحد + E2E Playwright | پیاده‌سازی‌شده |
+| **مدیریت زمان کاری** | تایمر زنده، ثبت کارکرد و تفکیک ساعات قابل فاکتور | دوگانه: `PrismaTimeTrackingRepository` و InMemory (از P01) | ۸ تست واحد + ۴ تست Prisma repo + E2E Playwright | پیاده‌سازی‌شده |
 | **کاریز فروش و فرصت‌ها (Didar)** | فرصت‌های راکد (Rotting)، اقدام بعدی الزامی، باخت ساختاریافته و چندارزی | دوگانه: `PrismaCrmRepository` و InMemory | ۲۴ تست اختصاصی + E2E | **Production-Ready** |
 | **پیش‌فاکتور و کاتالوگ (Didar)** | کاتالوگ کالا/خدمات، تخفیف و مالیات ۱۰٪ ارزش افزوده قانونی ایران | `ICrmRepository` + Audit | تست‌های واحد + E2E | **Production-Ready** |
 | **فروش اقساطی و چک صیادی (Didar)** | اعتبارسنجی ۱۶ رقمی صیاد، تقسیط خودکار، تغییر وضعیت و پیامک یادآوری | `InstallmentsService` + Outbox | ۵ تست واحد اختصاصی + E2E | **Production-Ready** |
@@ -89,6 +89,8 @@
 | **فیلدهای سفارشی** | اسکیمای داینامیک ۶ موجودیت و اعتبارسنجی مقادیر سرور | `InMemoryCustomFieldRepository` | ۷ تست واحد + E2E Playwright | پیاده‌سازی‌شده |
 | **پشتیبانی و تیکتینگ** | صف تیکت‌ها، SLA، تفکیک یادداشت داخلی و ماکروهای پاسخ | دوگانه: `PrismaSupportRepository` و InMemory | تست‌های واحد + E2E Playwright | تفکیک امنیتی تاییدشده در تست |
 | **پورتال مشتریان و CSAT (Didar)** | ورود با OTP موبایل ایران، نظرسنجی ۵ ستاره CSAT و مرکز راهنما | روت‌های اختصاصی `/portal` و API کلاینت | ۴ تست E2E اختصاصی | ایزولاسیون مشتری تاییدشده در تست |
+| **فعالیت‌ها و تقویم** | فید تایم‌لاین، فعالیت‌های زمان‌بندی‌شده، تقویم جلالی و کشف تداخل زمانی | دوگانه: `PrismaActivityRepository` و InMemory (از P01) | ۵ تست Prisma repo + E2E Playwright | پیاده‌سازی‌شده |
+| **اعلان‌ها** | اعلان درون‌برنامه‌ای با dedupe idempotent، خواندن دسته‌ای و ترجیحات کانال | دوگانه: `PrismaNotificationRepository` و InMemory (از P01) | ۴ تست Prisma repo + E2E Playwright | پیاده‌سازی‌شده |
 | **پایگاه دانش و اسناد** | فضاهای اسناد، دسترسی ۴گانه و کشوی تاریخچه نسخه‌ها | `InMemoryDocumentRepository` | ۱۱ تست واحد + E2E Playwright | پیاده‌سازی‌شده |
 | **همکاری و منشن‌های تیمی** | صندوق منشن‌ها و ارجاعات همکاران با رهگیری وضعیت خوانده‌شده | `InMemoryMentionRepository` | ۵ تست واحد + E2E Playwright | پیاده‌سازی‌شده |
 | **هوش تجاری و سرعت تبدیل (Didar)** | نشانگر کل شرکت، سرعت تبدیل (Days to Win/Lose) و تحلیل علل شکست | تجمیع دامنه‌ای در `ReportingService` | تست‌های تحلیلی + داشبورد | پیاده‌سازی‌شده |
@@ -115,3 +117,15 @@
 - هیچ cross-organization query، attachment، export یا search result بدون policy تست‌شده.
 - همه تغییرات حساس باید audit، تست منفی و در صورت نیاز migration/rollback plan داشته باشند.
 - کد خارجی را فقط پس از license/security review اقتباس کنید.
+
+## Execution plan (P00 baseline)
+
+- طرح مرجع: `docs/implementation/MASTER-EXECUTION-PLAN-10000-LINES.fa.md`
+- گزارش baseline: `docs/implementation/P00-BASELINE-REPORT.fa.md`
+- ثبت gapها: `docs/implementation/P00-GAP-REGISTER.csv`
+- اعتبارسنجی بسته: `python scripts/validation/validate_pack.py`
+- واقعیت persistence: `pnpm audit:persistence`
+- گزارش امنیت (evidence-based): `pnpm security:audit`
+- گزارش اجرای P01 (tenant scoper، گاردهای global، rate limit، CI database): `docs/implementation/P01-EXECUTION-REPORT.fa.md`
+
+تمام statusهای backlog به‌صورت `TODO` باقی می‌مانند تا evidence متصل به commit ارائه شود. هیچ ماژولی Production-Ready نیست مگر persistence واقعی، authorization سمت سرور، tenant isolation، تست‌ها، observability، backup/restore و evidence متصل به commit را بگذراند.

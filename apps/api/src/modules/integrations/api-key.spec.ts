@@ -4,6 +4,8 @@ import { ApiKeyService } from './api-key.service.js';
 import { InMemoryApiKeyRepository } from './api-key.repository.js';
 import { AuditService } from '../audit/audit.service.js';
 
+const smtpFixture = 'smtp-fixture-value';
+
 describe('API Keys & External Integrations Management (R-079 & R-080)', () => {
   let service: ApiKeyService;
   let repo: InMemoryApiKeyRepository;
@@ -90,7 +92,7 @@ describe('API Keys & External Integrations Management (R-079 & R-080)', () => {
           host: 'smtp.mailgun.org',
           port: '587',
           user: 'postmaster@company.com',
-          password: 'super_secret_smtp_password',
+          password: smtpFixture,
         },
       });
 

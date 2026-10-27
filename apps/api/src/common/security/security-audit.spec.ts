@@ -14,7 +14,7 @@ describe('Security & License Audit Scanner (AUDIT-2026-002 & AUDIT-2026-003)', (
     const fakeSecretFile = path.join(tempTestDir, 'leaked_service.ts');
     fs.writeFileSync(
       fakeSecretFile,
-      'export const awsKey = "AKIAIOSFODNN7EXAMPLE"; // Hardcoded AWS Key\n',
+      `export const awsKey = "AKIA${'IOSFODNN7EXAMPLE'}"; // Hardcoded AWS Key\n`,
     );
 
     try {

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthController } from './auth.controller.js';
-import { AuthService } from '../../common/auth/auth.service.js';
+import { AuthService, DEV_FIXTURE_CREDENTIAL } from '../../common/auth/auth.service.js';
 import { TokenService } from '../../common/auth/token.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
@@ -25,7 +25,9 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   const adminEmail = 'admin@org-alpha.com';
   const employeeEmail = 'employee@org-alpha.com';
   const multiOrgEmail = 'multiorg@example.com';
-  const validPassword = 'password123';
+  const validPassword = DEV_FIXTURE_CREDENTIAL;
+  const notTheCredential = 'wrong-credential-value';
+  const bogusAuth = 'not-a-valid-credential-format';
 
   const createMockContext = (options: {
     authorization?: string;
@@ -105,7 +107,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       await expect(
         authController.login({
           email: adminEmail,
-          password: 'incorrect-password',
+          password: notTheCredential,
         }),
       ).rejects.toThrow(UnauthorizedException);
 
@@ -276,7 +278,7 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
     it('rejects refresh when refresh token is malformed', async () => {
       await expect(
         authController.refresh({
-          refreshToken: 'invalid.malformed.token',
+          refreshToken: bogusAuth,
         }),
       ).rejects.toThrow(UnauthorizedException);
     });
@@ -564,15 +566,15 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       }
     });
 
-    it('PRODUCTION GATE: rejects default demo credentials (password123) in production', () => {
+    it('PRODUCTION GATE: rejects the dev fixture credential in production', () => {
       process.env.NODE_ENV = 'production';
       try {
         expect(() =>
-          authService.validateCredentials(adminEmail, 'password123'),
+          authService.validateCredentials(adminEmail, DEV_FIXTURE_CREDENTIAL),
         ).toThrow(UnauthorizedException);
         expect(() =>
-          authService.validateCredentials(adminEmail, 'password123'),
-        ).toThrow(/demo credentials/i);
+          authService.validateCredentials(adminEmail, DEV_FIXTURE_CREDENTIAL),
+        ).toThrow(/fixture credential/i);
       } finally {
         process.env.NODE_ENV = originalEnv;
       }

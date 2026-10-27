@@ -2,11 +2,19 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { createTenantScoper } from './tenant-scoper.js';
+
+function buildTenantClient(client: PrismaClient) {
+  return client.$extends(createTenantScoper());
+}
+
+export type TenantScopedPrismaClient = ReturnType<typeof buildTenantClient>;
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private pool: Pool;
+  private tenantScoped?: TenantScopedPrismaClient;
 
   constructor() {
     const connectionString =
@@ -16,6 +24,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const adapter = new PrismaPg(pool);
     super({ adapter });
     this.pool = pool;
+  }
+
+  /**
+   * PrismaClient with the strict tenant-scoper extension (SEC-001 / GAP-006).
+   * The active organization comes from the per-request AsyncLocalStorage
+   * store (TenantContextMiddleware + AuthGuard); repositories that touch
+   * tenant-scoped models must use this client instead of the raw one.
+   */
+  get tenantClient(): TenantScopedPrismaClient {
+    return (this.tenantScoped ??= buildTenantClient(this));
   }
 
   async onModuleInit(): Promise<void> {

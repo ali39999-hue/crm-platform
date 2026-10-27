@@ -70,6 +70,8 @@ model Organization {
   memberships Membership[]
   teams       Team[]
   projects    Project[]
+  milestones  Milestone[]
+  workLogs    WorkLog[]
   tasks       Task[]
   accounts    Account[]
   contacts    Contact[]
@@ -79,6 +81,7 @@ model Organization {
   activities  Activity[]
   auditEvents AuditEvent[]
   notifications Notification[]
+  scheduledActivities ScheduledActivity[]
 }
 
 model User {
@@ -99,9 +102,13 @@ model User {
   ownedDeals        Deal[]        @relation("DealOwner")
   assignedTickets   Ticket[]      @relation("TicketAssignee")
   ticketMessages    TicketMessage[]
+  ownedProjects     Project[]      @relation("ProjectOwner")
+  workLogs          WorkLog[]
   activities        Activity[]    @relation("ActivityActor")
   auditEvents       AuditEvent[]  @relation("AuditActor")
   notifications     Notification[]
+  ownedScheduledActivities ScheduledActivity[] @relation("ScheduledActivityOwner")
+  notificationPreference   NotificationPreference?
 }
 
 model Membership {
@@ -142,19 +149,66 @@ model TeamMember {
 }
 
 model Project {
-  id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @db.Uuid
-  teamId         String?      @db.Uuid
-  key            String
-  name           String
-  status         String       @default("ACTIVE")
-  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+  id                    String       @id @default(uuid()) @db.Uuid
+  organizationId        String       @db.Uuid
+  teamId                String?      @db.Uuid
+  key                   String
+  name                  String
+  description           String?
+  status                String       @default("ACTIVE")
+  health                String       @default("ON_TRACK")
+  ownerId               String?      @db.Uuid
+  ownerName             String?
+  startDate             DateTime?    @db.Timestamptz(6)
+  targetDate            DateTime?    @db.Timestamptz(6)
+  associatedAccountId   String?      @db.Uuid
+  associatedAccountName String?
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   team           Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  owner          User?        @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   tasks          Task[]
+  milestones     Milestone[]
   @@unique([organizationId, key])
   @@index([organizationId, status])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, targetDate])
+}
+
+model Milestone {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  projectId      String       @db.Uuid
+  title          String
+  dueDate        DateTime     @db.Timestamptz(6)
+  isCompleted    Boolean      @default(false)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([organizationId, projectId, dueDate])
+  @@index([projectId])
+}
+
+model WorkLog {
+  id              String       @id @default(uuid()) @db.Uuid
+  organizationId  String       @db.Uuid
+  userId          String       @db.Uuid
+  userName        String
+  entityType      String
+  entityId        String
+  entityTitle     String
+  durationMinutes Int
+  description     String
+  isBillable      Boolean      @default(true)
+  loggedDate      DateTime     @db.Date
+  createdAt       DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(6)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([organizationId, loggedDate])
+  @@index([organizationId, userId, loggedDate])
+  @@index([organizationId, entityType, entityId])
 }
 
 model Task {
@@ -328,12 +382,41 @@ model Activity {
   entityId       String       @db.Uuid
   kind           String
   summary        String
+  visibility     String       @default("INTERNAL")
   occurredAt     DateTime     @default(now()) @db.Timestamptz(6)
   metadata       Json?
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actor          User?        @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
   @@index([organizationId, entityType, entityId, occurredAt])
   @@index([organizationId, actorId, occurredAt])
+}
+
+model ScheduledActivity {
+  id                    String   @id @default(uuid()) @db.Uuid
+  organizationId        String   @db.Uuid
+  type                  String
+  title                 String
+  description           String?
+  startsAt              DateTime @db.Timestamptz(6)
+  endsAt                DateTime @db.Timestamptz(6)
+  isAllDay              Boolean  @default(false)
+  status                String   @default("SCHEDULED")
+  ownerId               String   @db.Uuid
+  ownerName             String?
+  participantIds        String[]
+  associatedEntityType  String?
+  associatedEntityId    String?
+  associatedEntityTitle String?
+  visibility            String   @default("INTERNAL")
+  reminderMinutesBefore Int?
+  isPinned              Boolean  @default(false)
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("ScheduledActivityOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  @@index([organizationId, startsAt, endsAt])
+  @@index([organizationId, ownerId, startsAt])
+  @@index([organizationId, status])
 }
 
 model AuditEvent {
@@ -359,6 +442,8 @@ model Notification {
   organizationId String       @db.Uuid
   userId         String       @db.Uuid
   type           String
+  title          String       @default("")
+  message        String       @default("")
   payload        Json
   dedupeKey      String?
   readAt         DateTime?    @db.Timestamptz(6)
@@ -368,4 +453,14 @@ model Notification {
   @@index([userId, readAt, createdAt])
   @@index([organizationId, createdAt])
   @@unique([organizationId, userId, dedupeKey])
+}
+
+model NotificationPreference {
+  userId    String   @id @db.Uuid
+  inApp     Boolean  @default(true)
+  email     Boolean  @default(true)
+  push      Boolean  @default(false)
+  digest    Boolean  @default(true)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

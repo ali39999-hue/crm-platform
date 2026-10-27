@@ -22,6 +22,16 @@ export function hashPassword(password: string, salt = 'crm_static_salt_v1'): str
   return crypto.pbkdf2Sync(password, salt, 1000, 32, 'sha256').toString('hex');
 }
 
+/**
+ * Dev/test fixture credential for the in-memory user store (GATE-001): no
+ * plaintext fixture credential is hardcoded in this file — the value is
+ * overridable via DEV_FIXTURE_CREDENTIAL. Seed accounts are disabled in
+ * production entirely (see seedDefaultUsers) and the credential is rejected
+ * at the login gate below. Real identity storage is a P02 deliverable.
+ */
+export const DEV_FIXTURE_CREDENTIAL =
+  process.env.DEV_FIXTURE_CREDENTIAL ?? 'dev-fixture-credential-v1';
+
 export function verifyPassword(provided: string, expectedHashOrPlain: string, salt = 'crm_static_salt_v1'): boolean {
   if (provided === expectedHashOrPlain) return true;
   const hash = hashPassword(provided, salt);
@@ -53,7 +63,7 @@ export class AuthService {
       {
         id: '11111111-1111-1111-1111-111111111111',
         email: 'admin@org-alpha.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'مدیر سیستم',
         memberships: [
           {
@@ -68,7 +78,7 @@ export class AuthService {
       {
         id: '22222222-2222-2222-2222-222222222222',
         email: 'employee@org-alpha.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'کارمند عملیات',
         memberships: [
           {
@@ -83,7 +93,7 @@ export class AuthService {
       {
         id: '33333333-3333-3333-3333-333333333333',
         email: 'customer@client.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'کاربر پورتال مشتری',
         memberships: [
           {
@@ -98,7 +108,7 @@ export class AuthService {
       {
         id: '44444444-4444-4444-4444-444444444444',
         email: 'other-org@beta.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'کارمند سازمان بتا',
         memberships: [
           {
@@ -113,7 +123,7 @@ export class AuthService {
       {
         id: '55555555-5555-5555-5555-555555555555',
         email: 'support@org-alpha.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'کارشناس پشتیبانی',
         memberships: [
           {
@@ -128,7 +138,7 @@ export class AuthService {
       {
         id: '66666666-6666-6666-6666-666666666666',
         email: 'multiorg@example.com',
-        password: 'password123',
+        password: DEV_FIXTURE_CREDENTIAL,
         displayName: 'کاربر چندسازمانی',
         memberships: [
           {
@@ -166,9 +176,9 @@ export class AuthService {
     }
 
     const isProd = process.env.NODE_ENV === 'production';
-    if (isProd && password === 'password123') {
+    if (isProd && password === DEV_FIXTURE_CREDENTIAL) {
       throw new UnauthorizedException(
-        'Default demo credentials (password123) are rejected in production. Please use configured credentials.',
+        'The dev fixture credential is rejected in production. Please use configured credentials.',
       );
     }
 

@@ -10,7 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,12 +33,17 @@ export const IGNORED_PATHS = [
   'build',
   'coverage',
   '.turbo',
+  '.mimosa',
+  '.zcode',
+  'playwright-report',
+  'test-results',
   'pnpm-lock.yaml',
   'security-audit.js',
   'security-audit.spec.ts',
   'package-lock.json',
   'temp_reaudit',
   'temp_reaudit_v1_3',
+  'generated',
 ];
 
 export const APPROVED_LICENSES = [
@@ -72,7 +77,11 @@ export function scanDirForSecrets(dir, findings = []) {
       continue;
     }
 
-    const fullPath = path.join(dir, entry.name);
+    const fullPath = path.resolve(dir, entry.name);
+    // Containment check: never read outside the repository root.
+    if (!fullPath.startsWith(ROOT_DIR + path.sep)) {
+      continue;
+    }
 
     if (entry.isDirectory()) {
       scanDirForSecrets(fullPath, findings);
@@ -91,7 +100,7 @@ export function scanDirForSecrets(dir, findings = []) {
       // Check if actual .env is tracked in git (BLOCKER)
       if (entry.name === '.env') {
         try {
-          const tracked = execSync(`git ls-files "${fullPath}"`, { encoding: 'utf-8', cwd: ROOT_DIR }).trim();
+          const tracked = execFileSync('git', ['ls-files', '--', fullPath], { encoding: 'utf-8', cwd: ROOT_DIR }).trim();
           if (tracked) {
             findings.push({
               type: 'ENV_FILE_COMMITTED',
@@ -222,7 +231,66 @@ export function verifyThirdPartyLicenses() {
   return { internalPackages, licenseFindings, totalThirdPartyDeps: dependencyMap.size };
 }
 
-export function runSecurityAudit(options = { exitOnError: true }) {
+export function collectControlEvidence() {
+  const read = (relPath) => {
+    const abs = path.join(ROOT_DIR, relPath);
+    return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
+  };
+
+  const prismaService = read('apps/api/src/prisma/prisma.service.ts');
+  const appModule = read('apps/api/src/app.module.ts');
+  const auditService = read('apps/api/src/modules/audit/audit.service.ts');
+  const webhookService = read('apps/api/src/modules/integrations/webhook.service.ts');
+
+  const tenantScoperWired =
+    /createTenantScoper\s*\(/.test(prismaService) ||
+    /\$extends\(\s*createTenantScoper/.test(prismaService);
+
+  return [
+    {
+      id: 'tenant-isolation',
+      label: 'Tenant isolation enforcement',
+      ok: tenantScoperWired,
+      detail: tenantScoperWired
+        ? 'PrismaService applies the tenant-scoper extension.'
+        : 'GAP: apps/api/src/prisma/tenant-scoper.ts exists but PrismaService never applies it. Isolation relies on manual organizationId filters in the Prisma repositories; the 13 InMemory repositories have no enforcement layer.',
+    },
+    {
+      id: 'pii-redaction',
+      label: 'PII redaction in audit trail',
+      ok: /redact/i.test(auditService),
+      detail: /redact/i.test(auditService)
+        ? 'AuditService references redaction helpers.'
+        : 'GAP: no redaction reference found in AuditService.',
+    },
+    {
+      id: 'security-headers',
+      label: 'Security headers middleware',
+      ok: /SecurityHeadersMiddleware/.test(appModule),
+      detail: /SecurityHeadersMiddleware/.test(appModule)
+        ? 'SecurityHeadersMiddleware is applied in AppModule.configure().'
+        : 'GAP: SecurityHeadersMiddleware is not registered.',
+    },
+    {
+      id: 'rate-limiting',
+      label: 'Rate limiting guard',
+      ok: /RateLimiterGuard/.test(appModule),
+      detail: /RateLimiterGuard/.test(appModule)
+        ? 'RateLimiterGuard is registered as a provider.'
+        : 'GAP: RateLimiterGuard is not registered.',
+    },
+    {
+      id: 'webhook-hmac',
+      label: 'Webhook HMAC signatures',
+      ok: /createHmac/.test(webhookService),
+      detail: /createHmac/.test(webhookService)
+        ? 'WebhookService uses HMAC signing.'
+        : 'GAP: no HMAC usage found in WebhookService.',
+    },
+  ];
+}
+
+export function runSecurityAudit(options = { exitOnError: true, strictGates: process.argv.includes('--strict') }) {
   console.log('🔒 Running Security & License Audit Scanner (Fail-Closed Mode)...\n');
 
   const secretFindings = scanDirForSecrets(ROOT_DIR);
@@ -260,11 +328,15 @@ export function runSecurityAudit(options = { exitOnError: true }) {
   }
 
   console.log('\n🛡️ Security Gates Summary:');
-  console.log('   - Tenant Isolation Enforcement: Enabled via TenantScoper');
-  console.log('   - PII Redaction: Enabled in AuditService');
-  console.log('   - Security Headers (CSP, HSTS): Enabled in Middleware');
-  console.log('   - Rate Limiting: Active (60/min general, 10/min sensitive)');
-  console.log('   - Webhook HMAC Signatures: Active (SHA-256)');
+
+  const controls = collectControlEvidence();
+  const gaps = controls.filter((c) => !c.ok);
+
+  console.log('\nSecurity Controls Evidence (measured, not asserted):');
+  for (const control of controls) {
+    console.log(`   ${control.ok ? '[PASS]' : '[GAP ]'} ${control.label}`);
+    console.log(`          ${control.detail}`);
+  }
 
   if (blockers.length > 0) {
     console.error(`\n❌ Security & License Audit FAILED: ${blockers.length} blocking issue(s) detected.\n`);
@@ -272,14 +344,28 @@ export function runSecurityAudit(options = { exitOnError: true }) {
     if (options.exitOnError && process.argv[1] === fileURLToPath(import.meta.url)) {
       process.exit(1);
     }
-    return { success: false, blockers, advisories };
+    return { success: false, blockers, advisories, controls, gaps };
   }
 
-  console.log('\n✨ Security Audit Complete: ALL GATES PASS.\n');
+  if (gaps.length > 0 && options.strictGates) {
+    console.error(`\nSecurity control gate FAILED (--strict): ${gaps.length} control(s) not enforced.\n`);
+    process.exitCode = 1;
+    if (options.exitOnError && process.argv[1] === fileURLToPath(import.meta.url)) {
+      process.exit(1);
+    }
+    return { success: false, blockers: [], advisories, controls, gaps };
+  }
+
+  if (gaps.length > 0) {
+    console.log(`\nSecurity Audit Complete: secrets/licenses PASS, ${gaps.length} control gap(s) recorded (non-blocking until --strict / P14).\n`);
+    process.exitCode = 0;
+    return { success: true, blockers: [], advisories, controls, gaps };
+  }
+
   process.exitCode = 0;
-  return { success: true, blockers: [], advisories };
+  return { success: true, blockers: [], advisories, controls, gaps: [] };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  runSecurityAudit({ exitOnError: true });
+  runSecurityAudit({ exitOnError: true, strictGates: process.argv.includes('--strict') });
 }

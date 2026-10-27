@@ -14,6 +14,9 @@
     "test": "turbo run test",
     "test:e2e": "playwright test",
     "security:audit": "node scripts/security-audit.js",
+    "audit:persistence": "node scripts/validation/persistence-reality.mjs",
+    "audit:persistence:strict": "node scripts/validation/persistence-reality.mjs --strict",
+    "validate:pack": "python scripts/validation/validate_pack.py",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "clean": "turbo run clean"

@@ -71,7 +71,7 @@ export class PrismaSupportRepository implements ISupportRepository {
     const where: any = { organizationId };
     if (accountId) where.accountId = accountId;
 
-    const list = await (this.prisma as any).ticket.findMany({
+    const list = await (this.prisma.tenantClient as any).ticket.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
@@ -79,7 +79,7 @@ export class PrismaSupportRepository implements ISupportRepository {
   }
 
   async findTicketById(organizationId: string, id: string): Promise<TicketEntity | null> {
-    const ticket = await (this.prisma as any).ticket.findUnique({
+    const ticket = await (this.prisma.tenantClient as any).ticket.findUnique({
       where: { id },
     });
     if (!ticket || ticket.organizationId !== organizationId) return null;
@@ -93,7 +93,7 @@ export class PrismaSupportRepository implements ISupportRepository {
     this.orgCounter.set(data.organizationId, counter);
     const reference = `TKT-${counter}`;
 
-    const created = await (this.prisma as any).ticket.create({
+    const created = await (this.prisma.tenantClient as any).ticket.create({
       data: {
         organizationId: data.organizationId,
         accountId: data.accountId,
@@ -112,7 +112,7 @@ export class PrismaSupportRepository implements ISupportRepository {
   }
 
   async updateTicket(ticket: TicketEntity): Promise<TicketEntity> {
-    const updated = await (this.prisma as any).ticket.update({
+    const updated = await (this.prisma.tenantClient as any).ticket.update({
       where: { id: ticket.id },
       data: {
         status: ticket.status,
@@ -128,7 +128,7 @@ export class PrismaSupportRepository implements ISupportRepository {
     if (!ticket) return false;
     if (ticket.assigneeId === userId) return true;
 
-    const messages = await (this.prisma as any).ticketMessage.findMany({
+    const messages = await (this.prisma.tenantClient as any).ticketMessage.findMany({
       where: { ticketId, authorId: userId },
       take: 1,
     });
@@ -145,7 +145,7 @@ export class PrismaSupportRepository implements ISupportRepository {
       where.visibility = 'CUSTOMER_SHARED';
     }
 
-    const messages = await (this.prisma as any).ticketMessage.findMany({
+    const messages = await (this.prisma.tenantClient as any).ticketMessage.findMany({
       where,
       orderBy: { createdAt: 'asc' },
     });
@@ -158,7 +158,7 @@ export class PrismaSupportRepository implements ISupportRepository {
   async addMessage(
     data: Omit<TicketMessageEntity, 'id' | 'createdAt'>,
   ): Promise<TicketMessageEntity> {
-    const created = await (this.prisma as any).ticketMessage.create({
+    const created = await (this.prisma.tenantClient as any).ticketMessage.create({
       data: {
         ticketId: data.ticketId,
         authorId: data.authorId,

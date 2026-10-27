@@ -12,6 +12,7 @@ import {
 import type { Response } from 'express';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
 import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
+import { RequirePermission } from '../../common/auth/require-permission.decorator.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import { Public } from '../../common/auth/public.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
@@ -35,6 +36,7 @@ export class FilesController {
 
   @Post('upload-intent')
   @SensitiveEndpoint()
+  @RequirePermission('create_or_edit_tasks')
   async createUploadIntent(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateUploadIntentDto,
@@ -43,6 +45,7 @@ export class FilesController {
   }
 
   @Post(':id/scan-result')
+  @RequirePermission('create_or_edit_tasks')
   async updateScanResult(
     @CurrentUser() user: UserContext,
     @Param('id') fileId: string,
@@ -57,6 +60,7 @@ export class FilesController {
   }
 
   @Get(':id/signed-url')
+  @RequirePermission('view_internal_tasks')
   async getSignedDownloadUrl(
     @CurrentUser() user: UserContext,
     @Param('id') fileId: string,
@@ -70,6 +74,7 @@ export class FilesController {
   }
 
   @Post(':id/signed-url')
+  @RequirePermission('view_internal_tasks')
   async postSignedDownloadUrl(
     @CurrentUser() user: UserContext,
     @Param('id') fileId: string,
@@ -83,6 +88,7 @@ export class FilesController {
   }
 
   @Get(':id')
+  @RequirePermission('view_internal_tasks')
   async getFileMetadata(
     @CurrentUser() user: UserContext,
     @Param('id') fileId: string,
@@ -91,6 +97,7 @@ export class FilesController {
   }
 
   @Get()
+  @RequirePermission('view_internal_tasks')
   async listFiles(
     @CurrentUser() user: UserContext,
     @Query('entityType') entityType?: string,

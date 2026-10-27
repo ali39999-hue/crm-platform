@@ -37,7 +37,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findAccounts(organizationId: string): Promise<AccountEntity[]> {
-    const list = await (this.prisma as any).account.findMany({
+    const list = await (this.prisma.tenantClient as any).account.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'desc' },
     });
@@ -45,7 +45,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findAccountById(organizationId: string, id: string): Promise<AccountEntity | null> {
-    const account = await (this.prisma as any).account.findUnique({
+    const account = await (this.prisma.tenantClient as any).account.findUnique({
       where: { id },
     });
     if (!account || account.organizationId !== organizationId) return null;
@@ -55,7 +55,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async createAccount(
     data: Omit<AccountEntity, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<AccountEntity> {
-    const created = await (this.prisma as any).account.create({
+    const created = await (this.prisma.tenantClient as any).account.create({
       data: {
         organizationId: data.organizationId,
         ownerId: data.ownerId,
@@ -70,7 +70,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async updateAccount(account: AccountEntity): Promise<AccountEntity> {
-    const updated = await (this.prisma as any).account.update({
+    const updated = await (this.prisma.tenantClient as any).account.update({
       where: { id: account.id },
       data: {
         name: account.name,
@@ -87,7 +87,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async deleteAccount(organizationId: string, id: string): Promise<boolean> {
     const existing = await this.findAccountById(organizationId, id);
     if (!existing) return false;
-    await (this.prisma as any).account.delete({
+    await (this.prisma.tenantClient as any).account.delete({
       where: { id },
     });
     return true;
@@ -116,7 +116,7 @@ export class PrismaCrmRepository implements ICrmRepository {
     const where: any = { organizationId };
     if (accountId) where.accountId = accountId;
 
-    const list = await (this.prisma as any).contact.findMany({
+    const list = await (this.prisma.tenantClient as any).contact.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
@@ -124,7 +124,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findContactById(organizationId: string, id: string): Promise<ContactEntity | null> {
-    const contact = await (this.prisma as any).contact.findUnique({
+    const contact = await (this.prisma.tenantClient as any).contact.findUnique({
       where: { id },
     });
     if (!contact || contact.organizationId !== organizationId) return null;
@@ -134,7 +134,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async createContact(
     data: Omit<ContactEntity, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<ContactEntity> {
-    const created = await (this.prisma as any).contact.create({
+    const created = await (this.prisma.tenantClient as any).contact.create({
       data: {
         organizationId: data.organizationId,
         accountId: data.accountId,
@@ -149,7 +149,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async updateContact(contact: ContactEntity): Promise<ContactEntity> {
-    const updated = await (this.prisma as any).contact.update({
+    const updated = await (this.prisma.tenantClient as any).contact.update({
       where: { id: contact.id },
       data: {
         firstName: contact.firstName,
@@ -166,7 +166,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async deleteContact(organizationId: string, id: string): Promise<boolean> {
     const existing = await this.findContactById(organizationId, id);
     if (!existing) return false;
-    await (this.prisma as any).contact.delete({
+    await (this.prisma.tenantClient as any).contact.delete({
       where: { id },
     });
     return true;
@@ -193,7 +193,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findLeads(organizationId: string): Promise<LeadEntity[]> {
-    const list = await (this.prisma as any).lead.findMany({
+    const list = await (this.prisma.tenantClient as any).lead.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'desc' },
     });
@@ -201,7 +201,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findLeadById(organizationId: string, id: string): Promise<LeadEntity | null> {
-    const lead = await (this.prisma as any).lead.findUnique({
+    const lead = await (this.prisma.tenantClient as any).lead.findUnique({
       where: { id },
     });
     if (!lead || lead.organizationId !== organizationId) return null;
@@ -214,7 +214,7 @@ export class PrismaCrmRepository implements ICrmRepository {
       'id' | 'createdAt' | 'updatedAt' | 'convertedContactId' | 'convertedDealId'
     >,
   ): Promise<LeadEntity> {
-    const created = await (this.prisma as any).lead.create({
+    const created = await (this.prisma.tenantClient as any).lead.create({
       data: {
         organizationId: data.organizationId,
         ownerId: data.ownerId,
@@ -230,7 +230,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async updateLead(lead: LeadEntity): Promise<LeadEntity> {
-    const updated = await (this.prisma as any).lead.update({
+    const updated = await (this.prisma.tenantClient as any).lead.update({
       where: { id: lead.id },
       data: {
         displayName: lead.displayName,
@@ -248,7 +248,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async deleteLead(organizationId: string, id: string): Promise<boolean> {
     const existing = await this.findLeadById(organizationId, id);
     if (!existing) return false;
-    await (this.prisma as any).lead.delete({
+    await (this.prisma.tenantClient as any).lead.delete({
       where: { id },
     });
     return true;
@@ -285,7 +285,7 @@ export class PrismaCrmRepository implements ICrmRepository {
     const where: any = { organizationId };
     if (accountId) where.accountId = accountId;
 
-    const list = await (this.prisma as any).deal.findMany({
+    const list = await (this.prisma.tenantClient as any).deal.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
@@ -293,7 +293,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async findDealById(organizationId: string, id: string): Promise<DealEntity | null> {
-    const deal = await (this.prisma as any).deal.findUnique({
+    const deal = await (this.prisma.tenantClient as any).deal.findUnique({
       where: { id },
     });
     if (!deal || deal.organizationId !== organizationId) return null;
@@ -303,7 +303,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async createDeal(
     data: Omit<DealEntity, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<DealEntity> {
-    const created = await (this.prisma as any).deal.create({
+    const created = await (this.prisma.tenantClient as any).deal.create({
       data: {
         organizationId: data.organizationId,
         accountId: data.accountId,
@@ -331,7 +331,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   }
 
   async updateDeal(deal: DealEntity): Promise<DealEntity> {
-    const updated = await (this.prisma as any).deal.update({
+    const updated = await (this.prisma.tenantClient as any).deal.update({
       where: { id: deal.id },
       data: {
         name: deal.name,
@@ -359,7 +359,7 @@ export class PrismaCrmRepository implements ICrmRepository {
   async deleteDeal(organizationId: string, id: string): Promise<boolean> {
     const existing = await this.findDealById(organizationId, id);
     if (!existing) return false;
-    await (this.prisma as any).deal.delete({
+    await (this.prisma.tenantClient as any).deal.delete({
       where: { id },
     });
     this.dealExtensions.delete(id);

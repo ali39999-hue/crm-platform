@@ -27,6 +27,7 @@ export type ProjectEntity = {
 
 export type MilestoneEntity = {
   id: string;
+  organizationId: string;
   projectId: string;
   title: string;
   dueDate: string;
@@ -43,9 +44,14 @@ export interface IProjectRepository {
   delete(organizationId: string, id: string): Promise<boolean>;
 
   // Milestones
-  findMilestones(projectId: string): Promise<MilestoneEntity[]>;
+  findMilestones(organizationId: string, projectId: string): Promise<MilestoneEntity[]>;
   createMilestone(data: Omit<MilestoneEntity, 'id' | 'createdAt'>): Promise<MilestoneEntity>;
-  toggleMilestone(projectId: string, milestoneId: string, isCompleted: boolean): Promise<MilestoneEntity | null>;
+  toggleMilestone(
+    organizationId: string,
+    projectId: string,
+    milestoneId: string,
+    isCompleted: boolean,
+  ): Promise<MilestoneEntity | null>;
 }
 
 @Injectable()
@@ -102,6 +108,7 @@ export class InMemoryProjectRepository implements IProjectRepository {
     this.milestones.push(
       {
         id: 'ms-001',
+        organizationId: orgAlpha,
         projectId: p1.id,
         title: 'طراحی قراردادهای داده و معماری چندمستأجری',
         dueDate: '2026-10-10T00:00:00.000Z',
@@ -110,6 +117,7 @@ export class InMemoryProjectRepository implements IProjectRepository {
       },
       {
         id: 'ms-002',
+        organizationId: orgAlpha,
         projectId: p1.id,
         title: 'پیاده‌سازی بردهای درگ اند دراپ و خطوط فروش',
         dueDate: '2026-10-25T00:00:00.000Z',
@@ -118,6 +126,7 @@ export class InMemoryProjectRepository implements IProjectRepository {
       },
       {
         id: 'ms-003',
+        organizationId: orgAlpha,
         projectId: p1.id,
         title: 'استقرار پایگاه دانش و گزارش‌های تحلیلی BI',
         dueDate: '2026-11-15T00:00:00.000Z',
@@ -177,8 +186,10 @@ export class InMemoryProjectRepository implements IProjectRepository {
 
   /* Milestones */
 
-  async findMilestones(projectId: string): Promise<MilestoneEntity[]> {
-    return this.milestones.filter((m) => m.projectId === projectId);
+  async findMilestones(organizationId: string, projectId: string): Promise<MilestoneEntity[]> {
+    return this.milestones.filter(
+      (m) => m.organizationId === organizationId && m.projectId === projectId,
+    );
   }
 
   async createMilestone(data: Omit<MilestoneEntity, 'id' | 'createdAt'>): Promise<MilestoneEntity> {
@@ -192,11 +203,17 @@ export class InMemoryProjectRepository implements IProjectRepository {
   }
 
   async toggleMilestone(
+    organizationId: string,
     projectId: string,
     milestoneId: string,
     isCompleted: boolean,
   ): Promise<MilestoneEntity | null> {
-    const m = this.milestones.find((x) => x.projectId === projectId && x.id === milestoneId);
+    const m = this.milestones.find(
+      (x) =>
+        x.organizationId === organizationId &&
+        x.projectId === projectId &&
+        x.id === milestoneId,
+    );
     if (!m) return null;
     m.isCompleted = isCompleted;
     return m;

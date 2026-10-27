@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
+import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
+import { RequirePermission } from '../../common/auth/require-permission.decorator.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { LettersService } from './letters.service.js';
@@ -23,11 +25,12 @@ import type {
 } from '@crm/contracts';
 
 @Controller('letters')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class LettersController {
   constructor(private readonly lettersService: LettersService) {}
 
   @Get()
+  @RequirePermission('view_internal_tasks')
   async listLetters(
     @CurrentUser() user: UserContext,
     @Query('mailbox') mailbox?: 'inbox' | 'sent' | 'all',
@@ -40,6 +43,7 @@ export class LettersController {
   }
 
   @Post()
+  @RequirePermission('create_or_edit_tasks')
   async createLetter(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateLetterRequest,
@@ -57,6 +61,7 @@ export class LettersController {
   }
 
   @Get(':id')
+  @RequirePermission('view_internal_tasks')
   async getLetterById(
     @CurrentUser() user: UserContext,
     @Param('id') letterId: string,
@@ -69,6 +74,7 @@ export class LettersController {
   }
 
   @Delete(':id')
+  @RequirePermission('create_or_edit_tasks')
   async deleteLetter(
     @CurrentUser() user: UserContext,
     @Param('id') letterId: string,
@@ -85,6 +91,7 @@ export class LettersController {
   }
 
   @Post(':id/referrals')
+  @RequirePermission('create_or_edit_tasks')
   async referLetter(
     @CurrentUser() user: UserContext,
     @Param('id') letterId: string,
@@ -103,6 +110,7 @@ export class LettersController {
   }
 
   @Post(':id/paraffs')
+  @RequirePermission('create_or_edit_tasks')
   async addParaff(
     @CurrentUser() user: UserContext,
     @Param('id') letterId: string,
@@ -121,6 +129,7 @@ export class LettersController {
   }
 
   @Delete(':id/paraffs/:paraffId')
+  @RequirePermission('create_or_edit_tasks')
   async deleteParaff(
     @CurrentUser() user: UserContext,
     @Param('id') letterId: string,

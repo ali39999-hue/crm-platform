@@ -30,7 +30,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async findMyWork(organizationId: string, userId: string): Promise<TaskEntity[]> {
-    const tasks = await (this.prisma as any).task.findMany({
+    const tasks = await (this.prisma.tenantClient as any).task.findMany({
       where: {
         organizationId,
         assigneeId: userId,
@@ -59,7 +59,7 @@ export class PrismaTaskRepository implements ITaskRepository {
     if (filter?.priority) where.priority = filter.priority;
     if (filter?.assigneeId) where.assigneeId = filter.assigneeId;
 
-    const tasks = await (this.prisma as any).task.findMany({
+    const tasks = await (this.prisma.tenantClient as any).task.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: filter?.limit ?? undefined,
@@ -68,7 +68,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async findById(organizationId: string, id: string): Promise<TaskEntity | null> {
-    const task = await (this.prisma as any).task.findUnique({
+    const task = await (this.prisma.tenantClient as any).task.findUnique({
       where: {
         id,
       },
@@ -80,12 +80,12 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async create(data: Omit<TaskEntity, 'id' | 'key' | 'version' | 'createdAt' | 'updatedAt'>): Promise<TaskEntity> {
-    const count = await (this.prisma as any).task.count({
+    const count = await (this.prisma.tenantClient as any).task.count({
       where: { organizationId: data.organizationId },
     });
     const key = `TSK-${count + 1}`;
 
-    const task = await (this.prisma as any).task.create({
+    const task = await (this.prisma.tenantClient as any).task.create({
       data: {
         organizationId: data.organizationId,
         projectId: data.projectId,
@@ -106,7 +106,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async update(task: TaskEntity): Promise<TaskEntity> {
-    const updated = await (this.prisma as any).task.update({
+    const updated = await (this.prisma.tenantClient as any).task.update({
       where: { id: task.id },
       data: {
         title: task.title,
@@ -122,7 +122,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async getDependencies(organizationId: string, taskId: string): Promise<TaskEntity[]> {
-    const links = await (this.prisma as any).taskDependency.findMany({
+    const links = await (this.prisma.tenantClient as any).taskDependency.findMany({
       where: {
         taskId,
       },
@@ -136,7 +136,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async getAllDependencyEdges(organizationId: string): Promise<TaskDependencyEdge[]> {
-    const links = await (this.prisma as any).taskDependency.findMany({
+    const links = await (this.prisma.tenantClient as any).taskDependency.findMany({
       where: {
         task: {
           organizationId,
@@ -151,7 +151,7 @@ export class PrismaTaskRepository implements ITaskRepository {
   }
 
   async addDependency(organizationId: string, taskId: string, dependsOnId: string): Promise<void> {
-    await (this.prisma as any).taskDependency.create({
+    await (this.prisma.tenantClient as any).taskDependency.create({
       data: {
         taskId,
         dependsOnId,

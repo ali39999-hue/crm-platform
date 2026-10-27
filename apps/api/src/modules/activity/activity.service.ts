@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   Logger,
@@ -10,7 +11,7 @@ import {
   type MembershipRole,
 } from '@crm/domain';
 import {
-  InMemoryActivityRepository,
+  type IActivityRepository,
   type ActivityEntity,
   type ScheduledActivityEntity,
 } from './activity.repository.js';
@@ -33,7 +34,8 @@ export class ActivityService {
   private readonly logger = new Logger(ActivityService.name);
 
   constructor(
-    private readonly activityRepo: InMemoryActivityRepository,
+    @Inject('ACTIVITY_REPOSITORY')
+    private readonly activityRepo: IActivityRepository,
     private readonly auditService: AuditService,
   ) {}
 

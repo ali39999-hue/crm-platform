@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthService } from './auth.service.js';
 import { TokenService } from './token.service.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
+import { getTenantContextStore, setTenantIdentity } from '../../prisma/tenant-context.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -91,6 +92,15 @@ export class AuthGuard implements CanActivate {
     }
 
     request.user = userContext;
+
+    // SEC-001 / GAP-006: publish the verified tenant identity into the
+    // per-request AsyncLocalStorage store so the Prisma tenant-scoper
+    // extension scopes every tenant-model query to it.
+    const tenantStore = getTenantContextStore();
+    if (tenantStore && userContext?.activeOrganization?.id) {
+      setTenantIdentity(tenantStore, userContext.activeOrganization.id);
+    }
+
     return true;
   }
 }

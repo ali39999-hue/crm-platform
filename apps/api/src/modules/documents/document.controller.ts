@@ -17,6 +17,7 @@ import type {
 } from '@crm/contracts';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
 import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
+import { RequirePermission } from '../../common/auth/require-permission.decorator.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { DocumentsService } from './document.service.js';
@@ -37,6 +38,7 @@ export class DocumentsController {
   /* Spaces */
 
   @Get('spaces')
+  @RequirePermission('view_internal_tasks')
   async getSpaces(
     @CurrentUser() user: UserContext,
   ): Promise<DocumentSpaceDto[]> {
@@ -44,6 +46,7 @@ export class DocumentsController {
   }
 
   @Post('spaces')
+  @RequirePermission('create_or_edit_tasks')
   async createSpace(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateDocumentSpaceDto,
@@ -58,6 +61,7 @@ export class DocumentsController {
   /* Documents */
 
   @Get()
+  @RequirePermission('view_internal_tasks')
   async getDocuments(
     @CurrentUser() user: UserContext,
     @Query('spaceId') spaceId?: string,
@@ -94,6 +98,7 @@ export class DocumentsController {
   }
 
   @Post()
+  @RequirePermission('create_or_edit_tasks')
   async createDocument(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateDocumentDto,
@@ -110,6 +115,7 @@ export class DocumentsController {
   }
 
   @Get(':id')
+  @RequirePermission('view_internal_tasks')
   async getDocumentDetail(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -125,6 +131,7 @@ export class DocumentsController {
   }
 
   @Patch(':id')
+  @RequirePermission('create_or_edit_tasks')
   async updateDocument(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -143,6 +150,7 @@ export class DocumentsController {
   }
 
   @Post(':id/restore')
+  @RequirePermission('create_or_edit_tasks')
   async restoreRevision(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -162,6 +170,7 @@ export class DocumentsController {
   }
 
   @Delete(':id')
+  @RequirePermission('create_or_edit_tasks')
   async deleteDocument(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/auth/auth.guard.js';
 import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
+import { RequirePermission } from '../../common/auth/require-permission.decorator.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import type { UserContext } from '../../common/auth/auth.types.js';
 import { ActivityService } from './activity.service.js';
@@ -32,6 +33,7 @@ export class ActivityController {
   /* Passive Timeline */
 
   @Get('recent')
+  @RequirePermission('view_internal_tasks')
   async getRecent(
     @CurrentUser() user: UserContext,
     @Query('limit') limit?: number,
@@ -44,6 +46,7 @@ export class ActivityController {
   }
 
   @Get('account/:accountId')
+  @RequirePermission('view_internal_tasks')
   async getAccountTimeline(
     @CurrentUser() user: UserContext,
     @Param('accountId') accountId: string,
@@ -58,6 +61,7 @@ export class ActivityController {
   }
 
   @Get('entity/:type/:id')
+  @RequirePermission('view_internal_tasks')
   async getEntityTimeline(
     @CurrentUser() user: UserContext,
     @Param('type') type: string,
@@ -76,6 +80,7 @@ export class ActivityController {
   /* Scheduled Activities & Calendar */
 
   @Post()
+  @RequirePermission('create_or_edit_tasks')
   async createScheduled(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateActivityDto,
@@ -92,6 +97,7 @@ export class ActivityController {
   }
 
   @Get('calendar/jalali')
+  @RequirePermission('view_internal_tasks')
   async getJalaliCalendar(
     @CurrentUser() user: UserContext,
     @Query('year') yearStr?: string,
@@ -109,6 +115,7 @@ export class ActivityController {
   }
 
   @Get('pinned')
+  @RequirePermission('view_internal_tasks')
   async getPinnedActivities(
     @CurrentUser() user: UserContext,
     @Query('entityType') entityType?: string,
@@ -122,6 +129,7 @@ export class ActivityController {
   }
 
   @Post(':id/pin')
+  @RequirePermission('create_or_edit_tasks')
   async togglePinActivity(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -134,6 +142,7 @@ export class ActivityController {
   }
 
   @Get('calendar')
+  @RequirePermission('view_internal_tasks')
   async getCalendarActivities(
     @CurrentUser() user: UserContext,
     @Query('from') from?: string,
@@ -164,6 +173,7 @@ export class ActivityController {
   }
 
   @Get('conflicts')
+  @RequirePermission('view_internal_tasks')
   async checkConflicts(
     @CurrentUser() user: UserContext,
     @Query('startsAt') startsAt: string,
@@ -185,6 +195,7 @@ export class ActivityController {
   }
 
   @Get(':id')
+  @RequirePermission('view_internal_tasks')
   async getScheduledActivity(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -196,6 +207,7 @@ export class ActivityController {
   }
 
   @Patch(':id')
+  @RequirePermission('create_or_edit_tasks')
   async updateScheduledActivity(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,
@@ -214,6 +226,7 @@ export class ActivityController {
   }
 
   @Delete(':id')
+  @RequirePermission('create_or_edit_tasks')
   async deleteScheduledActivity(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,

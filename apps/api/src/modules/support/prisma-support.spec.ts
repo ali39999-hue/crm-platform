@@ -107,6 +107,9 @@ describe('PrismaSupportRepository Multi-Tenant Integration Tests (RA-004)', () =
       },
     };
 
+    // See prisma-crm.spec.ts note: alias the tenant-scoped client to the mock.
+    mockPrisma.tenantClient = mockPrisma;
+
     repository = new PrismaSupportRepository(mockPrisma as any);
   });
 

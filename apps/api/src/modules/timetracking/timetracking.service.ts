@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   Logger,
@@ -13,7 +14,7 @@ import type {
   WorkLogSummaryDto,
 } from '@crm/contracts';
 import {
-  InMemoryTimeTrackingRepository,
+  type ITimeTrackingRepository,
   type WorkLogEntity,
 } from './timetracking.repository.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -23,7 +24,8 @@ export class TimeTrackingService {
   private readonly logger = new Logger(TimeTrackingService.name);
 
   constructor(
-    private readonly repo: InMemoryTimeTrackingRepository,
+    @Inject('TIME_TRACKING_REPOSITORY')
+    private readonly repo: ITimeTrackingRepository,
     private readonly auditService: AuditService,
   ) {}
 

@@ -15,6 +15,27 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    # GAP-008 / GATE-004: real PostgreSQL in CI so migrations are applied on
+    # every push instead of remaining unverified locally (no Docker here).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crm_dev
+          POSTGRES_PASSWORD: local_dev_only_change_me
+          POSTGRES_DB: crm_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crm_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://crm_dev:local_dev_only_change_me@localhost:5432/crm_dev?schema=public
+
     steps:
       - uses: actions/checkout@v7
 
@@ -36,6 +57,9 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter @crm/api db:generate
 
+      - name: Apply Prisma Migrations
+        run: pnpm --filter @crm/api db:migrate:deploy
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -44,6 +68,12 @@ jobs:
 
       - name: Security & License Audit
         run: pnpm security:audit
+
+      # GATE-003 evidence: reports which repository tokens resolve to a durable
+      # implementation vs InMemory. Non-blocking in P00/P01; switch to
+      # `pnpm audit:persistence:strict` before the P14 release gate.
+      - name: Persistence reality report
+        run: pnpm audit:persistence
 
       - name: Build
         run: pnpm build

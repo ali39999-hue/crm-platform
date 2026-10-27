@@ -91,6 +91,7 @@ export class SupportController {
   }
 
   @Post()
+  @RequirePermission('reply_to_customer')
   async createTicket(
     @CurrentUser() user: UserContext,
     @Body() dto: CreateTicketDto,
@@ -139,6 +140,7 @@ export class SupportController {
   }
 
   @Post(':id/messages')
+  @RequirePermission('reply_to_customer')
   async addTicketMessage(
     @CurrentUser() user: UserContext,
     @Param('id') id: string,

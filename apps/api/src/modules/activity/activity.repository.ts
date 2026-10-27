@@ -49,7 +49,7 @@ export interface IActivityRepository {
   createScheduled(data: Omit<ScheduledActivityEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ScheduledActivityEntity>;
   updateScheduled(organizationId: string, id: string, data: Partial<Omit<ScheduledActivityEntity, 'id' | 'organizationId' | 'createdAt'>>): Promise<ScheduledActivityEntity | null>;
   findScheduledById(organizationId: string, id: string): Promise<ScheduledActivityEntity | null>;
-  findScheduled(organizationId: string, filters?: { from?: string; to?: string; type?: ActivityType; status?: ActivityStatus; ownerId?: string }): Promise<ScheduledActivityEntity[]>;
+  findScheduled(organizationId: string, filters?: { from?: string | undefined; to?: string | undefined; type?: ActivityType | undefined; status?: ActivityStatus | undefined; ownerId?: string | undefined; }): Promise<ScheduledActivityEntity[]>;
   deleteScheduled(organizationId: string, id: string): Promise<boolean>;
   detectConflicts(organizationId: string, startsAt: string, endsAt: string, participantIds: string[], excludeId?: string): Promise<ScheduledActivityEntity[]>;
 }

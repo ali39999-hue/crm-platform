@@ -210,6 +210,12 @@ describe('PrismaCrmRepository Multi-Tenant Integration Tests (RA-003)', () => {
       },
     };
 
+    // Repos access tenant models through PrismaService.tenantClient
+    // (tenant-scoper extension); the scoper's enforcement itself is covered
+    // by src/prisma/tenant-scoper.spec.ts, so here the alias keeps these
+    // mock-table tests focused on repository-level filtering behavior.
+    mockPrisma.tenantClient = mockPrisma;
+
     repository = new PrismaCrmRepository(mockPrisma as any);
   });
 
