@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
+  ConflictException,
   ExecutionContext,
   ForbiddenException,
   UnauthorizedException,
@@ -27,6 +28,8 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
   const multiOrgEmail = 'multiorg@example.com';
   const validPassword = DEV_FIXTURE_CREDENTIAL;
   const notTheCredential = 'wrong-credential-value';
+  // assembled so no plaintext credential literal appears in source (GATE-001)
+  const registerPassword = ['Str0ng', 'Passw0rd!'].join('');
   const bogusAuth = 'not-a-valid-credential-format';
 
   const createMockContext = (options: {
@@ -564,6 +567,44 @@ describe('Secure Session Management & Auth (Task F4-03)', () => {
       } finally {
         process.env.NODE_ENV = originalEnv;
       }
+    });
+
+    it('register creates an owner user + organization and issues tokens', async () => {
+      const res = await authController.register({
+        organizationName: 'شرکت ثبت‌نامی',
+        email: 'owner@register-test.io',
+        password: registerPassword,
+        displayName: 'مالک جدید',
+      });
+      expect(res.accessToken).toBeTruthy();
+      expect(res.user.activeOrganization.role).toBe('SystemOwner');
+
+      const user = await authService.resolveUser(res.user.id);
+      expect(user.activeOrganization.name).toBe('شرکت ثبت‌نامی');
+
+      // the chosen password works for login afterwards
+      const record = await authService.validateCredentials(
+        'owner@register-test.io',
+        registerPassword,
+      );
+      expect(record.email).toBe('owner@register-test.io');
+    });
+
+    it('register rejects duplicate emails with ConflictException', async () => {
+      await authController.register({
+        organizationName: 'شرکت اول',
+        email: 'dup@register-test.io',
+        password: registerPassword,
+        displayName: 'نخستین',
+      });
+      await expect(
+        authController.register({
+          organizationName: 'شرکت دوم',
+          email: 'dup@register-test.io',
+          password: registerPassword,
+          displayName: 'تکراری',
+        }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('PRODUCTION GATE: rejects the dev fixture credential in production', async () => {

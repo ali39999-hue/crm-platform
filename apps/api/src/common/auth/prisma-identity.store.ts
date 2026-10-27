@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import type { IIdentityStore, MockUserRecord } from './identity-store.js';
+import { ConflictException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import type {
+  CreateUserWithOrganizationInput,
+  IIdentityStore,
+  MockUserRecord,
+} from './identity-store.js';
 import type { MembershipRole } from '@crm/domain';
 
 /**
@@ -67,5 +73,38 @@ export class PrismaIdentityStore implements IIdentityStore {
 
   async findByEmail(email: string): Promise<MockUserRecord | null> {
     return this.findUser({ email: email.toLowerCase().trim() });
+  }
+
+  async createUserWithOrganization(
+    input: CreateUserWithOrganizationInput,
+  ): Promise<MockUserRecord> {
+    const email = input.email.toLowerCase().trim();
+    if (await this.findByEmail(email)) {
+      throw new ConflictException('An account with this email already exists');
+    }
+    const client = this.prisma.tenantClient as any;
+    const organization = await client.organization.create({
+      data: { name: input.organizationName, slug: `org-${randomUUID().slice(0, 8)}` },
+    });
+    try {
+      await client.user.create({
+        data: {
+          email,
+          passwordHash: input.passwordHash,
+          displayName: input.displayName,
+          memberships: {
+            create: { organizationId: organization.id, role: 'OWNER', active: true },
+          },
+        },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException('An account with this email already exists');
+      }
+      throw err;
+    }
+    const user = await this.findByEmail(email);
+    if (!user) throw new ConflictException('Registration could not be completed');
+    return user;
   }
 }

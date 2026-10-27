@@ -1,9 +1,10 @@
-import { Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import crypto from 'crypto';
 import type { UserContext } from './auth.types.js';
 import type { MembershipRole } from '@crm/domain';
 import {
   InMemoryIdentityStore,
+  type CreateUserWithOrganizationInput,
   type IIdentityStore,
   type MockUserRecord,
 } from './identity-store.js';
@@ -75,6 +76,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
     return user;
+  }
+
+  /**
+   * Tenant onboarding (P02): creates the owner user and their organization in
+   * one step. The password is hashed here; plaintext never reaches a store.
+   */
+  async register(input: {
+    organizationName: string;
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<MockUserRecord> {
+    const createInput: CreateUserWithOrganizationInput = {
+      email: input.email.toLowerCase().trim(),
+      passwordHash: hashPassword(input.password),
+      displayName: input.displayName,
+      organizationName: input.organizationName,
+    };
+    return this.identityStore.createUserWithOrganization(createInput);
   }
 
   async resolveUser(userIdOrEmail: string, preferredOrgId?: string): Promise<UserContext> {

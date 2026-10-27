@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { MembershipRole } from '@crm/domain';
+import { randomUUID } from 'crypto';
+import { ConflictException } from '@nestjs/common';
 import { DEV_FIXTURE_CREDENTIAL } from './auth.service.js';
 
 /**
@@ -25,9 +27,19 @@ export type MockUserRecord = {
   }>;
 };
 
+export type CreateUserWithOrganizationInput = {
+  email: string;
+  passwordHash: string;
+  displayName: string;
+  organizationName: string;
+};
+
 export interface IIdentityStore {
   findByIdOrEmail(key: string): Promise<MockUserRecord | null>;
   findByEmail(email: string): Promise<MockUserRecord | null>;
+  createUserWithOrganization(
+    input: CreateUserWithOrganizationInput,
+  ): Promise<MockUserRecord>;
 }
 
 @Injectable()
@@ -161,5 +173,33 @@ export class InMemoryIdentityStore implements IIdentityStore {
 
   async findByEmail(email: string): Promise<MockUserRecord | null> {
     return this.findByIdOrEmail(email);
+  }
+
+  async createUserWithOrganization(
+    input: import('./identity-store.js').CreateUserWithOrganizationInput,
+  ): Promise<MockUserRecord> {
+    const email = input.email.toLowerCase().trim();
+    if (await this.findByEmail(email)) {
+      throw new ConflictException('An account with this email already exists');
+    }
+    const organizationId = randomUUID();
+    const user: MockUserRecord = {
+      id: randomUUID(),
+      email,
+      passwordHash: input.passwordHash,
+      displayName: input.displayName,
+      memberships: [
+        {
+          organizationId,
+          organizationName: input.organizationName,
+          organizationSlug: `org-${organizationId.slice(0, 8)}`,
+          role: 'SystemOwner',
+          active: true,
+        },
+      ],
+    };
+    this.users.set(user.id, user);
+    this.users.set(user.email, user);
+    return user;
   }
 }

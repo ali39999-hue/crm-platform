@@ -22,6 +22,7 @@ import {
   LoginRequestDto,
   LogoutRequestDto,
   RefreshTokenRequestDto,
+  RegisterRequestDto,
   SwitchWorkspaceRequestDto,
 } from './dto/auth.dto.js';
 
@@ -33,6 +34,53 @@ export class AuthController {
     private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
   ) {}
+
+  /**
+   * Tenant onboarding (P02): creates the owner account + organization and
+   * issues the first token pair. Public by definition; protected by the
+   * sensitive-path rate limit (auth/*).
+   */
+  @Public()
+  @Post(['register', 'auth/register'])
+  async register(@Body() dto: RegisterRequestDto): Promise<AuthResponseDto> {
+    const userRecord = await this.authService.register({
+      organizationName: dto.organizationName,
+      email: dto.email,
+      password: dto.password,
+      displayName: dto.displayName,
+    });
+    const userContext = await this.authService.resolveUser(userRecord.id);
+
+    const tokenPair = this.tokenService.generateTokenPair({
+      userId: userContext.id,
+      email: userContext.email,
+      orgId: userContext.activeOrganization.id,
+      role: userContext.activeOrganization.role,
+    });
+
+    this.auditService.record({
+      organizationId: userContext.activeOrganization.id,
+      actorId: userContext.id,
+      action: 'AUTH_REGISTER',
+      entityType: 'User',
+      entityId: userContext.id,
+      metadata: { email: userContext.email, sessionId: tokenPair.sessionId },
+    });
+
+    return {
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
+      tokenType: tokenPair.tokenType,
+      user: {
+        id: userContext.id,
+        email: userContext.email,
+        displayName: userContext.displayName,
+        activeOrganization: userContext.activeOrganization,
+        memberships: userContext.memberships,
+      },
+    };
+  }
 
   @Public()
   @Post(['login', 'auth/login'])
