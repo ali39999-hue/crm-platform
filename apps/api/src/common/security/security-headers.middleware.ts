@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware, Optional } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 
 export const DEFAULT_SECURITY_HEADERS: Readonly<Record<string, string>> = {
@@ -13,7 +13,7 @@ export const DEFAULT_SECURITY_HEADERS: Readonly<Record<string, string>> = {
 export class SecurityHeadersMiddleware implements NestMiddleware {
   private readonly headers: Record<string, string>;
 
-  constructor(customHeaders?: Record<string, string>) {
+  constructor(@Optional() @Inject('CUSTOM_SECURITY_HEADERS') customHeaders?: Record<string, string>) {
     this.headers = { ...DEFAULT_SECURITY_HEADERS, ...customHeaders };
   }
 
